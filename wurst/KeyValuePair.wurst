@@ -1,0 +1,19 @@
+package KeyValuePair
+
+// ============================================================================
+public class KeyValuePair<TKey, TValue>
+  private TKey _key
+  private TValue _value
+
+  // --------------------------------------------------------------------------
+  construct(TKey key, TValue value)
+    _key = key
+    _value = value
+
+  // --------------------------------------------------------------------------
+  function getKey() returns TKey
+    return _key
+
+  // --------------------------------------------------------------------------
+  function getValue() returns TValue
+    return _value

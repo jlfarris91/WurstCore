@@ -1,0 +1,6 @@
+---
+projectName: WurstCore
+buildMapData:
+  name: MyMapName
+  fileName: MyMapFile
+  author: jlfar
