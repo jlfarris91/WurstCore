@@ -6,3 +6,4 @@ objectEditingOutput/
 /archive
 .vscode/
 imports/
+*.j
