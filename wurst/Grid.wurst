@@ -1,0 +1,282 @@
+package Grid
+import ErrorIf
+import Bounds
+import Action
+import Math
+
+int INVALID_INDEX = -1
+
+public tuple cell(int row, int column)
+public tuple span(cell min, cell max)
+
+public constant cell INVALID_CELL = cell(INVALID_INDEX, INVALID_INDEX)
+
+// ============================================================================
+public interface IGrid
+  // --------------------------------------------------------------------------
+  function getBounds() returns bounds
+
+  // --------------------------------------------------------------------------
+  function getWidth() returns int
+
+  // --------------------------------------------------------------------------
+  function getHeight() returns int
+
+  // --------------------------------------------------------------------------
+  function getCell(vec2 pos) returns cell
+
+  // --------------------------------------------------------------------------
+  function getIndex(cell cell) returns int
+
+  // --------------------------------------------------------------------------
+  function getCellBounds(cell cell) returns bounds
+
+// ============================================================================
+public class Grid implements IGrid
+  private bounds _bounds
+  private int _width
+  private int _height
+  private vec2 _cellSize
+
+  // --------------------------------------------------------------------------
+  construct(bounds bounds, int width, int height)
+    _bounds = bounds
+    _width = width
+    _height = height
+
+    let size = _bounds.size()
+    _cellSize = vec2(size.x / width, size.y / height)
+
+  // --------------------------------------------------------------------------
+  override function getBounds() returns bounds
+    return _bounds
+
+  // --------------------------------------------------------------------------
+  override function getWidth() returns int
+    return _width
+
+  // --------------------------------------------------------------------------
+  override function getHeight() returns int
+    return _height
+
+  // --------------------------------------------------------------------------
+  override function getCell(vec2 worldPos) returns cell
+    if (not _bounds.contains(worldPos))
+      return INVALID_CELL
+    let localPos = _bounds.toLocalPos(worldPos)
+    return getCellFromLocalPos(localPos)
+
+  // --------------------------------------------------------------------------
+  override function getIndex(cell cell) returns int
+    return cell.toIndex(_width, _height)
+
+  // --------------------------------------------------------------------------
+  override function getCellBounds(cell cell) returns bounds
+    ErrorIf.argumentIsOutOfBounds(cell.row, 0, _height - 1, "cell.row")
+    ErrorIf.argumentIsOutOfBounds(cell.column, 0, _width - 1, "cell.column")
+    let min = _bounds.min + vec2(_cellSize.x * cell.column, _cellSize.y * cell.row)
+    let max = min + _cellSize
+    return bounds(min, max)
+    
+  // --------------------------------------------------------------------------
+  function forEachCell(Action2<int, int> action)
+    for r = 0 to _height - 1
+      for c = 0 to _width - 1
+        action.execute(r, c)
+
+  // --------------------------------------------------------------------------
+  function getArea(vec2 worldPos, real range) returns span
+    return getArea(worldPos, vec2(range, range))
+
+  // --------------------------------------------------------------------------
+  function getArea(vec2 worldPos, vec2 range) returns span
+    var minPos = clamp(worldPos - range / 2, _bounds.min, _bounds.max)
+    var maxPos = clamp(worldPos + range / 2, _bounds.min, _bounds.max)
+    var min = getCell(minPos)
+    var max = getCell(maxPos)
+    return span(min, max)
+
+  // --------------------------------------------------------------------------
+  private function getCellFromLocalPos(vec2 localPos) returns cell
+    let x = clamp(R2I(localPos.x / _cellSize.x), 0, _width - 1)
+    let y = clamp(R2I(localPos.y / _cellSize.y), 0, _height - 1)    
+    return cell(x, y)
+
+// ============================================================================
+public function cell.toIndex(int width, int height) returns int
+  ErrorIf.argumentIsOutOfBounds(this.row, 0, height - 1, "row")
+  ErrorIf.argumentIsOutOfBounds(this.column, 0, width - 1, "column")
+  return this.row * width + this.column
+
+// ============================================================================
+public function cell.toString() returns string
+  return "(r: {0}, c: {1})".format(I2S(this.row), I2S(this.column))
+
+// ============================================================================
+public function cell(int index, int width, int height) returns cell
+  ErrorIf.argumentIsOutOfBounds(index, 0, (width * height) - 1, "index")
+  return cell(index mod width, index div height)
+
+// ============================================================================
+public function span.toString() returns string
+  return "(min: {0}, max: {1})".format(this.min.toString(), this.max.toString())
+
+@test
+function grid_getCell_checkBottomLeft()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act + assert
+  grid.forEachCell() (integer r, integer c) ->
+    let testPos = vec2(I2R(r), I2R(c)) * 10
+    let cell = grid.getCell(testPos)
+    assertTrue(cell == cell(r, c), testPos.toString() + ": " + cell.toString())
+
+@test
+function grid_getCell_checkCenter()
+  // arrange
+  let cellW = 10
+  let cellH = 10
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), cellW, cellH)
+
+  // act + assert
+  grid.forEachCell() (integer r, integer c) ->
+    let testPos = vec2(I2R(r), I2R(c)) * 10 + vec2(I2R(cellW), I2R(cellH)) / 2
+    let cell = grid.getCell(testPos)
+    assertTrue(cell == cell(r, c), testPos.toString() + ": " + cell.toString())
+
+@test
+function grid_getCell_checkTopRightCorner()
+  // arrange
+  let cellW = 10
+  let cellH = 10
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), cellW, cellH)
+
+  // act + assert
+  grid.forEachCell() (integer r, integer c) ->
+    let testPos = vec2(I2R(r), I2R(c)) * 10 + vec2(I2R(cellW), I2R(cellH))
+    let cell = grid.getCell(testPos)
+    assertTrue(cell == cell(r + 1, c + 1), testPos.toString() + ": " + cell.toString())
+
+@test
+function grid_getCell_checkGridCorners()
+  // arrange
+  let min = vec2(-100, -100)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act + assert
+  assertTrue(grid.getCell(vec2(-100, -100)) == cell(0, 0))  // Bottom left corner
+  assertTrue(grid.getCell(vec2(99, 99)) == cell(9, 9))    // Top right corner
+  assertTrue(grid.getCell(vec2(-100, 99)) == cell(0, 9))   // Top left corner
+  assertTrue(grid.getCell(vec2(99, -100)) == cell(9, 0))   // Bottom right corner
+
+  assertTrue(grid.getCell(vec2(-1, -1)) == cell(4, 4))    // Almost center
+  assertTrue(grid.getCell(vec2(0, 0)) == cell(5, 5))      // Exactly center
+  assertTrue(grid.getCell(vec2(1, 1)) == cell(5, 5))      // A little past center
+  assertTrue(grid.getCell(vec2(-1, 1)) == cell(4, 5))     // Almost center
+  assertTrue(grid.getCell(vec2(1, -1)) == cell(5, 4))     // Almost center
+
+@test
+function grid_getArea_center_rangeLessThanOneCell()
+  // arrange
+  let min = vec2(-100, -100)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(0, 0), vec2(5, 5))
+
+  // assert
+  assertTrue(area.min == cell(4, 4))
+  assertTrue(area.max == cell(5, 5))
+
+@test
+function grid_getArea_center_rangeEqualToTwoCells()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(50, 50), vec2(15, 15))
+
+  // assert
+  assertTrue(area.min == cell(4, 4))
+  assertTrue(area.max == cell(5, 5))
+
+@test
+function grid_getArea_bottomLeftCorner_shouldReturnOneCell()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(0, 0), vec2(10, 10))
+
+  // assert
+  assertTrue(area.min == cell(0, 0))
+  assertTrue(area.max == cell(0, 0))
+
+@test
+function grid_getArea_bottomLeftCorner_shouldReturn4Cells()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(0, 0), vec2(20, 20))
+
+  // assert
+  assertTrue(area.min == cell(0, 0))
+  assertTrue(area.max == cell(1, 1))
+
+@test
+function grid_getArea_topRightCorner_shouldReturnOneCell()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(100, 100), vec2(10, 10))
+
+  // assert
+  assertTrue(area.min == cell(9, 9))
+  assertTrue(area.max == cell(9, 9))
+
+@test
+function grid_getArea_topRightCorner_shouldReturn4Cells()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(100, 100), vec2(20, 20))
+
+  // assert
+  assertTrue(area.min == cell(9, 9))
+  assertTrue(area.max == cell(9, 9))
+
+@test
+function grid_getArea_topRightCorner_shouldReturn4Cells_2()
+  // arrange
+  let min = vec2(0, 0)
+  let max = vec2(100, 100)
+  let grid = new Grid(bounds(min, max), 10, 10)
+
+  // act
+  let area = grid.getArea(vec2(99, 99), vec2(20, 20))
+
+  // assert
+  assertTrue(area.min == cell(8, 8))
+  assertTrue(area.max == cell(9, 9))

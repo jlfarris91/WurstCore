@@ -1,0 +1,71 @@
+package EnumerableLinkedList
+import initlater Enumerable
+import LinkedList
+
+// ============================================================================
+/** Returns the LinkedList<T> typed as IEnumerable<T>. */
+public function LinkedList<T>.asEnumerable<T>() returns IEnumerable<T>
+  return new LinkedListEnumerableAdapter(this, false)
+
+// ============================================================================
+/** Returns the LinkedList<T> typed as IEnumerable<T>. */
+public function LinkedList<T>.asEnumerable<T>(bool owner) returns IEnumerable<T>
+  return new LinkedListEnumerableAdapter(this, owner)
+
+// ============================================================================
+/** Returns the LLIterator<T> typed as IEnumerator<T>. */
+public function LLIterator<T>.asEnumerator<T>() returns IEnumerator<T>
+  return new LinkedListEnumeratorAdapter(this)
+
+// ============================================================================
+public function IEnumerable<TSource>.toList<TSource>() returns LinkedList<TSource>
+  let iter = this.iterator()
+  let result = new LinkedList<TSource>()
+  while iter.hasNext()
+    result.add(iter.next())
+  destroy iter
+  return result
+
+// ============================================================================
+class LinkedListEnumerableAdapter<T> implements IEnumerable<T>
+  private LinkedList<T> _list
+  private bool _ownsList
+
+  // --------------------------------------------------------------------------
+  construct(LinkedList<T> list, bool ownsList)
+    _list = list
+    _ownsList = ownsList
+
+  ondestroy
+    if (_ownsList)
+      destroy _list
+    _list = null
+
+  // --------------------------------------------------------------------------
+  override function iterator() returns IEnumerator<T>
+    return new LinkedListEnumeratorAdapter<T>(_list.iterator())
+
+// ============================================================================
+class LinkedListEnumeratorAdapter<T> implements IEnumerator<T>
+  private LLIterator<T> _iterator
+
+  // --------------------------------------------------------------------------
+  construct(LLIterator<T> iterator)
+    _iterator = iterator
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy _iterator
+    _iterator = null
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    return _iterator.hasNext()
+
+  // --------------------------------------------------------------------------
+  override function next() returns T
+    return _iterator.next()
+
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this

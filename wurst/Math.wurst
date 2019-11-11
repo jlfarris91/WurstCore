@@ -12,6 +12,9 @@ public function clamp(real value, real min, real max) returns real
 public function clamp01(real value) returns real
   return RMaxBJ(RMinBJ(value, 1.0), 0.0)
 
+public function clamp(vec2 v, vec2 min, vec2 max) returns vec2
+  return vec2(clamp(v.x, min.x, max.x), clamp(v.y, min.y, max.y))
+
 public function clampToWorldBounds(vec2 pos, real radius) returns vec2
   var x = clamp(
     pos.x,

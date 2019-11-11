@@ -1,0 +1,9 @@
+package Selector
+
+// ============================================================================
+public interface Selector<TElem, TValue>
+  function select(TElem elem) returns TValue
+
+// ============================================================================
+public interface Vec2Selector<TArg1>
+  function select(TArg1 arg1) returns vec2

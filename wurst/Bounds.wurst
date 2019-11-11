@@ -1,0 +1,33 @@
+package Bounds
+
+public tuple bounds(vec2 min, vec2 max)
+
+// ============================================================================
+@inline
+public function bounds.center() returns vec2
+  return (this.min + this.max) / 2.0
+
+// ============================================================================
+@inline
+public function bounds.size() returns vec2
+  return this.max - this.min
+
+// ============================================================================
+@inline
+public function bounds.contains(vec2 pos) returns bool
+  return pos.x >= this.min.x and pos.x <= this.max.x and
+         pos.y >= this.min.y and pos.y <= this.max.y
+
+// ============================================================================
+@inline
+public function bounds.toLocalPos(vec2 worldPos) returns vec2
+  return worldPos - this.min
+
+// ============================================================================
+@inline
+public function bounds.toWorldPos(vec2 localPos) returns vec2
+  return localPos + this.min
+
+// ============================================================================
+public function bounds.toString() returns string
+  return "(min: {0}, max: {1})".format(this.min.toString(), this.max.toString())

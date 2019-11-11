@@ -1,4 +1,7 @@
 package Enumerable
+import public EnumerableLinkedList
+import public EnumerableHashList
+import public EnumerableHashMap
 
 // ============================================================================
 public interface IEnumerator<TElement>

@@ -3,6 +3,7 @@ import LinkedList
 import ErrorHandling
 import ErrorIf
 import WeightedSet
+import Selector
 
 // ============================================================================
 public function LinkedList<T>.getRandom<T>() returns T
@@ -45,10 +46,6 @@ public function LinkedList<TElem>.toWeightedSet<TElem>(Selector<TElem, real> sel
   let output = new WeightedSet<TElem>()
   this.forEach(elem -> output.add(elem, selector.select(elem)))
   return output
-
-// ============================================================================
-public interface Selector<TElem, TValue>
-  function select(TElem elem) returns TValue
 
 // ============================================================================
 //
