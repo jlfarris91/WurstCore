@@ -4,6 +4,7 @@ package Enumerable
 public interface IEnumerator<TElement>
   function hasNext() returns bool
   function next() returns TElement
+  function close()
 
 // ============================================================================
 public interface IEnumerable<TElement>
