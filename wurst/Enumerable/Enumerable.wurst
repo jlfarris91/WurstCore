@@ -2,6 +2,7 @@ package Enumerable
 import public EnumerableLinkedList
 import public EnumerableHashList
 import public EnumerableHashMap
+import Action
 
 // ============================================================================
 public interface IEnumerator<TElement>
@@ -12,3 +13,21 @@ public interface IEnumerator<TElement>
 // ============================================================================
 public interface IEnumerable<TElement>
   function iterator() returns IEnumerator<TElement>
+
+// ============================================================================
+public function IEnumerable<TSource>.forEach<TSource>(Action1<TSource> action)
+  let iter = this.iterator()
+  while (iter.hasNext())
+    action.execute(iter.next())
+  destroy iter
+  destroy action
+
+// ============================================================================
+public function IEnumerable<TSource>.forEach<TSource>(Action2<int, TSource> action)
+  let iter = this.iterator()
+  var index = 0
+  while (iter.hasNext())
+    action.execute(index, iter.next())
+    index++
+  destroy iter
+  destroy action

@@ -10,14 +10,16 @@ import ErrorIf
 import Selector
 
 // ============================================================================
-public class GridList<T> implements IGrid
+public class GridList<T> implements IGrid, IEnumerable<T>
   private Grid _grid
   private HashMap<int, GridBucket<T>> _cellToBucketMap
+  private int _size
 
   // --------------------------------------------------------------------------
   construct (bounds bounds, int width, int height)
     _grid = new Grid(bounds, width, height)
     _cellToBucketMap = new HashMap<int, GridBucket<T>>()
+    _size = 0
     updateBuckets()
 
   // --------------------------------------------------------------------------
@@ -34,6 +36,7 @@ public class GridList<T> implements IGrid
     let bucket = getBucket(cell)
     bucket._items.add(data)
     print("Added item to bucket " + cell.toString())
+    _size++
 
   // --------------------------------------------------------------------------
   function remove(T data) returns bool
@@ -43,8 +46,23 @@ public class GridList<T> implements IGrid
       for c = 0 to w
         let bucket = getBucket(cell(r, c))
         if (bucket._items.remove(data))
+          _size--
           return true
     return false
+
+  // --------------------------------------------------------------------------
+  function clear()
+    let w = getWidth()
+    let h = getHeight()
+    for r = 0 to h
+      for c = 0 to w
+        let bucket = getBucket(cell(r, c))
+        bucket._items.clear()
+    _size = 0
+
+  // --------------------------------------------------------------------------
+  function size() returns int
+    return _size
 
   // --------------------------------------------------------------------------
   function getElementsInRange(vec2 pos, real range, Vec2Selector<T> posSelector) returns IEnumerable<T>
@@ -100,6 +118,9 @@ public class GridList<T> implements IGrid
   override function getCellBounds(cell cell) returns bounds
     return _grid.getCellBounds(cell)
 
+  override function iterator() returns IEnumerator<T>
+    return new GridListEnumerator<T>(this)
+
 // ============================================================================
 class GridBucket<T> implements IEnumerable<T>
   bounds _bounds
@@ -117,6 +138,50 @@ class GridBucket<T> implements IEnumerable<T>
   // --------------------------------------------------------------------------
   override function iterator() returns IEnumerator<T>
     return _items.iterator().asEnumerator()
+
+// ============================================================================
+class GridListEnumerator<T> implements IEnumerator<T>
+  private GridList<T> _list
+  private IEnumerator<T> _current
+  private int _col
+  private int _row
+  
+  // --------------------------------------------------------------------------
+  construct(GridList<T> list)
+    _list = list
+    _col = 0
+    _row = 0
+    getNextBucket()
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    while (_current != null and not _current.hasNext())
+      getNextBucket()
+    return _current != null and _current.hasNext()
+
+  // --------------------------------------------------------------------------
+  override function next() returns T
+    return _current.next()
+
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this
+
+  // --------------------------------------------------------------------------
+  private function getNextBucket()
+
+    if (_current != null)
+      destroy _current
+      _current = null
+
+    _col++
+    if (_col == _list.getWidth())
+      _col = 0
+      _row++
+      if (_row == _list.getHeight())
+        return
+
+    _current = _list.getBucket(cell(_row, _col)).iterator()
 
 // ============================================================================
 class RangedEnumerable<T> implements IEnumerable<T>
