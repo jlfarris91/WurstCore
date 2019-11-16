@@ -35,15 +35,15 @@ public class GridList<T> implements IGrid, IEnumerable<T>
       error("Position is outside of the bounds of the grid")
     let bucket = getBucket(cell)
     bucket._items.add(data)
-    print("Added item to bucket " + cell.toString())
+    // print("Added item to bucket " + cell.toString())
     _size++
 
   // --------------------------------------------------------------------------
   function remove(T data) returns bool
     let w = getWidth()
     let h = getHeight()
-    for r = 0 to h
-      for c = 0 to w
+    for r = 0 to h - 1
+      for c = 0 to w - 1
         let bucket = getBucket(cell(r, c))
         if (bucket._items.remove(data))
           _size--
@@ -54,8 +54,8 @@ public class GridList<T> implements IGrid, IEnumerable<T>
   function clear()
     let w = getWidth()
     let h = getHeight()
-    for r = 0 to h
-      for c = 0 to w
+    for r = 0 to h - 1
+      for c = 0 to w - 1
         let bucket = getBucket(cell(r, c))
         bucket._items.clear()
     _size = 0
