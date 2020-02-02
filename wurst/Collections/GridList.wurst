@@ -283,7 +283,7 @@ function gridList_getElementsInRange_zeroRange()
       gridList.add(new TestClass(pos, cell.toString()), pos)
 
   // act
-  var elements = gridList.getElementsInRange(vec2(50, 50), 0) (data) ->
+  let elements = gridList.getElementsInRange(vec2(50, 50), 0) (data) ->
     return data._pos
 
   // assert
@@ -306,7 +306,7 @@ function gridList_getElementsInRange_zeroRange2()
         gridList.add(new TestClass(pos, cell.toString() + " " + I2S(i)), pos)
 
   // act
-  var elements = gridList.getElementsInRange(vec2(50, 50), 22) (data) ->
+  let elements = gridList.getElementsInRange(vec2(50, 50), 22) (data) ->
     return data._pos
 
   // assert

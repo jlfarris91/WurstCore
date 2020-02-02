@@ -69,7 +69,7 @@ function invoke_CallsAddedHandler()
 @test
 function invoke_DoesNotCallRemovedHandler()
   // arrange
-  var ev = new AnonymousEvent()
+  let ev = new AnonymousEvent()
   var counter = new Counter()
 
   var cb = ev.addListener() () ->
@@ -87,7 +87,7 @@ function invoke_DoesNotCallRemovedHandler()
 @test
 function invoke_DoesNotCallReremovedHandler()
   // arrange
-  var ev = new AnonymousEvent()
+  let ev = new AnonymousEvent()
   var counter = new Counter()
 
   var cb = ev.addListener() () ->
@@ -105,7 +105,7 @@ function invoke_DoesNotCallReremovedHandler()
 @test
 function invoke_CallsReaddedHandler()
   // arrange
-  var ev = new AnonymousEvent()
+  let ev = new AnonymousEvent()
   var counter = new Counter()
 
   var cb = ev.addListener() () ->
@@ -128,13 +128,13 @@ function invoke_CallsReaddedHandler()
 @test
 function invoke_CallsMultipleHandlersInOrder()
   // arrange
-  var ev = new AnonymousEvent()
+  let ev = new AnonymousEvent()
   var s = new String()
 
-  var cb1 = ev.addListener() () ->
+  let cb1 = ev.addListener() () ->
     s.value += "Hello"
   
-  var cb2 = ev.addListener() () ->
+  let cb2 = ev.addListener() () ->
     s.value += " World!"
 
   // act

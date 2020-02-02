@@ -40,7 +40,7 @@ public class WeightedSet<T>
   function addAll(WeightedSet<T> other)
     var current = other.head
     while (current != null)
-      var next = current.next
+      let next = current.next
       add(current.elem, current.weight)
       current = next
 
@@ -57,7 +57,7 @@ public class WeightedSet<T>
   function clear()
     var current = this.head
     while (current != null)
-      var next = current.next
+      let next = current.next
       destroy current
       current = next
     this.head = null
@@ -100,7 +100,7 @@ public class WeightedSet<T>
     var entry = this.head
     while (entry != null)
       if (r >= 0.0 and r < entry.weight)
-        T elem = entry.elem
+        let elem = entry.elem
         removeEntry(entry)
         return elem
       r -= entry.weight
@@ -120,7 +120,7 @@ public class WeightedSet<T>
   // --------------------------------------------------------------------------
   /** Get the chance [0.0 - 1.0] that an element in the set will be randomly selected */
   function getChance(T elem) returns real
-    var entry = findEntry(elem)
+    let entry = findEntry(elem)
     if (entry == null)
       return 0.0
     return entry.weight / this.totalWeight
@@ -184,6 +184,7 @@ public class WeightedSet<T>
     while (entry != null)
       s = s + ", " + I2S(i) + ": " + R2S(entry.weight)
       entry = entry.next
+      i++
     return s
 
 // ============================================================================
@@ -352,7 +353,7 @@ public class WeightedSetIterator<T>
   weightedSet.add(3, 3.0)
 
   // act
-  var elem = weightedSet.getRandom()
+  let elem = weightedSet.getRandom()
   
   // assert
   assertTrue(elem == 1 or elem == 2 or elem == 3)

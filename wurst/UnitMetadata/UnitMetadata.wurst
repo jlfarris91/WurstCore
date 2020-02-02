@@ -8,6 +8,8 @@ import OnUnitEnterLeave
 import HashList
 import Type
 import ErrorIf
+import ClosureEvents
+import initlater UnitComponent
 // import Reflection
 
 HashMap<unit, IUnitMetadata> g_unitMetadataMap
@@ -23,17 +25,6 @@ public interface IUnitMetadata extends IComposite
 // ============================================================================
 public interface IUnitMetadataFactory
   function createUnit(unit u) returns IUnitMetadata
-
-// ============================================================================
-public abstract class UnitComponent extends Component
-
-  // --------------------------------------------------------------------------
-  construct (IUnitMetadata metadata)
-    super(metadata)
-
-  // --------------------------------------------------------------------------
-  function getUnit() returns unit
-    return (_owner castTo IUnitMetadata).getUnit()
 
 // ============================================================================
 public class UnitMetadata implements IUnitMetadata
@@ -66,8 +57,16 @@ public class UnitMetadata implements IUnitMetadata
     //   Log.info(typeIdToTypeName(this.typeId) + " replaced " + I2S(oldUnit.getTypeId()) + " with " + I2S(newUnit.getTypeId()))
 
   // --------------------------------------------------------------------------
-  protected function onUnitChanged(unit _oldUnit, unit _newUnit)
+  function onKilled()
     skip
+
+  // --------------------------------------------------------------------------
+  protected function onUnitChanged(unit oldUnit, unit newUnit)
+    if (_compositionManager != null)
+      for comp in _compositionManager
+        let unitComp = comp castTo UnitComponent
+        if (unitComp != null)
+          unitComp.onUnitChanged(newUnit, oldUnit)
 
   // --------------------------------------------------------------------------
   override function addComponent(IComponent component) returns IComponent
@@ -103,7 +102,7 @@ public function unregisterUnitMetadataFactory(IUnitMetadataFactory factory)
 public function constructUnitMetadata(unit u) returns IUnitMetadata
   ErrorIf.argumentIsNull(u, "u")
   for factory in g_unitMetadataFactories
-    var uu = factory.createUnit(u)
+    let uu = factory.createUnit(u)
     if (uu != null)
       return uu
   return new UnitMetadata(u)
@@ -235,6 +234,14 @@ function onUnitRemovedFromMap()
     resumeMetadataRemoval(id)
 
 // ============================================================================
+function onUnitKilled()
+  let dyingUnit = GetDyingUnit()
+  let metadata = dyingUnit.getMetadata() castTo UnitMetadata
+  if (metadata == null)
+    return
+  metadata.onKilled()
+
+// ============================================================================
 init
   g_unitMetadataMap = new HashMap<unit, IUnitMetadata>()
   g_unitMetadataFactories = new LinkedList<IUnitMetadataFactory>()
@@ -243,3 +250,4 @@ init
 
   onEnter(function onUnitEnteredMap)
   onLeave(function onUnitRemovedFromMap)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitKilled)

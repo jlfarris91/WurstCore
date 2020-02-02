@@ -1,0 +1,24 @@
+package UnitComponent
+import UnitMetadata
+import initlater Component
+
+// ============================================================================
+public abstract class UnitComponent extends Component
+  private IUnitMetadata m_owner
+
+  // --------------------------------------------------------------------------
+  construct(IUnitMetadata ownerUnit)
+    super(ownerUnit)
+    m_owner = ownerUnit
+
+  // --------------------------------------------------------------------------
+  override function getOwner() returns IUnitMetadata
+    return m_owner
+
+  // --------------------------------------------------------------------------
+  function getOwnerUnit() returns unit
+    return m_owner.getUnit()
+
+  // --------------------------------------------------------------------------
+  function onUnitChanged(unit _newUnit, unit _oldUnit)
+    skip

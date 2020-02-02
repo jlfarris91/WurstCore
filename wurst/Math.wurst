@@ -16,11 +16,11 @@ public function clamp(vec2 v, vec2 min, vec2 max) returns vec2
   return vec2(clamp(v.x, min.x, max.x), clamp(v.y, min.y, max.y))
 
 public function clampToWorldBounds(vec2 pos, real radius) returns vec2
-  var x = clamp(
+  let x = clamp(
     pos.x,
     g_WorldBounds.getMinX() + radius + BOUNDARY_OFFSET,
     (g_WorldBounds.getMaxX() - radius) - BOUNDARY_OFFSET)
-  var y = clamp(
+  let y = clamp(
     pos.y,
     g_WorldBounds.getMinY() + radius + BOUNDARY_OFFSET,
     (g_WorldBounds.getMaxY() - radius) - BOUNDARY_OFFSET)

@@ -43,3 +43,7 @@ public class CompositionManager implements IComposite
 
   // override function getComponentsOfType<TComponent>() returns IEnumerable<TComponent>
   //   skip
+
+  // --------------------------------------------------------------------------
+  function iterator() returns LLIterator<IComponent>
+    return _components.iterator()

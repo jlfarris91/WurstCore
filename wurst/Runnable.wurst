@@ -1,0 +1,78 @@
+package Runnable
+import ErrorHandling
+
+// ============================================================================
+public interface IRunnable
+  function getHasStarted() returns bool
+  function getIsRunning() returns bool
+  function start()
+  function stop()
+  function pause()
+  function resume()
+
+// ============================================================================
+public abstract class Runnable implements IRunnable
+  private bool m_started
+  private bool m_running
+  
+  construct()
+    m_started = false
+    m_running = false
+
+  // --------------------------------------------------------------------------
+  override function getHasStarted() returns bool
+    return m_started
+
+  // --------------------------------------------------------------------------
+  override function getIsRunning() returns bool
+    return m_running
+
+  // --------------------------------------------------------------------------
+  override function start()
+    if (m_started)
+      error("Runnable has already been started")
+      return
+
+    m_started = true
+    m_running = true
+    onStarted()
+  
+  // --------------------------------------------------------------------------
+  override function stop()
+    if (not m_started)
+      error("Attempted to stop a runnable that was not running")
+      return
+
+    m_started = false
+    m_running = false
+    onStopped()
+
+  // --------------------------------------------------------------------------
+  override function pause()
+    if (not m_running)
+      error("Attempted to pause a runnable when it was not running")
+      return
+
+    m_running = false
+    onPaused()    
+
+  // --------------------------------------------------------------------------
+  override function resume()
+    if (m_running)
+      error("Runnable is already running")
+      return
+
+    m_running = true
+    onResumed()    
+
+  // --------------------------------------------------------------------------
+  protected function onStarted()
+
+  // --------------------------------------------------------------------------
+  protected function onStopped()
+  
+  // --------------------------------------------------------------------------
+  protected function onPaused()
+  
+  // --------------------------------------------------------------------------
+  protected function onResumed()

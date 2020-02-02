@@ -90,10 +90,10 @@ public class Grid implements IGrid
 
   // --------------------------------------------------------------------------
   function getArea(vec2 worldPos, vec2 range) returns span
-    var minPos = clamp(worldPos - range / 2, _bounds.min, _bounds.max)
-    var maxPos = clamp(worldPos + range / 2, _bounds.min, _bounds.max)
-    var min = getCell(minPos)
-    var max = getCell(maxPos)
+    let minPos = clamp(worldPos - range / 2, _bounds.min, _bounds.max)
+    let maxPos = clamp(worldPos + range / 2, _bounds.min, _bounds.max)
+    let min = getCell(minPos)
+    let max = getCell(maxPos)
     return span(min, max)
 
   // --------------------------------------------------------------------------
