@@ -4,5 +4,6 @@ import Type
 
 // ============================================================================
 public interface IComposite
-  function addComponent(IComponent component) returns IComponent
   function getComponent(Type componentType) returns IComponent
+  function addComponent(IComponent component) returns IComponent
+  function removeComponent(IComponent component) returns bool

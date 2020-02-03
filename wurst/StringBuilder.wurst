@@ -1,0 +1,39 @@
+package StringBuilder
+
+// ============================================================================
+public class StringBuilder
+  private constant string NEW_LINE = "|n"
+  private string m_string
+
+  // --------------------------------------------------------------------------
+  construct()
+    reset()
+
+  // --------------------------------------------------------------------------
+  construct(string initial)
+    m_string = initial
+
+  // --------------------------------------------------------------------------
+  function append(string str) returns StringBuilder
+    m_string += str
+    return this
+
+  // --------------------------------------------------------------------------
+  function appendLine() returns StringBuilder
+    append(NEW_LINE)
+    return this
+
+  // --------------------------------------------------------------------------
+  function appendLine(string str) returns StringBuilder
+    append(str)
+    appendLine()
+    return this
+
+  // --------------------------------------------------------------------------
+  function reset() returns StringBuilder
+    m_string = ""
+    return this
+
+  // --------------------------------------------------------------------------
+  function toString() returns string
+    return m_string

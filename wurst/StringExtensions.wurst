@@ -1,7 +1,134 @@
 package StringExtensions
 
+// ============================================================================
 public function string.colorize(color color) returns string
   return color.toColorString() + this + "|r"
 
+// ============================================================================
 public function string.colorize(colorA color) returns string
   return color.toColorString() + this + "|r"
+
+// ============================================================================
+public function string.padLeft(int totalLength, string padStr) returns string
+  let strLength = this.length()
+  let padLength = padStr.length()
+  var result = ""
+  var remaining = totalLength - strLength
+  while (remaining > 0)
+    if (remaining > padLength)
+      result += padStr
+    else
+      result += padStr.substring(0, remaining)
+    remaining -= padLength
+  result += this
+  return result
+
+// ============================================================================
+public function string.padRight(int totalLength, string padStr) returns string
+  let strLength = this.length()
+  let padLength = padStr.length()
+  var result = this
+  var remaining = totalLength - strLength
+  while (remaining > 0)
+    if (remaining > padLength)
+      result += padStr
+    else
+      result += padStr.substring(0, remaining)
+    remaining -= padLength
+  return result
+
+// ============================================================================
+@test function padLeft_LessThanDesiredLength_OneCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padLeft(20, " ")
+
+  // Assert
+  paddedStr.length().assertEquals(20)
+  paddedStr.assertEquals("          HelloWorld")
+
+// ============================================================================
+@test function padLeft_LessThanDesiredLength_TwoCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padLeft(20, "--")
+
+  // Assert
+  paddedStr.length().assertEquals(20)
+  paddedStr.assertEquals("----------HelloWorld")
+
+// ============================================================================
+@test function padLeft_LessThanDesiredLength_ThreeCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padLeft(20, "+++")
+
+  // Assert
+  paddedStr.length().assertEquals(20)
+  paddedStr.assertEquals("++++++++++HelloWorld")
+
+// ============================================================================
+@test function padLeft_EqualToDesiredLength_OneCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padLeft(10, "!")
+
+  // Assert
+  paddedStr.length().assertEquals(10)
+  paddedStr.assertEquals("HelloWorld")
+  
+// ============================================================================
+@test function padRight_LessThanDesiredLength_OneCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padRight(20, " ")
+
+  // Assert
+  paddedStr.length().assertEquals(20)
+  paddedStr.assertEquals("HelloWorld          ")
+
+// ============================================================================
+@test function padRight_LessThanDesiredLength_TwoCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padRight(20, "--")
+
+  // Assert
+  paddedStr.length().assertEquals(20)
+  paddedStr.assertEquals("HelloWorld----------")
+
+// ============================================================================
+@test function padRight_LessThanDesiredLength_ThreeCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padRight(20, "+++")
+
+  // Assert
+  paddedStr.length().assertEquals(20)
+  paddedStr.assertEquals("HelloWorld++++++++++")
+
+// ============================================================================
+@test function padRight_EqualToDesiredLength_OneCharPad()
+  // Arrange
+  let initialStr = "HelloWorld"
+
+  // Act
+  let paddedStr = initialStr.padRight(10, "!")
+
+  // Assert
+  paddedStr.length().assertEquals(10)
+  paddedStr.assertEquals("HelloWorld")

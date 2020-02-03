@@ -38,6 +38,15 @@ public class CompositionManager implements IComposite
 
   // --------------------------------------------------------------------------
   @inline
+  override function removeComponent(IComponent component) returns bool
+    if (not _components.remove(component))
+      return false    
+    component.setEnabled(false)
+    destroy component
+    return true
+
+  // --------------------------------------------------------------------------
+  @inline
   override function getComponent(Type componentType) returns IComponent
     return _typeToComponentMap.get(componentType.id)
 

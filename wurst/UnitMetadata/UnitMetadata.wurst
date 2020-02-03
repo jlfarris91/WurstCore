@@ -37,7 +37,12 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   ondestroy
+    if (_compositionManager != null)
+      destroy _compositionManager
+      _compositionManager = null
+
     unregisterUnitMetadata(this)
+
     _unit = null
 
   // --------------------------------------------------------------------------
@@ -69,12 +74,21 @@ public class UnitMetadata implements IUnitMetadata
           unitComp.onUnitChanged(newUnit, oldUnit)
 
   // --------------------------------------------------------------------------
+  @inline
   override function addComponent(IComponent component) returns IComponent
     if (_compositionManager == null)
       _compositionManager = new CompositionManager()
     return _compositionManager.addComponent(component)
 
   // --------------------------------------------------------------------------
+  @inline
+  override function removeComponent(IComponent component) returns bool
+    if (_compositionManager == null)
+      return false
+    return _compositionManager.removeComponent(component)
+
+  // --------------------------------------------------------------------------
+  @inline
   override function getComponent(Type componentType) returns IComponent
     return _compositionManager != null ? _compositionManager.getComponent(componentType) : null
 
