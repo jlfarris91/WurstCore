@@ -13,7 +13,8 @@ public abstract class Component implements IComponent
 
   // --------------------------------------------------------------------------
   ondestroy
-    onDisabled()
+    if (_enabled)
+      onDisabled()
 
   // --------------------------------------------------------------------------
   override function getOwner() returns IComposite
@@ -37,9 +38,9 @@ public abstract class Component implements IComponent
     skip
 
   // --------------------------------------------------------------------------
-  function onEnabled()
+  protected function onEnabled()
     skip
 
   // --------------------------------------------------------------------------
-  function onDisabled()
+  protected function onDisabled()
     skip
