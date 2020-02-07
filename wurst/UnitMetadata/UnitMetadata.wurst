@@ -10,6 +10,7 @@ import Type
 import ErrorIf
 import ClosureEvents
 import initlater UnitComponent
+import UnitExtensions
 // import Reflection
 
 HashMap<unit, IUnitMetadata> g_unitMetadataMap
@@ -30,10 +31,6 @@ public interface IUnitMetadataFactory
 public class UnitMetadata implements IUnitMetadata
   protected unit _unit
   private CompositionManager _compositionManager
-
-  // --------------------------------------------------------------------------
-  construct(unit u)
-    setUnit(u)
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -115,11 +112,16 @@ public function unregisterUnitMetadataFactory(IUnitMetadataFactory factory)
 // ============================================================================
 public function constructUnitMetadata(unit u) returns IUnitMetadata
   ErrorIf.argumentIsNull(u, "u")
+  IUnitMetadata metadata = null
   for factory in g_unitMetadataFactories
     let uu = factory.createUnit(u)
     if (uu != null)
-      return uu
-  return new UnitMetadata(u)
+      metadata = uu
+      break
+  if (metadata == null)
+    metadata = new UnitMetadata()
+  metadata.setUnit(u)
+  return metadata
 
 // ============================================================================
 public function registerUnitMetadata(IUnitMetadata metadata)
@@ -151,7 +153,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   // else
   //   Log.info("replaceUnitTLS: no metadata exists for " + whichUnit.getName())
 
-  let newUnit = ReplaceUnitBJ(whichUnit, newUnitId, unitStateMethod)
+  let newUnit = replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod)
 
   if (existingMetadata != null)
     existingMetadata.setUnit(newUnit)
