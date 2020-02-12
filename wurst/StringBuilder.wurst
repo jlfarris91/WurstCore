@@ -1,7 +1,15 @@
 package StringBuilder
 
 // ============================================================================
-public class StringBuilder
+public interface IStringBuilder
+  function append(string str) returns IStringBuilder
+  function appendLine() returns IStringBuilder
+  function appendLine(string str) returns IStringBuilder
+  function reset() returns IStringBuilder
+  function toString() returns string
+
+// ============================================================================
+public class StringBuilder implements IStringBuilder
   private constant string NEW_LINE = "|n"
   private string m_string
 
@@ -14,26 +22,66 @@ public class StringBuilder
     m_string = initial
 
   // --------------------------------------------------------------------------
-  function append(string str) returns StringBuilder
+  override function append(string str) returns IStringBuilder
     m_string += str
     return this
 
   // --------------------------------------------------------------------------
-  function appendLine() returns StringBuilder
+  override function appendLine() returns IStringBuilder
     append(NEW_LINE)
     return this
 
   // --------------------------------------------------------------------------
-  function appendLine(string str) returns StringBuilder
+  override function appendLine(string str) returns IStringBuilder
     append(str)
     appendLine()
     return this
 
   // --------------------------------------------------------------------------
-  function reset() returns StringBuilder
+  override function reset() returns IStringBuilder
     m_string = ""
     return this
 
   // --------------------------------------------------------------------------
-  function toString() returns string
+  override function toString() returns string
     return m_string
+
+// ============================================================================
+public class LogStringBuilder implements IStringBuilder
+  private StringBuilder m_sb
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_sb = new StringBuilder()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_sb
+    m_sb = null
+
+  // --------------------------------------------------------------------------
+  override function append(string str) returns IStringBuilder
+    m_sb.append(str)
+    return this
+
+  // --------------------------------------------------------------------------
+  override function appendLine() returns IStringBuilder
+    Log.info(m_sb.toString())
+    m_sb.reset()
+    return this
+    
+  // --------------------------------------------------------------------------
+  override function appendLine(string str) returns IStringBuilder
+    m_sb.append(str)
+    Log.info(m_sb.toString())
+    m_sb.reset()
+    return this
+  
+  // --------------------------------------------------------------------------
+  override function reset() returns IStringBuilder
+    m_sb.reset()
+    return this
+
+  // --------------------------------------------------------------------------
+  override function toString() returns string
+    return m_sb.toString()
