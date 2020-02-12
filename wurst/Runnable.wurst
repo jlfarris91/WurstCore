@@ -78,7 +78,7 @@ public abstract class Runnable implements IRunnable
   protected function onResumed()
 
   // --------------------------------------------------------------------------
-  protected function getStatusString() returns string
+  function getStatusString() returns string
     if (getHasStarted())
       return getIsRunning() ? "Running" : "Paused"
     else
