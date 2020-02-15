@@ -8,14 +8,14 @@ public abstract class BuildingMetadata extends UnitMetadata
 
   // --------------------------------------------------------------------------
   ondestroy
-    unlistenToUnitConstructFinishEvent()
+    unlistenToUnitConstructedEvent()
 
   // --------------------------------------------------------------------------
   protected function onConstructed()
     skip
 
   // --------------------------------------------------------------------------
-  protected function listenToUnitConstructFinishEvent()
+  protected function listenToUnitConstructedEvent()
     if (m_unitConstructedEventHandler != null)
       return
     m_unitConstructedEventHandler= PlayerUnitEvents.unitConstructed.addListener() -> 
@@ -23,7 +23,7 @@ public abstract class BuildingMetadata extends UnitMetadata
         onConstructed()
 
   // --------------------------------------------------------------------------
-  protected function unlistenToUnitConstructFinishEvent()
+  protected function unlistenToUnitConstructedEvent()
     if (m_unitConstructedEventHandler == null)
       return
     PlayerUnitEvents.unitConstructed.removeListener(m_unitConstructedEventHandler)

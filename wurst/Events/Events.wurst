@@ -4,6 +4,15 @@ import public GenericEvent
 import public GenericArgsEvent
 import RegisterEvents
 import Orders
+import GameConstants
+
+trigger g_OnDayTrigger
+trigger g_OnNightTrigger
+
+// ============================================================================
+public class GameEvents
+  static AnonymousEvent dayStartEvent
+  static AnonymousEvent nightStartEvent
 
 // ============================================================================
 public class PlayerUnitEvents
@@ -62,6 +71,14 @@ function onUnitIssuedOrderTargettingUnit()
     onUnitUnloaded()
 
 // ============================================================================
+function onDayStart()
+  GameEvents.dayStartEvent.invoke()
+
+// ============================================================================
+function onNightStart()
+  GameEvents.nightStartEvent.invoke()
+
+// ============================================================================
 init
 
   PlayerUnitEvents.unitDamaged = new AnonymousEvent()
@@ -88,3 +105,13 @@ init
 
   PlayerUnitEvents.unitIssuedOrderTargettingUnit = new AnonymousEvent()
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_UNIT_ORDER, function onUnitIssuedOrderTargettingUnit)
+
+  GameEvents.dayStartEvent = new AnonymousEvent()
+  g_OnDayTrigger = CreateTrigger()
+  g_OnDayTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_DAY)
+  g_OnDayTrigger.addAction(function onDayStart)
+
+  GameEvents.nightStartEvent = new AnonymousEvent()
+  g_OnNightTrigger = CreateTrigger()
+  g_OnNightTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_NIGHT)
+  g_OnNightTrigger.addAction(function onNightStart)
