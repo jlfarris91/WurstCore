@@ -2,3 +2,89 @@ package Events
 import public AnonymousEvent
 import public GenericEvent
 import public GenericArgsEvent
+import RegisterEvents
+import Orders
+
+// ============================================================================
+public class PlayerUnitEvents
+  static AnonymousEvent unitDamaged
+  static AnonymousEvent unitConstructed
+  static AnonymousEvent unitKilled
+  static AnonymousEvent itemAcquired
+  static AnonymousEvent itemDropped
+  static AnonymousEvent unitLoaded
+  static AnonymousEvent unitUnloaded
+  static AnonymousEvent unitIssuedOrder
+  static AnonymousEvent unitIssuedOrderTargettingUnit
+
+// ============================================================================
+function onUnitDamaged()
+  PlayerUnitEvents.unitDamaged.invoke()
+
+// ============================================================================
+function onConstructFinish()
+  PlayerUnitEvents.unitConstructed.invoke()
+
+// ============================================================================
+function onUnitDeath()
+  PlayerUnitEvents.unitKilled.invoke()
+    
+// ============================================================================
+function onItemAcquired()
+  PlayerUnitEvents.itemAcquired.invoke()
+
+// ============================================================================
+function onItemDropped()
+  PlayerUnitEvents.itemDropped.invoke()
+
+// ============================================================================
+function onUnitLoaded()
+  PlayerUnitEvents.unitLoaded.invoke()
+
+// ============================================================================
+function onUnitUnloaded()
+  PlayerUnitEvents.unitUnloaded.invoke()
+
+// ============================================================================
+function onUnitIssuedOrder()
+  PlayerUnitEvents.unitIssuedOrder.invoke()
+
+  let orderId = GetIssuedOrderId()
+  if (orderId == OrderIds.unload or orderId == OrderIds.standdown)
+    onUnitUnloaded()
+
+// ============================================================================
+function onUnitIssuedOrderTargettingUnit()
+  PlayerUnitEvents.unitIssuedOrderTargettingUnit.invoke()
+
+  let orderId = GetIssuedOrderId()
+  if (orderId == OrderIds.unload or orderId == OrderIds.standdown)
+    onUnitUnloaded()
+
+// ============================================================================
+init
+
+  PlayerUnitEvents.unitDamaged = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DAMAGED, function onUnitDamaged)
+
+  PlayerUnitEvents.unitConstructed = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_FINISH, function onConstructFinish)
+
+  PlayerUnitEvents.unitKilled = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)
+  
+  PlayerUnitEvents.itemAcquired = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function onItemAcquired)
+
+  PlayerUnitEvents.itemDropped = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DROP_ITEM, function onItemDropped)
+  
+  PlayerUnitEvents.unitLoaded = new AnonymousEvent()
+  PlayerUnitEvents.unitUnloaded = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_LOADED, function onUnitLoaded)
+
+  PlayerUnitEvents.unitIssuedOrder = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function onUnitIssuedOrder)
+
+  PlayerUnitEvents.unitIssuedOrderTargettingUnit = new AnonymousEvent()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_UNIT_ORDER, function onUnitIssuedOrderTargettingUnit)

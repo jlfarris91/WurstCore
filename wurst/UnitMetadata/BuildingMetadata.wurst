@@ -1,0 +1,30 @@
+package BuildingMetadata
+import initlater UnitMetadata
+import Events
+
+// ============================================================================
+public abstract class BuildingMetadata extends UnitMetadata
+  private AnonymousEventHandler m_unitConstructedEventHandler
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    unlistenToUnitConstructFinishEvent()
+
+  // --------------------------------------------------------------------------
+  protected function onConstructed()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function listenToUnitConstructFinishEvent()
+    if (m_unitConstructedEventHandler != null)
+      return
+    m_unitConstructedEventHandler= PlayerUnitEvents.unitConstructed.addListener() -> 
+      if (GetConstructedStructure() == getUnit())
+        onConstructed()
+
+  // --------------------------------------------------------------------------
+  protected function unlistenToUnitConstructFinishEvent()
+    if (m_unitConstructedEventHandler == null)
+      return
+    PlayerUnitEvents.unitConstructed.removeListener(m_unitConstructedEventHandler)
+    m_unitConstructedEventHandler = null
