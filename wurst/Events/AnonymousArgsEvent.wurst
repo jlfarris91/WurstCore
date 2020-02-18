@@ -1,0 +1,45 @@
+package AnonymousArgsEvent
+import LinkedList
+
+// ============================================================================
+public abstract class AnonymousArgsEventHandler<TArgs>
+  bool _isMarkedForRemoval
+  abstract function call(TArgs args)
+  ondestroy
+    _isMarkedForRemoval = false
+
+// ============================================================================
+public class AnonymousArgsEvent<TArgs>
+  private LinkedList<AnonymousArgsEventHandler<TArgs>> _handlers
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (_handlers != null)
+      for handler in _handlers
+        destroy handler
+      destroy _handlers
+
+  // --------------------------------------------------------------------------
+  function addListener(AnonymousArgsEventHandler<TArgs> handler) returns AnonymousArgsEventHandler<TArgs>
+    if (handler == null)
+      return handler
+    if (_handlers == null)
+      _handlers = new LinkedList<AnonymousArgsEventHandler<TArgs>>()
+    _handlers.add(handler)
+    return handler
+
+  // --------------------------------------------------------------------------
+  function removeListener(AnonymousArgsEventHandler<TArgs> handler) returns AnonymousArgsEventHandler<TArgs>
+    if (handler != null and _handlers != null)
+      handler._isMarkedForRemoval = true
+    return null
+
+  // --------------------------------------------------------------------------
+  function invoke(TArgs args)
+    if (_handlers != null)
+      for handler in _handlers
+        if (handler._isMarkedForRemoval)
+          _handlers.remove(handler)
+          destroy handler
+        else
+          handler.call(args)

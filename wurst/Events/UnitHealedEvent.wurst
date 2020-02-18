@@ -1,0 +1,59 @@
+package UnitHealedEvent
+import UnitIndexer
+import initlater Events
+
+constant real HEAL_THRESHOLD = 5.0
+constant real INVALID_HP = -1
+real array g_lastKnownHP
+
+// ============================================================================
+public class UnitHealedEventArgs
+  private unit m_healedUnit
+  private real m_healedAmount
+
+  // --------------------------------------------------------------------------
+  construct(unit unitHealed, real healedAmount)
+    m_healedUnit = unitHealed
+    m_healedAmount = healedAmount
+
+  // --------------------------------------------------------------------------
+  function getHealedUnit() returns unit
+    return m_healedUnit
+
+  // --------------------------------------------------------------------------
+  function getAmountHealed() returns real
+    return m_healedAmount
+
+// ============================================================================
+public class UnitHealedEvent extends AnonymousArgsEvent<UnitHealedEventArgs>
+
+// ============================================================================
+function recordLastKnownHP(unit u)
+
+  let lastKnownHP = g_lastKnownHP[u.getIndex()]
+  let currentHP = u.getHP()
+
+  // Record current hp
+  g_lastKnownHP[u.getIndex()] = currentHP
+
+  if (lastKnownHP != INVALID_HP)
+    let deltaHP = currentHP - lastKnownHP
+
+    // Unit was healed
+    if (deltaHP > HEAL_THRESHOLD)
+      raiseUnitHealedEvent(u, deltaHP)
+
+// ============================================================================
+function clearLastKnownHP(unit u)
+  g_lastKnownHP[u.getIndex()] = INVALID_HP
+
+// ============================================================================
+function raiseUnitHealedEvent(unit unitHealed, real healedAmount)
+  let args = new UnitHealedEventArgs(unitHealed, healedAmount)
+  PlayerUnitEvents.unitHealed.invoke(args)
+  destroy args
+
+// ============================================================================
+init
+  onUnitIndex(() -> recordLastKnownHP(getIndexingUnit()))
+  onUnitDeindex(() -> clearLastKnownHP(getIndexingUnit()))
