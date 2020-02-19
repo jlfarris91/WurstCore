@@ -201,6 +201,9 @@ public function createUnitTLS(IUnitMetadata metadata, player owner, integer unit
 
   if (newUnit.hasMetadata())
     error("[createUnitTLS] Unit should not have metadata yet")
+    return null
+
+  metadata.attach(newUnit)
 
   Log.debug("[createUnitTLS] Reattached metadata from unit " + (oldUnit != null ? oldUnit.getName() : "null") + " to unit " + newUnit.getName())
 

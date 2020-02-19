@@ -5,7 +5,6 @@ import LinkedList
 import ClosureTimers
 
 constant real HEAL_THRESHOLD = 1.0
-constant real INVALID_HP = -1
 constant real UPDATE_INTERVAL = 0.1
 real array g_lastKnownHP
 unit array g_healSource
@@ -44,18 +43,21 @@ function updateLastKnownHP(unit u)
     onUnitDeindexed(u)
     return
 
-  let lastKnownHP = g_lastKnownHP[u.getIndex()]
+  let index = u.getIndex()
+  let lastKnownHP = g_lastKnownHP[index]
   let currentHP = u.getHP()
 
   // Record current hp
-  g_lastKnownHP[u.getIndex()] = currentHP
+  g_lastKnownHP[index] = currentHP
 
-  if (lastKnownHP != INVALID_HP)
-    let deltaHP = currentHP - lastKnownHP
+  if (lastKnownHP <= 0.0 or currentHP <= 0.0)
+    return
 
-    // Unit was healed
-    if (deltaHP > HEAL_THRESHOLD)
-      onUnitHealed(u, deltaHP)
+  let deltaHP = currentHP - lastKnownHP
+
+  // Unit was healed
+  if (deltaHP > HEAL_THRESHOLD)
+    onUnitHealed(u, deltaHP)
 
 // ============================================================================
 function onUnitHealed(unit u, real deltaHP)
@@ -71,7 +73,7 @@ function onUnitHealed(unit u, real deltaHP)
 
 // ============================================================================
 function clearLastKnownHP(unit u)
-  g_lastKnownHP[u.getIndex()] = INVALID_HP
+  g_lastKnownHP[u.getIndex()] = -1.0
 
 // ============================================================================
 public function recordHealingAction(unit source, unit target)
@@ -95,7 +97,6 @@ function updateTrackedUnits()
 function onUnitIndexed(unit u)
   if (not u.isInvulnerable())
     g_trackedUnits.add(u)
-    g_lastKnownHP[u.getIndex()] = u.getHP()
 
 // ============================================================================
 function onUnitDeindexed(unit u)
