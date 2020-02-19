@@ -66,13 +66,14 @@ public class LogStringBuilder implements IStringBuilder
 
   // --------------------------------------------------------------------------
   override function appendLine() returns IStringBuilder
+    m_sb.appendLine()
     Log.info(m_sb.toString())
     m_sb.reset()
     return this
     
   // --------------------------------------------------------------------------
   override function appendLine(string str) returns IStringBuilder
-    m_sb.append(str)
+    m_sb.appendLine(str)
     Log.info(m_sb.toString())
     m_sb.reset()
     return this

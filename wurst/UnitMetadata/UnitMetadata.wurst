@@ -42,6 +42,7 @@ public class UnitMetadata implements IUnitMetadata
     m_unit = null
 
   // --------------------------------------------------------------------------
+  @inline
   override function getUnit() returns unit
     return m_unit
 
