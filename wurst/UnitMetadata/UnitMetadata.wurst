@@ -85,7 +85,7 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   function onKilled()
-    skip
+    setAllComponentsEnabled(false)
 
   // --------------------------------------------------------------------------
   protected function onUnitChanged(unit oldUnit, unit newUnit)
@@ -93,16 +93,15 @@ public class UnitMetadata implements IUnitMetadata
       for comp in m_compositionManager
         let unitComp = comp castTo UnitComponent
         if (unitComp != null)
-          unitComp.onUnitChanged(newUnit, oldUnit)
+          unitComp.onUnitChanged(oldUnit, newUnit)
 
   // --------------------------------------------------------------------------
   private function setUnit(unit u)
     let oldUnit = m_unit
     let newUnit = u
-    m_unit = newUnit
-    onUnitChanged(oldUnit, newUnit)
-    // if (oldUnit != null)
-    //   Log.debug(typeIdToTypeName(this.typeId) + " replaced " + I2S(oldUnit.getTypeId()) + " with " + I2S(newUnit.getTypeId()))
+    if (oldUnit != newUnit)
+      m_unit = newUnit
+      onUnitChanged(oldUnit, newUnit)
 
   // --------------------------------------------------------------------------
   @inline
@@ -141,6 +140,12 @@ public class UnitMetadata implements IUnitMetadata
       return
     PlayerUnitEvents.unitDamaged.removeListener(m_unitDamagedEventHandler)
     m_unitDamagedEventHandler = null
+
+  // --------------------------------------------------------------------------
+  private function setAllComponentsEnabled(bool enabled)
+    if (m_compositionManager != null)
+      for comp in m_compositionManager
+        comp.setEnabled(enabled)
 
 // ============================================================================
 public function unit.hasMetadata() returns bool

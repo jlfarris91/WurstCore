@@ -20,5 +20,5 @@ public abstract class UnitComponent extends Component
     return m_owner.getUnit()
 
   // --------------------------------------------------------------------------
-  function onUnitChanged(unit _newUnit, unit _oldUnit)
+  function onUnitChanged(unit _oldUnit, unit _newUnit)
     skip
