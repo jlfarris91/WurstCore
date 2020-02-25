@@ -194,6 +194,10 @@ public function createUnitTLS(player owner, integer unitId, real x, real y, real
   return CreateUnit(owner, unitId, x, y, face)
 
 // ============================================================================
+public function createUnitTLS(player owner, integer unitId, vec2 pos, real face) returns unit
+  return CreateUnit(owner, unitId, pos.x, pos.y, face)
+
+// ============================================================================
 public function createUnitTLS(IUnitMetadata metadata, player owner, integer unitId, real x, real y, real face) returns unit
   ErrorIf.argumentIsNull(metadata, "metadata")
 
