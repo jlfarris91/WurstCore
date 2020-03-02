@@ -13,7 +13,7 @@ import UnitIndexer
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
-int g_ignoreIndexingCounter
+int array g_ignoreIndexingCounter
 
 // ============================================================================
 public interface IUnitMetadata extends IComposite
@@ -204,9 +204,9 @@ public function createUnitTLS(IUnitMetadata metadata, player owner, integer unit
   let oldUnit = metadata.getUnit()
   metadata.detach()
 
-  startIgnoreIndexing()
+  startIgnoreIndexing(owner)
   let newUnit = CreateUnit(owner, unitId, x, y, face)
-  stopIgnoreIndexing()
+  stopIgnoreIndexing(owner)
 
   if (newUnit.hasMetadata())
     error("[createUnitTLS] Unit should not have metadata yet")
@@ -224,10 +224,11 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
 
   let oldUnitName = whichUnit.getName()
   let existingMetadata = whichUnit.getMetadata()
+  let owningPlayer = whichUnit.getOwner()
 
   if (existingMetadata != null)
     existingMetadata.detach()
-    startIgnoreIndexing()
+    startIgnoreIndexing(owningPlayer)
   else
     Log.debug("[replaceUnitTLS] Replacing unit " + whichUnit.getName() + " with no attached metadata")
 
@@ -237,7 +238,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
     error("Unit should not have metadata yet")
   
   if (existingMetadata != null)
-    stopIgnoreIndexing()
+    stopIgnoreIndexing(owningPlayer)
     existingMetadata.attach(newUnit)
 
   Log.debug("[replaceUnitTLS] Reattached metadata from unit " + oldUnitName + " to unit " + newUnit.getName())
@@ -257,7 +258,7 @@ function onUnitKilled()
 
 // ============================================================================
 function onUnitIndexed(unit indexingUnit)
-  if (isIgnoringIndexing())
+  if (isIgnoringIndexing(indexingUnit.getOwner()))
     Log.debug("[onUnitIndexed] Ignoring indexed unit")
     return
 
@@ -275,7 +276,7 @@ function onUnitIndexed(unit indexingUnit)
 
 // ============================================================================
 function onUnitDeindexed(unit indexingUnit)
-  if (isIgnoringIndexing())
+  if (isIgnoringIndexing(indexingUnit.getOwner()))
     Log.debug("[onUnitDeindexed] Ignoring deindexed unit")
     return
 
@@ -289,23 +290,25 @@ function onUnitDeindexed(unit indexingUnit)
   g_unitMetadatas[index] = null
 
 // ============================================================================
-public function startIgnoreIndexing()
-  g_ignoreIndexingCounter++
-  Log.debug("Start ignoring indexing " + I2S(g_ignoreIndexingCounter))
+public function startIgnoreIndexing(player p)
+  g_ignoreIndexingCounter[p.getId()]++
+  Log.debug("Start ignoring indexing " + I2S(g_ignoreIndexingCounter[p.getId()]))
 
 // ============================================================================
-public function stopIgnoreIndexing()
-  g_ignoreIndexingCounter--
-  Log.debug("Stop ignoring indexing " + I2S(g_ignoreIndexingCounter))
+public function stopIgnoreIndexing(player p)
+  g_ignoreIndexingCounter[p.getId()]--
+  Log.debug("Stop ignoring indexing " + I2S(g_ignoreIndexingCounter[p.getId()]))
 
 // ============================================================================
-public function isIgnoringIndexing() returns bool
-  return g_ignoreIndexingCounter > 0
+public function isIgnoringIndexing(player p) returns bool
+  return g_ignoreIndexingCounter[p.getId()] > 0
 
 // ============================================================================
 init
   g_unitMetadataFactories = new LinkedList<IUnitMetadataFactory>()
-  g_ignoreIndexingCounter = 0
+
+  for i = 0 to 24
+    g_ignoreIndexingCounter[i] = 0
 
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitKilled)
 
