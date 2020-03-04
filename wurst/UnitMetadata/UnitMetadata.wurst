@@ -88,20 +88,42 @@ public class UnitMetadata implements IUnitMetadata
     setAllComponentsEnabled(false)
 
   // --------------------------------------------------------------------------
-  protected function onUnitChanged(unit oldUnit, unit newUnit)
-    if (m_compositionManager != null)
-      for comp in m_compositionManager
-        let unitComp = comp castTo UnitComponent
-        if (unitComp != null)
-          unitComp.onUnitChanged(oldUnit, newUnit)
+  protected function onUnitChanged(unit _oldUnit, unit _newUnit)
+    skip
 
   // --------------------------------------------------------------------------
   private function setUnit(unit u)
     let oldUnit = m_unit
     let newUnit = u
     if (oldUnit != newUnit)
-      m_unit = newUnit
-      onUnitChanged(oldUnit, newUnit)
+      changeUnit(oldUnit, newUnit)
+
+  // --------------------------------------------------------------------------
+  private function changeUnit(unit oldUnit, unit newUnit)
+
+    // Disable and then re-enable any components that were enabled and operated
+    // under the context of the old unit
+    LinkedList<IComponent> enabledComponents = null
+    if (m_compositionManager != null)
+      enabledComponents = new LinkedList<IComponent>()
+      for comp in m_compositionManager
+        if (comp.getEnabled())
+          enabledComponents.add(comp)
+          comp.setEnabled(false)
+
+    m_unit = newUnit
+    onUnitChanged(oldUnit, newUnit)
+
+    // Now that the backing field for getUnit() has changed, re-enable any
+    // components that were enabled with the old unit, also alert them
+    if (enabledComponents != null)
+      for comp in enabledComponents
+        comp.setEnabled(true)
+        let unitComp = comp castTo UnitComponent
+        if (unitComp != null)
+          unitComp.onUnitChanged(oldUnit, newUnit)
+
+      destroy enabledComponents
 
   // --------------------------------------------------------------------------
   @inline
