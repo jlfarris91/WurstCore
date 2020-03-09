@@ -27,8 +27,6 @@ public class MulticastFunc<TReturn> implements Func<TReturn>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
@@ -63,8 +61,6 @@ public class MulticastFunc1<TArg, TReturn> implements Func1<TArg, TReturn>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
@@ -99,8 +95,6 @@ public class MulticastFunc2<TArg1, TArg2, TReturn> implements Func2<TArg1, TArg2
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
@@ -135,8 +129,6 @@ public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> implements Func3<TArg1
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------

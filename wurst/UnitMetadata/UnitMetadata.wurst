@@ -207,6 +207,7 @@ public function constructUnitMetadata(unit u) returns IUnitMetadata
       break
   if (metadata == null)
     metadata = new UnitMetadata()
+    Log.warn("No unit metadata factory handled unit " + u.getName() + ". defaulting to UnitMetadata")
   metadata.attach(u)
   return metadata
 

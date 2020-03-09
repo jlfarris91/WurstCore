@@ -27,8 +27,6 @@ public class MulticastAction implements Action
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
@@ -61,8 +59,6 @@ public class MulticastAction1<TArg1> implements Action1<TArg1>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
@@ -95,8 +91,6 @@ public class MulticastAction2<TArg1, TArg2> implements Action2<TArg1, TArg2>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
@@ -129,8 +123,6 @@ public class MulticastAction3<TArg1, TArg2, TArg3> implements Action3<TArg1, TAr
 
   // --------------------------------------------------------------------------
   ondestroy
-    for impl in m_invocationList
-      destroy impl
     destroy m_invocationList
 
   // --------------------------------------------------------------------------
