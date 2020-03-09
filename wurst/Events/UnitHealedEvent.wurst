@@ -85,7 +85,7 @@ public function recordHealingAction(unit source, unit target)
 // ============================================================================
 function raiseUnitHealedEvent(unit healingSource, unit unitHealed, real healedAmount)
   let args = new UnitHealedEventArgs(healingSource, unitHealed, healedAmount)
-  PlayerUnitEvents.unitHealed.invoke(args)
+  PlayerUnitEvents.unitHealed.call(args)
   destroy args
 
 // ============================================================================

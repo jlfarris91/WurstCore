@@ -1,25 +1,162 @@
 package Func
+import LinkedList
 
 // ============================================================================
 public interface Func<TReturn>
-  function execute() returns TReturn
+  function call() returns TReturn
 
 // ============================================================================
 public interface Func1<TArg, TReturn>
-  function execute(TArg arg) returns TReturn
+  function call(TArg arg) returns TReturn
 
 // ============================================================================
 public interface Func2<TArg1, TArg2, TReturn>
-  function execute(TArg1 arg1, TArg2 arg2) returns TReturn
+  function call(TArg1 arg1, TArg2 arg2) returns TReturn
 
 // ============================================================================
 public interface Func3<TArg1, TArg2, TArg3, TReturn>
-  function execute(TArg1 arg1, TArg2 arg2, TArg3 arg3) returns TReturn
+  function call(TArg1 arg1, TArg2 arg2, TArg3 arg3) returns TReturn
 
 // ============================================================================
-public interface Func4<TArg1, TArg2, TArg3, TArg4, TReturn>
-  function execute(TArg1 arg1, TArg2 arg2, TArg3 arg3, TArg4 arg4) returns TReturn
+public class MulticastFunc<TReturn> implements Func<TReturn>
+  private LinkedList<Func<TReturn>> m_invocationList
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationList = new LinkedList<Func<TReturn>>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for impl in m_invocationList
+      destroy impl
+    destroy m_invocationList
+
+  // --------------------------------------------------------------------------
+  function iterator() returns LLIterator<Func<TReturn>>
+    return m_invocationList.iterator()
+
+  // --------------------------------------------------------------------------
+  function add(Func<TReturn> func) returns Func<TReturn>
+    m_invocationList.add(func)
+    return func
+
+  // --------------------------------------------------------------------------
+  function remove(Func<TReturn> func) returns bool
+    return m_invocationList.remove(func)
+
+  // --------------------------------------------------------------------------
+  override function call() returns TReturn
+    let invocations = m_invocationList.copy()
+    TReturn result = null
+    for impl in invocations
+      result = impl.call()
+    destroy invocations
+    return result
 
 // ============================================================================
-public interface Func5<TArg1, TArg2, TArg3, TArg4, TArg5, TReturn>
-  function execute(TArg1 arg1, TArg2 arg2, TArg3 arg3, TArg4 arg4, TArg5 arg5) returns TReturn
+public class MulticastFunc1<TArg, TReturn> implements Func1<TArg, TReturn>
+  private LinkedList<Func1<TArg, TReturn>> m_invocationList
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationList = new LinkedList<Func1<TArg, TReturn>>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for impl in m_invocationList
+      destroy impl
+    destroy m_invocationList
+
+  // --------------------------------------------------------------------------
+  function iterator() returns LLIterator<Func1<TArg, TReturn>>
+    return m_invocationList.iterator()
+
+  // --------------------------------------------------------------------------
+  function add(Func1<TArg, TReturn> func) returns Func1<TArg, TReturn>
+    m_invocationList.add(func)
+    return func
+
+  // --------------------------------------------------------------------------
+  function remove(Func1<TArg, TReturn> func) returns bool
+    return m_invocationList.remove(func)
+
+  // --------------------------------------------------------------------------
+  override function call(TArg arg) returns TReturn
+    let invocations = m_invocationList.copy()
+    TReturn result = null
+    for impl in invocations
+      result = impl.call(arg)
+    destroy invocations
+    return result
+
+// ============================================================================
+public class MulticastFunc2<TArg1, TArg2, TReturn> implements Func2<TArg1, TArg2, TReturn>
+  private LinkedList<Func2<TArg1, TArg2, TReturn>> m_invocationList
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationList = new LinkedList<Func2<TArg1, TArg2, TReturn>>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for impl in m_invocationList
+      destroy impl
+    destroy m_invocationList
+
+  // --------------------------------------------------------------------------
+  function iterator() returns LLIterator<Func2<TArg1, TArg2, TReturn>>
+    return m_invocationList.iterator()
+
+  // --------------------------------------------------------------------------
+  function add(Func2<TArg1, TArg2, TReturn> func) returns Func2<TArg1, TArg2, TReturn>
+    m_invocationList.add(func)
+    return func
+
+  // --------------------------------------------------------------------------
+  function remove(Func2<TArg1, TArg2, TReturn> func) returns bool
+    return m_invocationList.remove(func)
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1, TArg2 arg2) returns TReturn
+    let invocations = m_invocationList.copy()
+    TReturn result = null
+    for impl in invocations
+      result = impl.call(arg1, arg2)
+    destroy invocations
+    return result
+
+// ============================================================================
+public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> implements Func3<TArg1, TArg2, TArg3, TReturn>
+  private LinkedList<Func3<TArg1, TArg2, TArg3, TReturn>> m_invocationList
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationList = new LinkedList<Func3<TArg1, TArg2, TArg3, TReturn>>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for impl in m_invocationList
+      destroy impl
+    destroy m_invocationList
+
+  // --------------------------------------------------------------------------
+  function iterator() returns LLIterator<Func3<TArg1, TArg2, TArg3, TReturn>>
+    return m_invocationList.iterator()
+
+  // --------------------------------------------------------------------------
+  function add(Func3<TArg1, TArg2, TArg3, TReturn> func) returns Func3<TArg1, TArg2, TArg3, TReturn>
+    m_invocationList.add(func)
+    return func
+
+  // --------------------------------------------------------------------------
+  function remove(Func3<TArg1, TArg2, TArg3, TReturn> func) returns bool
+    return m_invocationList.remove(func)
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1, TArg2 arg2, TArg3 arg3) returns TReturn
+    let invocations = m_invocationList.copy()
+    TReturn result = null
+    for impl in invocations
+      result = impl.call(arg1, arg2, arg3)
+    destroy invocations
+    return result

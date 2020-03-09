@@ -29,7 +29,7 @@ public interface IUnitMetadataFactory
 public class UnitMetadata implements IUnitMetadata
   protected unit m_unit
   private CompositionManager m_compositionManager
-  private AnonymousEventHandler m_unitDamagedEventHandler
+  private Action m_unitDamagedEventHandler
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -150,18 +150,17 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   protected function listenToUnitDamagedEvent()
-    if (m_unitDamagedEventHandler != null)
-      return
-    m_unitDamagedEventHandler= PlayerUnitEvents.unitDamaged.addListener() -> 
-      if (GetEventDamageSource() == getUnit())
-        onDamaged()
+    if (m_unitDamagedEventHandler == null)
+      m_unitDamagedEventHandler = PlayerUnitEvents.unitDamaged.add() -> 
+        if (GetEventDamageSource() == getUnit())
+          onDamaged()
 
   // --------------------------------------------------------------------------
   protected function unlistenToUnitDamagedEvent()
-    if (m_unitDamagedEventHandler == null)
-      return
-    PlayerUnitEvents.unitDamaged.removeListener(m_unitDamagedEventHandler)
-    m_unitDamagedEventHandler = null
+    if (m_unitDamagedEventHandler != null)
+      PlayerUnitEvents.unitDamaged.remove(m_unitDamagedEventHandler)
+      destroy m_unitDamagedEventHandler
+      m_unitDamagedEventHandler = null
 
   // --------------------------------------------------------------------------
   private function setAllComponentsEnabled(bool enabled)

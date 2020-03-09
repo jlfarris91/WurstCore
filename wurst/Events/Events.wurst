@@ -32,35 +32,35 @@ public class PlayerUnitEvents
 
 // ============================================================================
 function onUnitDamaged()
-  PlayerUnitEvents.unitDamaged.invoke()
+  PlayerUnitEvents.unitDamaged.call()
 
 // ============================================================================
 function onConstructFinish()
-  PlayerUnitEvents.unitConstructed.invoke()
+  PlayerUnitEvents.unitConstructed.call()
 
 // ============================================================================
 function onUnitDeath()
-  PlayerUnitEvents.unitKilled.invoke()
+  PlayerUnitEvents.unitKilled.call()
     
 // ============================================================================
 function onItemAcquired()
-  PlayerUnitEvents.itemAcquired.invoke()
+  PlayerUnitEvents.itemAcquired.call()
 
 // ============================================================================
 function onItemDropped()
-  PlayerUnitEvents.itemDropped.invoke()
+  PlayerUnitEvents.itemDropped.call()
 
 // ============================================================================
 function onUnitLoaded()
-  PlayerUnitEvents.unitLoaded.invoke()
+  PlayerUnitEvents.unitLoaded.call()
 
 // ============================================================================
 function onUnitUnloaded()
-  PlayerUnitEvents.unitUnloaded.invoke()
+  PlayerUnitEvents.unitUnloaded.call()
 
 // ============================================================================
 function onUnitIssuedOrder()
-  PlayerUnitEvents.unitIssuedOrder.invoke()
+  PlayerUnitEvents.unitIssuedOrder.call()
 
   let orderId = GetIssuedOrderId()
   if (orderId == OrderIds.unload or orderId == OrderIds.standdown)
@@ -68,7 +68,7 @@ function onUnitIssuedOrder()
 
 // ============================================================================
 function onUnitIssuedOrderTargettingUnit()
-  PlayerUnitEvents.unitIssuedOrderTargettingUnit.invoke()
+  PlayerUnitEvents.unitIssuedOrderTargettingUnit.call()
 
   let orderId = GetIssuedOrderId()
   if (orderId == OrderIds.unload or orderId == OrderIds.standdown)
@@ -76,11 +76,11 @@ function onUnitIssuedOrderTargettingUnit()
 
 // ============================================================================
 function onDayStart()
-  GameEvents.dayStartEvent.invoke()
+  GameEvents.dayStartEvent.call()
 
 // ============================================================================
 function onNightStart()
-  GameEvents.nightStartEvent.invoke()
+  GameEvents.nightStartEvent.call()
 
 // ============================================================================
 init

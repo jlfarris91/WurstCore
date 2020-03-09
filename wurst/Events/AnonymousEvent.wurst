@@ -1,49 +1,10 @@
 package AnonymousEvent
-import LinkedList
+import public Action
 
 // ============================================================================
-public abstract class AnonymousEventHandler
-  bool _isMarkedForRemoval
-  abstract function call()
-  ondestroy
-    _isMarkedForRemoval = false
+public class AnonymousEvent extends MulticastAction
 
 // ============================================================================
-public class AnonymousEvent
-  private LinkedList<AnonymousEventHandler> _handlers
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (_handlers != null)
-      for handler in _handlers
-        destroy handler
-      destroy _handlers
-
-  // --------------------------------------------------------------------------
-  function addListener(AnonymousEventHandler handler) returns AnonymousEventHandler
-    if (handler == null)
-      return handler
-    if (_handlers == null)
-      _handlers = new LinkedList<AnonymousEventHandler>()
-    _handlers.add(handler)
-    return handler
-
-  // --------------------------------------------------------------------------
-  function removeListener(AnonymousEventHandler handler) returns AnonymousEventHandler
-    if (handler != null and _handlers != null)
-      handler._isMarkedForRemoval = true
-    return null
-
-  // --------------------------------------------------------------------------
-  function invoke()
-    if (_handlers != null)
-      for handler in _handlers
-        if (handler._isMarkedForRemoval)
-          _handlers.remove(handler)
-          destroy handler
-        else
-          handler.call()
-    
 class Counter
   int value
 
@@ -57,10 +18,10 @@ function invoke_CallsAddedHandler()
   let counter = new Counter()
 
   // act
-  let cb = ev.addListener() () ->
+  let cb = ev.add() () ->
     counter.value++
 
-  ev.invoke()
+  ev.call()
 
   // assert
   assertTrue(cb != null)
@@ -72,16 +33,16 @@ function invoke_DoesNotCallRemovedHandler()
   let ev = new AnonymousEvent()
   var counter = new Counter()
 
-  var cb = ev.addListener() () ->
+  let cb = ev.add() () ->
     counter.value++
 
-  cb = ev.removeListener(cb)
+  ev.remove(cb)
+  destroy cb
 
   // act
-  ev.invoke()
+  ev.call()
 
   // assert
-  assertTrue(cb == null)
   assertTrue(counter.value == 0)
 
 @test
@@ -90,16 +51,18 @@ function invoke_DoesNotCallReremovedHandler()
   let ev = new AnonymousEvent()
   var counter = new Counter()
 
-  var cb = ev.addListener() () ->
+  let cb = ev.add() () ->
     counter.value++
 
   // act
-  ev.invoke()
-  cb = ev.removeListener(cb)
-  ev.invoke()
+  ev.call()
+  
+  ev.remove(cb)
+  destroy cb
+
+  ev.call()
 
   // assert
-  assertTrue(cb == null)
   assertTrue(counter.value == 1)
 
 @test
@@ -108,18 +71,19 @@ function invoke_CallsReaddedHandler()
   let ev = new AnonymousEvent()
   var counter = new Counter()
 
-  var cb = ev.addListener() () ->
+  var cb = ev.add() () ->
     counter.value++
   
-  ev.removeListener(cb)
+  ev.remove(cb)
+  destroy cb
 
-  ev.invoke()
+  ev.call()
 
   // act
-  cb = ev.addListener() () ->
+  cb = ev.add() () ->
     counter.value += 10
 
-  ev.invoke()
+  ev.call()
 
   // assert
   assertTrue(cb != null)
@@ -131,14 +95,14 @@ function invoke_CallsMultipleHandlersInOrder()
   let ev = new AnonymousEvent()
   var s = new String()
 
-  let cb1 = ev.addListener() () ->
+  let cb1 = ev.add() () ->
     s.value += "Hello"
   
-  let cb2 = ev.addListener() () ->
+  let cb2 = ev.add() () ->
     s.value += " World!"
 
   // act
-  ev.invoke()
+  ev.call()
 
   // assert
   assertTrue(cb1 != null)
