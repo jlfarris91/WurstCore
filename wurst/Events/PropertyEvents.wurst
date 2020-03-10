@@ -1,0 +1,32 @@
+package PropertyEvents
+import Events
+
+// ============================================================================
+public class PropertyChangingEventArgs<TValue>
+  private string m_propertyName
+  private TValue m_oldValue
+  private TValue m_newValue
+
+  // --------------------------------------------------------------------------
+  construct(string propertyName, TValue oldValue, TValue newValue)
+    m_propertyName = propertyName
+    m_oldValue = oldValue
+    m_newValue = newValue
+
+  // --------------------------------------------------------------------------
+  function getPropertyName() returns string
+    return m_propertyName
+
+  // --------------------------------------------------------------------------
+  function getOldValue() returns TValue
+    return m_oldValue
+
+  // --------------------------------------------------------------------------
+  function getNewValue() returns TValue
+    return m_newValue
+
+// ============================================================================
+public class PropertyChangingEvent<TSender, TValue> extends GenericArgsEvent<TSender, PropertyChangingEventArgs<TValue>>
+
+// ============================================================================
+public class PropertyChangedEvent<TSender> extends GenericArgsEvent<TSender, string>

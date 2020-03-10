@@ -1,0 +1,81 @@
+package Union
+import ErrorHandling
+
+// ============================================================================
+public enum UnionType
+  String
+  Real
+  Int
+  Bool
+
+// ============================================================================
+public class Union
+  private UnionType m_type
+  private string m_value
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_type = UnionType.String
+    m_value = ""
+
+  // --------------------------------------------------------------------------
+  function getType() returns UnionType
+    return m_type
+    
+  // --------------------------------------------------------------------------
+  function getString() returns string
+    if (getType() != UnionType.String)
+      error("Expected union to be type String")
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function setString(string value)
+    m_type = UnionType.String
+    m_value = value
+
+  // --------------------------------------------------------------------------
+  function getReal() returns real
+    if (getType() != UnionType.Real)
+      error("Expected union to be type Real")
+    return m_value.toReal()
+
+  // --------------------------------------------------------------------------
+  function setReal(real value)
+    m_type = UnionType.Real
+    m_value = value.toString()
+    
+  // --------------------------------------------------------------------------
+  function getInt() returns int
+    if (getType() != UnionType.Int)
+      error("Expected union to be type Int")
+    return m_value.toInt()
+
+  // --------------------------------------------------------------------------
+  function setInt(int value)
+    m_type = UnionType.Int
+    m_value = value.toString()
+    
+  // --------------------------------------------------------------------------
+  function getBool() returns bool
+    if (getType() != UnionType.Bool)
+      error("Expected union to be type Bool")
+    return m_value.toBool()
+
+  // --------------------------------------------------------------------------
+  function setBool(bool value)
+    m_type = UnionType.Bool
+    m_value = value.toString()
+
+  // --------------------------------------------------------------------------
+  function clone() returns Union
+    let clone = new Union()
+    switch (m_type)
+      case UnionType.String
+        clone.setString(getString())
+      case UnionType.Real
+        clone.setReal(getReal())
+      case UnionType.Int
+        clone.setInt(getInt())
+      case UnionType.Bool
+        clone.setBool(getBool())
+    return clone

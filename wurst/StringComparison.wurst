@@ -1,0 +1,73 @@
+package StringComparison
+import LinkedList
+
+public StringComparator stringComparator
+
+// ============================================================================
+public class StringComparator implements Comparator<string>
+
+  // --------------------------------------------------------------------------
+  override function compare(string string1, string string2) returns int
+    let len1 = string1.length()
+    let len2 = string2.length()
+    let maxLen = max(len1, len2)
+    
+    for i = 0 to maxLen
+      // Reached the end of string1 before string2
+      if (i == len1 and len1 != len2)
+        return -1
+
+      // Reached the end of string2 before string1
+      if (i == len2 and len1 != len2)
+        return 1
+
+      let c1 = string1.charAt(i)
+      let c2 = string2.charAt(i)
+
+      if (c1 != c2)
+        let charInt1 = c1.toCharsetInt()
+        let charInt2 = c2.toCharsetInt()
+        if (charInt1 == -1)
+          return -1
+        if (charInt2 == -1)
+          return -1
+        if (charInt1 < charInt2)
+          return -1
+        if (charInt1 > charInt2)
+          return 1
+
+    return 0
+
+// ============================================================================
+init
+  stringComparator = new StringComparator()
+
+
+// ============================================================================
+@test function test1()
+  let comparator = new StringComparator()
+  
+  comparator.compare("a", "b").assertEquals(-1)
+  comparator.compare("a", "a").assertEquals(0)
+  comparator.compare("b", "a").assertEquals(1)
+
+  // Lowercase letters come before capital letters
+  comparator.compare("b", "B").assertEquals(-1)
+  comparator.compare("A", "A").assertEquals(0)
+  comparator.compare("A", "a").assertEquals(1)
+
+  comparator.compare("Hello World!", "Hello World!").assertEquals(0)
+  comparator.compare("Animal", "Apple").assertEquals(-1)
+  comparator.compare("Bat", "Banana").assertEquals(1)
+
+  comparator.compare("Foo", "Foobar").assertEquals(-1)
+  comparator.compare("Foobar", "Foo").assertEquals(1)
+
+  comparator.compare("123", "456").assertEquals(-1)
+  comparator.compare("123", "123").assertEquals(0)
+  comparator.compare("456", "123").assertEquals(1)
+
+  // Non-charset chars always return -1
+  comparator.compare("@@@", "!!!").assertEquals(-1)
+  comparator.compare("!!!", "@@@").assertEquals(-1)
+  comparator.compare("$", "%").assertEquals(-1)

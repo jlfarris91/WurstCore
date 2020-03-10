@@ -18,7 +18,7 @@ public interface IEnumerable<TElement>
 public function IEnumerable<TSource>.forEach<TSource>(Action1<TSource> action)
   let iter = this.iterator()
   while (iter.hasNext())
-    action.execute(iter.next())
+    action.call(iter.next())
   destroy iter
   destroy action
 
@@ -27,7 +27,7 @@ public function IEnumerable<TSource>.forEach<TSource>(Action2<int, TSource> acti
   let iter = this.iterator()
   var index = 0
   while (iter.hasNext())
-    action.execute(index, iter.next())
+    action.call(index, iter.next())
     index++
   destroy iter
   destroy action

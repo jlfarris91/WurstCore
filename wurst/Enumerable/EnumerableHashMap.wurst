@@ -38,7 +38,7 @@ public function IEnumerable<TSource>.toHashMap<TSource, TKey>(Func1<TSource, TKe
   let result = new HashMap<TKey, TSource>()
   while iter.hasNext()
     let value = iter.next()
-    let key = keySelector.execute(value)
+    let key = keySelector.call(value)
     result.put(key, value)
   destroy iter
   return result
@@ -49,8 +49,8 @@ public function IEnumerable<TSource>.toHashMap<TSource, TKey, TValue>(Func1<TSou
   let result = new HashMap<TKey, TValue>()
   while iter.hasNext()
     let element = iter.next()
-    let key = keySelector.execute(element)
-    let value = valueSelector.execute(element)
+    let key = keySelector.call(element)
+    let value = valueSelector.call(element)
     result.put(key, value)
   destroy iter
   return result
