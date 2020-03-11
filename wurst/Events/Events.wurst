@@ -15,7 +15,9 @@ trigger g_OnNightTrigger
 // ============================================================================
 public class GameEvents
   static AnonymousEvent dayStartEvent
+  static AnonymousEvent dayEndEvent
   static AnonymousEvent nightStartEvent
+  static AnonymousEvent nightEndEvent
 
 // ============================================================================
 public class PlayerUnitEvents
@@ -77,10 +79,12 @@ function onUnitIssuedOrderTargettingUnit()
 // ============================================================================
 function onDayStart()
   GameEvents.dayStartEvent.call()
+  GameEvents.nightEndEvent.call()
 
 // ============================================================================
 function onNightStart()
   GameEvents.nightStartEvent.call()
+  GameEvents.dayEndEvent.call()
 
 // ============================================================================
 init
@@ -113,11 +117,13 @@ init
   PlayerUnitEvents.unitHealed = new UnitHealedEvent()
 
   GameEvents.dayStartEvent = new AnonymousEvent()
+  GameEvents.dayEndEvent = new AnonymousEvent()
   g_OnDayTrigger = CreateTrigger()
   g_OnDayTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_DAY)
   g_OnDayTrigger.addAction(function onDayStart)
 
   GameEvents.nightStartEvent = new AnonymousEvent()
+  GameEvents.nightEndEvent = new AnonymousEvent()
   g_OnNightTrigger = CreateTrigger()
   g_OnNightTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_NIGHT)
   g_OnNightTrigger.addAction(function onNightStart)
