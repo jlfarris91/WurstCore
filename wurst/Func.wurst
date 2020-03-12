@@ -28,6 +28,7 @@ public class MulticastFunc<TReturn> implements Func<TReturn>
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_invocationList
+    m_invocationList = null
 
   // --------------------------------------------------------------------------
   function iterator() returns LLIterator<Func<TReturn>>
@@ -62,6 +63,7 @@ public class MulticastFunc1<TArg, TReturn> implements Func1<TArg, TReturn>
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_invocationList
+    m_invocationList = null
 
   // --------------------------------------------------------------------------
   function iterator() returns LLIterator<Func1<TArg, TReturn>>
@@ -96,6 +98,7 @@ public class MulticastFunc2<TArg1, TArg2, TReturn> implements Func2<TArg1, TArg2
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_invocationList
+    m_invocationList = null
 
   // --------------------------------------------------------------------------
   function iterator() returns LLIterator<Func2<TArg1, TArg2, TReturn>>
@@ -130,6 +133,7 @@ public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> implements Func3<TArg1
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_invocationList
+    m_invocationList = null
 
   // --------------------------------------------------------------------------
   function iterator() returns LLIterator<Func3<TArg1, TArg2, TArg3, TReturn>>
