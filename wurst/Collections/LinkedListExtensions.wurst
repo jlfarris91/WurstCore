@@ -57,13 +57,15 @@ public function LinkedList<TElem>.toWeightedSet<TElem>(Selector<TElem, real> sel
 function take()
   // arrange
   let myList = new LinkedList<int>()
+  let count = 3
   
   for i = 0 to 10
     myList.add(i)
 
   // act
-  let first3 = myList.take(3)
+  let first3 = myList.take(count)
 
   // assert
-  for i = 0 to 3
-    assertTrue(first3.get(i) == i)
+  first3.size().assertEquals(count)
+  for i = 0 to count - 1
+    first3.get(i).assertEquals(i)
