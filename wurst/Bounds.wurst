@@ -1,6 +1,10 @@
 package Bounds
+import public MapBounds
 
 public tuple bounds(vec2 min, vec2 max)
+
+public constant bounds playableBounds = bounds(playableMin, playableMax)
+public constant bounds mapBounds = bounds(boundMin, boundMax)
 
 // ============================================================================
 @inline
@@ -31,3 +35,51 @@ public function bounds.toWorldPos(vec2 localPos) returns vec2
 // ============================================================================
 public function bounds.toString() returns string
   return "(min: {0}, max: {1})".format(this.min.toString(), this.max.toString())
+
+// ============================================================================
+public function fitToPlayableBounds(bounds bounds) returns bounds
+  return fitToBounds(playableBounds, bounds)
+
+// ============================================================================
+public function fitToMapBounds(bounds bounds) returns bounds
+  return fitToBounds(mapBounds, bounds)
+
+// ============================================================================
+public function fitToBounds(bounds container, bounds bounds) returns bounds
+  let size = bounds.size()
+  var min = bounds.min
+  var max = bounds.max
+  if (bounds.max.x > container.max.x)
+    min.x = container.max.x - size.x
+    max.x = container.max.x
+  else if (bounds.min.x < container.min.x)
+    min.x = container.min.x
+    max.x = container.min.x + size.x
+  if (bounds.max.y > container.max.y)
+    min.y = container.max.y - size.y
+    max.y = container.max.y
+  else if (bounds.min.y < container.min.y)
+    min.y = container.min.y
+    max.y = container.min.y + size.y
+  return bounds(min, max)
+
+// ============================================================================
+public function fitToPlayableBounds(vec2 pos, real radius) returns vec2
+  return fitToBounds(playableBounds, pos, radius)
+
+// ============================================================================
+public function fitToMapBounds(vec2 pos, real radius) returns vec2
+  return fitToBounds(mapBounds, pos, radius)
+
+// ============================================================================
+public function fitToBounds(bounds container, vec2 pos, real radius) returns vec2
+  var result = pos
+  if (pos.x + radius > container.max.x)
+    result.x = container.max.x - radius
+  else if (pos.x - radius < container.min.x)
+    result.x = container.min.x + radius
+  if (pos.y + radius > container.max.y)
+    result.y = container.max.y - radius
+  else if (pos.y - radius < container.min.y)
+    result.y = container.min.y + radius
+  return result
