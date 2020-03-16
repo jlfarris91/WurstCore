@@ -3,18 +3,23 @@ package Math
 rect g_WorldBounds
 constant real BOUNDARY_OFFSET = 512.0
 
+// ============================================================================
 public function clamp(int value, int min, int max) returns int
   return IMaxBJ(IMinBJ(value, max), min)
 
+// ============================================================================
 public function clamp(real value, real min, real max) returns real
   return RMaxBJ(RMinBJ(value, max), min)
 
+// ============================================================================
 public function clamp01(real value) returns real
   return RMaxBJ(RMinBJ(value, 1.0), 0.0)
 
+// ============================================================================
 public function clamp(vec2 v, vec2 min, vec2 max) returns vec2
   return vec2(clamp(v.x, min.x, max.x), clamp(v.y, min.y, max.y))
 
+// ============================================================================
 public function clampToWorldBounds(vec2 pos, real radius) returns vec2
   let x = clamp(
     pos.x,
@@ -26,6 +31,7 @@ public function clampToWorldBounds(vec2 pos, real radius) returns vec2
     (g_WorldBounds.getMaxY() - radius) - BOUNDARY_OFFSET)
   return vec2(x, y)
 
+// ============================================================================
 public function wrap(int value, int min, int max) returns int
   var result = value
   let d = max - min
@@ -35,27 +41,34 @@ public function wrap(int value, int min, int max) returns int
     result = min + ModuloInteger(IAbsBJ((max + 1) - result), d + 1)
   return result
 
+// ============================================================================
 public function wrapMaxEx(int value, int min, int max) returns int
   return wrap(value, min, max - 1)
 
+// ============================================================================
 public function passesChanceCheck(real chance) returns bool
   return GetRandomReal(0.0, 1.0) < chance
 
+// ============================================================================
 public function moveTowards(real current, real target, real maxSpeed) returns real
   let dist = target - current
   if (RAbsBJ(dist) < RAbsBJ(maxSpeed))
     return target
   return current + RAbsBJ(maxSpeed) * RSignBJ(dist)
 
+// ============================================================================
 public function lerp(real start, real _end, real t) returns real
   return start + (_end - start) * t
 
+// ============================================================================
 public function lerpInt(int start, int _end, real t) returns int
   return start + R2I(I2R(_end - start) * t)
 
+// ============================================================================
 init
   g_WorldBounds = GetPlayableMapRect()
 
+// ============================================================================
 @test public function wrap1()
   assertTrue(wrap(-5, 0, 3) == 3)
   assertTrue(wrap(-4, 0, 3) == 0)
