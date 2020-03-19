@@ -4,7 +4,7 @@ import HashMap
 import IComponent
 import IComposite
 import Component
-import Type
+import public Type
 
 // ============================================================================
 public class CompositionManager implements IComposite

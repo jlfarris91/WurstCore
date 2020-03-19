@@ -1,9 +1,8 @@
 package UnitMetadata
-import Composition
+import public Composition
 import LinkedList
 import public UnitMetadataExtensions
 import ErrorHandling
-import Type
 import ErrorIf
 import ClosureEvents
 import initlater UnitComponent

@@ -1,6 +1,6 @@
 package UnitComponent
 import UnitMetadata
-import initlater Component
+import public initlater Component
 
 // ============================================================================
 public abstract class UnitComponent extends Component
