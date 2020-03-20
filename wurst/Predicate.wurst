@@ -2,4 +2,4 @@ package Predicate
 
 // ============================================================================
 public interface Predicate<T>
-  function execute(T element) returns bool
+  function call(T element) returns bool
