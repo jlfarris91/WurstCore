@@ -86,3 +86,9 @@ public class LogStringBuilder implements IStringBuilder
   // --------------------------------------------------------------------------
   override function toString() returns string
     return m_sb.toString()
+
+// ============================================================================
+public function IStringBuilder.toStringAndDestroy() returns string
+  let str = this.toString()
+  destroy this
+  return str
