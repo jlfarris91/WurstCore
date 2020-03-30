@@ -82,7 +82,7 @@ public class Grid implements IGrid
   function forEachCell(Action2<int, int> action)
     for r = 0 to _height - 1
       for c = 0 to _width - 1
-        action.execute(r, c)
+        action.call(r, c)
 
   // --------------------------------------------------------------------------
   function getArea(vec2 worldPos, real range) returns span

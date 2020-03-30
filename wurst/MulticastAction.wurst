@@ -1,0 +1,174 @@
+package MulticastAction
+import public Action
+import Pool
+
+constant int DEFAULT_INVOCATION_POOL_SIZE = 8
+
+// ============================================================================
+public class MulticastRegistration
+  private IMulticast m_owner
+  private poolHandle m_handle
+
+  // --------------------------------------------------------------------------
+  construct (IMulticast owner, poolHandle poolHandle)
+    m_owner = owner
+    m_handle = poolHandle
+  
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_owner != null)
+      m_owner.unregister(this)
+
+  // --------------------------------------------------------------------------
+  function getHandle() returns poolHandle
+    return m_handle
+
+// ============================================================================
+public interface IMulticast
+  function unregister(MulticastRegistration registration) returns bool
+
+// ============================================================================
+public class MulticastAction implements Action, IMulticast
+  private Pool<Action> m_invocationPool
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationPool = new Pool<Action>(DEFAULT_INVOCATION_POOL_SIZE)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_invocationPool
+    m_invocationPool = null
+
+  // --------------------------------------------------------------------------
+  function register(Action action) returns MulticastRegistration
+    let ph = m_invocationPool.reserve(action)
+    return new MulticastRegistration(this, ph)
+
+  // --------------------------------------------------------------------------
+  override function unregister(MulticastRegistration registration) returns bool
+    let poolHandle = registration.getHandle()
+    if (not m_invocationPool.isHandleValid(poolHandle))
+      return false
+    let action = m_invocationPool.get(poolHandle)
+    destroy action
+    m_invocationPool.release(poolHandle)
+    return true
+
+  // --------------------------------------------------------------------------
+  override function call()
+    let handleList = m_invocationPool.toVector()
+    for h in handleList
+      if (m_invocationPool.isHandleValid(h))
+        let action = m_invocationPool.get(h)
+        if (action != null)
+          action.call()
+    destroy handleList
+
+// ============================================================================
+public class MulticastAction1<TArg1> implements Action1<TArg1>, IMulticast
+  private Pool<Action1<TArg1>> m_invocationPool
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationPool = new Pool<Action1<TArg1>>(DEFAULT_INVOCATION_POOL_SIZE)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_invocationPool
+    m_invocationPool = null
+
+  // --------------------------------------------------------------------------
+  function register(Action1<TArg1> action) returns MulticastRegistration
+    let ph = m_invocationPool.reserve(action)
+    return new MulticastRegistration(this, ph)
+
+  // --------------------------------------------------------------------------
+  override function unregister(MulticastRegistration registration) returns bool
+    let poolHandle = registration.getHandle()
+    if (not m_invocationPool.isHandleValid(poolHandle))
+      return false
+    m_invocationPool.release(poolHandle)
+    return true
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1)
+    let handleList = m_invocationPool.toVector()
+    for h in handleList
+      if (m_invocationPool.isHandleValid(h))
+        let action = m_invocationPool.get(h)
+        if (action != null)
+          action.call(arg1)
+    destroy handleList
+
+// ============================================================================
+public class MulticastAction2<TArg1, TArg2> implements Action2<TArg1, TArg2>, IMulticast
+  private Pool<Action2<TArg1, TArg2>> m_invocationPool
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationPool = new Pool<Action2<TArg1, TArg2>>(DEFAULT_INVOCATION_POOL_SIZE)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_invocationPool
+    m_invocationPool = null
+
+  // --------------------------------------------------------------------------
+  function register(Action2<TArg1, TArg2> action) returns MulticastRegistration
+    let ph = m_invocationPool.reserve(action)
+    return new MulticastRegistration(this, ph)
+
+  // --------------------------------------------------------------------------
+  override function unregister(MulticastRegistration registration) returns bool
+    let poolHandle = registration.getHandle()
+    if (not m_invocationPool.isHandleValid(poolHandle))
+      return false
+    m_invocationPool.release(poolHandle)
+    return true
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1, TArg2 arg2)
+    let handleList = m_invocationPool.toVector()
+    for h in handleList
+      if (m_invocationPool.isHandleValid(h))
+        let action = m_invocationPool.get(h)
+        if (action != null)
+          action.call(arg1, arg2)
+    destroy handleList
+
+// ============================================================================
+public class MulticastAction3<TArg1, TArg2, TArg3> implements Action3<TArg1, TArg2, TArg3>, IMulticast
+  private Pool<Action3<TArg1, TArg2, TArg3>> m_invocationPool
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_invocationPool = new Pool<Action3<TArg1, TArg2, TArg3>>(DEFAULT_INVOCATION_POOL_SIZE)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_invocationPool
+    m_invocationPool = null
+
+  // --------------------------------------------------------------------------
+  function register(Action3<TArg1, TArg2, TArg3> action) returns MulticastRegistration
+    let ph = m_invocationPool.reserve(action)
+    return new MulticastRegistration(this, ph)
+
+  // --------------------------------------------------------------------------
+  override function unregister(MulticastRegistration registration) returns bool
+    let poolHandle = registration.getHandle()
+    if (not m_invocationPool.isHandleValid(poolHandle))
+      return false
+    m_invocationPool.release(poolHandle)
+    return true
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
+    let handleList = m_invocationPool.toVector()
+    for h in handleList
+      if (m_invocationPool.isHandleValid(h))
+        let action = m_invocationPool.get(h)
+        if (action != null)
+          action.call(arg1, arg2, arg3)
+    destroy handleList

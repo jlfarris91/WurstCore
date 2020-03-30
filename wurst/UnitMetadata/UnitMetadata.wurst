@@ -7,7 +7,6 @@ import ErrorIf
 import ClosureEvents
 import initlater UnitComponent
 import UnitExtensions
-import Events
 import UnitIndexer
 
 IUnitMetadata array g_unitMetadatas
@@ -28,15 +27,12 @@ public interface IUnitMetadataFactory
 public class UnitMetadata implements IUnitMetadata
   protected unit m_unit
   private CompositionManager m_compositionManager
-  private Action m_unitDamagedEventHandler
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_compositionManager != null)
       destroy m_compositionManager
       m_compositionManager = null
-
-    unlistenToUnitDamagedEvent()
 
     m_unit = null
 
@@ -142,24 +138,6 @@ public class UnitMetadata implements IUnitMetadata
   @inline
   override function getComponent(Type componentType) returns IComponent
     return m_compositionManager != null ? m_compositionManager.getComponent(componentType) : null
-
-  // --------------------------------------------------------------------------
-  protected function onDamaged()
-    skip
-
-  // --------------------------------------------------------------------------
-  protected function listenToUnitDamagedEvent()
-    if (m_unitDamagedEventHandler == null)
-      m_unitDamagedEventHandler = PlayerUnitEvents.unitDamaged.add() -> 
-        if (GetEventDamageSource() == getUnit())
-          onDamaged()
-
-  // --------------------------------------------------------------------------
-  protected function unlistenToUnitDamagedEvent()
-    if (m_unitDamagedEventHandler != null)
-      PlayerUnitEvents.unitDamaged.remove(m_unitDamagedEventHandler)
-      destroy m_unitDamagedEventHandler
-      m_unitDamagedEventHandler = null
 
   // --------------------------------------------------------------------------
   private function setAllComponentsEnabled(bool enabled)

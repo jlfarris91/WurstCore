@@ -1,5 +1,6 @@
 package AnonymousEvent
 import public Action
+import public MulticastAction
 
 // ============================================================================
 public class AnonymousEvent extends MulticastAction
@@ -10,7 +11,6 @@ class Counter
 
 class String
   string value
-
 @test
 function invoke_CallsAddedHandler()
   // arrange
@@ -18,7 +18,7 @@ function invoke_CallsAddedHandler()
   let counter = new Counter()
 
   // act
-  let cb = ev.add() () ->
+  let cb = ev.register() () ->
     counter.value++
 
   ev.call()
@@ -33,10 +33,10 @@ function invoke_DoesNotCallRemovedHandler()
   let ev = new AnonymousEvent()
   var counter = new Counter()
 
-  let cb = ev.add() () ->
+  let cb = ev.register() () ->
     counter.value++
 
-  ev.remove(cb)
+  ev.unregister(cb)
   destroy cb
 
   // act
@@ -51,13 +51,13 @@ function invoke_DoesNotCallReremovedHandler()
   let ev = new AnonymousEvent()
   var counter = new Counter()
 
-  let cb = ev.add() () ->
+  let cb = ev.register() () ->
     counter.value++
 
   // act
   ev.call()
   
-  ev.remove(cb)
+  ev.unregister(cb)
   destroy cb
 
   ev.call()
@@ -71,16 +71,16 @@ function invoke_CallsReaddedHandler()
   let ev = new AnonymousEvent()
   var counter = new Counter()
 
-  var cb = ev.add() () ->
+  var cb = ev.register() () ->
     counter.value++
   
-  ev.remove(cb)
+  ev.unregister(cb)
   destroy cb
 
   ev.call()
 
   // act
-  cb = ev.add() () ->
+  cb = ev.register() () ->
     counter.value += 10
 
   ev.call()
@@ -95,10 +95,10 @@ function invoke_CallsMultipleHandlersInOrder()
   let ev = new AnonymousEvent()
   var s = new String()
 
-  let cb1 = ev.add() () ->
+  let cb1 = ev.register() () ->
     s.value += "Hello"
   
-  let cb2 = ev.add() () ->
+  let cb2 = ev.register() () ->
     s.value += " World!"
 
   // act

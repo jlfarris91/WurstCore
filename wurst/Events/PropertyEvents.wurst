@@ -1,5 +1,5 @@
 package PropertyEvents
-import Events
+import public MulticastAction
 
 // ============================================================================
 public class PropertyChangingEvent<TValue> extends MulticastAction3<string, TValue, TValue>

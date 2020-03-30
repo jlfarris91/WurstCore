@@ -1,0 +1,7 @@
+package ICollection
+
+// ============================================================================
+public interface ICollection<T>
+  function getCount() returns int
+  function get(int index) returns T
+  function set(int index, T elem)

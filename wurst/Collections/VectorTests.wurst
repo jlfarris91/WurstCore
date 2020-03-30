@@ -1,0 +1,334 @@
+package VectorTests
+import Vector
+import FixedArray
+
+// ============================================================================
+@test function vector_fits_initial_capacity()
+  
+  for i = 1 to FixedArray.MAX_SIZE
+    let vector = new Vector<int>(i)
+    vector.getCapacity().assertGreaterThanOrEqual(i)
+    destroy vector
+
+// ============================================================================
+@test function vector_set()
+
+  let vector = new Vector<int>()
+  
+  for i = 0 to 10
+    vector.add(i * 2)
+    vector.get(i).assertEquals(i * 2)
+    vector.getCount().assertEquals(i + 1)
+  
+  for i = 0 to 10
+    vector.set(i, i * 4)
+    vector.get(i).assertEquals(i * 4)
+
+// ============================================================================
+@test function vector_add_grows()
+
+  let vector = new Vector<int>()
+  
+  for i = 1 to FixedArray.MAX_SIZE
+    vector.add(i * 2)
+    vector.getCapacity().assertGreaterThanOrEqual(i)
+
+// ============================================================================
+@test function vector_insert_front_grows_SLOW()
+
+  let vector = new Vector<int>()
+  
+  for i = 1 to 100
+    vector.insert(0, i * 2)
+    vector.getCapacity().assertGreaterThanOrEqual(i)
+
+// ============================================================================
+@test function vector_insert_end_grows()
+
+  let vector = new Vector<int>()
+  
+  for i = 1 to FixedArray.MAX_SIZE
+    vector.insert(vector.getCount(), i * 2)
+    vector.getCapacity().assertGreaterThanOrEqual(i)
+
+// ============================================================================
+@test function vector_insert_shiftsRight()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.insert(2, "Hello World!")
+
+  vector.getCount().assertEquals(5)
+  vector.get(0).assertEquals("0")
+  vector.get(1).assertEquals("1")
+  vector.get(2).assertEquals("Hello World!")
+  vector.get(3).assertEquals("2")
+  vector.get(4).assertEquals("3")
+
+// ============================================================================
+@test function vector_insert_front()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.insert(0, "Hello World!")
+
+  vector.getCount().assertEquals(5)
+  vector.get(0).assertEquals("Hello World!")
+  vector.get(1).assertEquals("0")
+  vector.get(2).assertEquals("1")
+  vector.get(3).assertEquals("2")
+  vector.get(4).assertEquals("3")
+
+// ============================================================================
+@test function vector_insert_end()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.insert(4, "Hello World!")
+
+  vector.getCount().assertEquals(5)
+  vector.get(0).assertEquals("0")
+  vector.get(1).assertEquals("1")
+  vector.get(2).assertEquals("2")
+  vector.get(3).assertEquals("3")
+  vector.get(4).assertEquals("Hello World!")
+
+// ============================================================================
+@test function vector_remove_shiftsLeft()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.remove("2")
+  
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+
+  vector.get(0).assertEquals("0")
+  vector.get(1).assertEquals("1")
+  vector.get(2).assertEquals("3")
+  
+// ============================================================================
+@test function vector_remove_front()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.remove("0")
+  
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+
+  vector.get(0).assertEquals("1")
+  vector.get(1).assertEquals("2")
+  vector.get(2).assertEquals("3")
+  
+// ============================================================================
+@test function vector_remove_end()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.remove("3")
+  
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+
+  vector.get(0).assertEquals("0")
+  vector.get(1).assertEquals("1")
+  vector.get(2).assertEquals("2")
+
+// ============================================================================
+@test function vector_removeAt_shiftsLeft()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.removeAt(2)
+  
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+
+  vector.get(0).assertEquals("0")
+  vector.get(1).assertEquals("1")
+  vector.get(2).assertEquals("3")
+
+// ============================================================================
+@test function vector_removeAt_front()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.removeAt(0)
+  
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+
+  vector.get(0).assertEquals("1")
+  vector.get(1).assertEquals("2")
+  vector.get(2).assertEquals("3")
+
+// ============================================================================
+@test function vector_removeAt_end()
+
+  let vector = new Vector<string>(8)
+
+  for i = 0 to 3
+    vector.add(i.toString())
+  
+  vector.removeAt(3)
+  
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+
+  vector.get(0).assertEquals("0")
+  vector.get(1).assertEquals("1")
+  vector.get(2).assertEquals("2")
+
+// ============================================================================
+@test function vector_indexOf_finds_element()
+  let vector = new Vector<string>(8)
+  
+  for i = 1 to 8
+    vector.add(i.toString())
+
+  vector.indexOf("4").assertEquals(3)
+
+// ============================================================================
+@test function vector_indexOf_cannot_find_element()
+  let vector = new Vector<string>(8)
+  
+  for i = 1 to 8
+    vector.add(i.toString())
+
+  vector.indexOf("asdf").assertEquals(-1)
+
+// ============================================================================
+@test function vector_reserve_grows_if_necessary()
+  let vector = new Vector<int>(8)
+  vector.reserve(32)
+  vector.getCount().assertEquals(0)
+  vector.getCapacity().assertEquals(32)
+  
+// ============================================================================
+@test function vector_reserve_does_not_grow_if_unnecessary()
+  let vector = new Vector<int>(64)
+  vector.reserve(32)
+  vector.getCount().assertEquals(0)
+  vector.getCapacity().assertEquals(64)
+  
+// ============================================================================
+@test function vector_clear()
+  let vector = new Vector<int>(8)
+  
+  for i = 0 to 3
+    vector.add(i)
+
+  vector.getCount().assertEquals(4)
+  vector.getCapacity().assertEquals(8)
+
+  vector.clear()
+
+  vector.getCount().assertEquals(0)
+  vector.getCapacity().assertEquals(8)
+  
+// ============================================================================
+@test function vector_pop()
+  let vector = new Vector<int>(8)
+  
+  for i = 0 to 3
+    vector.add(i)
+
+  vector.getCount().assertEquals(4)
+  vector.getCapacity().assertEquals(8)
+
+  vector.pop().assertEquals(3)
+
+  vector.getCount().assertEquals(3)
+  vector.getCapacity().assertEquals(8)
+  
+// ============================================================================
+@test function shrinkToFit_fits()
+  let vector = new Vector<int>(256)
+  
+  for i = 1 to 20
+    vector.add(i)
+
+  vector.getCount().assertEquals(20)
+  vector.getCapacity().assertEquals(256)
+
+  vector.shrinkToFit()
+
+  vector.getCount().assertEquals(20)
+  vector.getCapacity().assertEquals(32)
+  
+// ============================================================================
+@test function shrinkToFit_fits_exact()
+  let vector = new Vector<int>(256)
+  
+  for i = 1 to 8
+    vector.add(i)
+
+  vector.getCount().assertEquals(8)
+  vector.getCapacity().assertEquals(256)
+
+  vector.shrinkToFit()
+
+  vector.getCount().assertEquals(8)
+  vector.getCapacity().assertEquals(8)
+  
+// ============================================================================
+@test function shrinkToFit_fits_min_size()
+  let vector = new Vector<int>(FixedArray.MAX_SIZE)
+  
+  vector.add(1)
+
+  vector.getCount().assertEquals(1)
+  vector.getCapacity().assertEquals(FixedArray.MAX_SIZE)
+
+  vector.shrinkToFit()
+
+  vector.getCount().assertEquals(1)
+  vector.getCapacity().assertEquals(FixedArray.MIN_SIZE)
+
+// ============================================================================
+@test function copyTo()
+  
+  let vector1 = new Vector<string>(8)
+  let vector2 = new Vector<string>(16)
+
+  for i = 1 to vector1.getCapacity()
+    vector1.add(i.toString())
+
+  vector1.getCount().assertEquals(8)
+  vector1.getCapacity().assertEquals(8)
+
+  for i = 1 to vector2.getCapacity()
+    vector2.add("X")
+
+  vector2.getCount().assertEquals(16)
+  vector2.getCapacity().assertEquals(16)
+
+  vector1.copyTo(vector2, 0)
+
+  for i = 1 to vector1.getCount()
+    vector2.get(i - 1).assertEquals(i.toString())

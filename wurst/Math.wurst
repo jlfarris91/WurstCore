@@ -33,8 +33,10 @@ public function clampToWorldBounds(vec2 pos, real radius) returns vec2
 
 // ============================================================================
 public function wrap(int value, int min, int max) returns int
-  var result = value
+  if (min >= max)
+    return min
   let d = max - min
+  var result = value
   if (result < min)
     result = (max + 1) - ModuloInteger(IAbsBJ(min - result), d + 1)
   if (result > max)
@@ -84,6 +86,7 @@ init
   assertTrue(wrap( 6, 0, 3) == 2)
   assertTrue(wrap( 7, 0, 3) == 3)
 
+// ============================================================================
 @test public function wrap2()
   assertTrue(wrap(-5, 2, 5) == 3)
   assertTrue(wrap(-4, 2, 5) == 4)
@@ -99,6 +102,7 @@ init
   assertTrue(wrap( 6, 2, 5) == 2)
   assertTrue(wrap( 7, 2, 5) == 3)
 
+// ============================================================================
 @test public function wrap3()
   assertTrue(wrap(-180, 0, 359) == 180)
   assertTrue(wrap( -90, 0, 359) == 270)
@@ -107,6 +111,7 @@ init
   assertTrue(wrap( 180, 0, 359) == 180)
   assertTrue(wrap( 270, 0, 359) == 270)
 
+// ============================================================================
 @test public function wrapMaxEx()
   assertTrue(wrapMaxEx(-180, 0, 360) == 180)
   assertTrue(wrapMaxEx( -90, 0, 360) == 270)
@@ -115,8 +120,13 @@ init
   assertTrue(wrapMaxEx( 180, 0, 360) == 180)
   assertTrue(wrapMaxEx( 270, 0, 360) == 270)
 
+// ============================================================================
 @test public function wrapMaxEx2()
   assertTrue(wrapMaxEx( -45, 0, 360) == 315)
   assertTrue(wrapMaxEx(   0, 0, 360) == 0)
   assertTrue(wrapMaxEx( 360, 0, 360) == 0)
   assertTrue(wrapMaxEx( 405, 0, 360) == 45)
+
+// ============================================================================
+@test public function wrap_min_equals_max()
+  assertTrue(wrap(-5, 0, 0) == 0)

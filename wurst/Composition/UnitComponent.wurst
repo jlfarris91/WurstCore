@@ -1,5 +1,5 @@
 package UnitComponent
-import UnitMetadata
+import public UnitMetadata
 import public initlater Component
 
 // ============================================================================

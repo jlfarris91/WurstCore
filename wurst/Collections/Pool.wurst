@@ -1,0 +1,205 @@
+package Pool
+import Vector
+import ErrorHandling
+import Math
+
+// ============================================================================
+public tuple poolHandle(int id, int gen)
+
+// ============================================================================
+public function poolHandleToIndex(poolHandle poolHandle) returns int
+  return poolHandle.gen * 10000 + poolHandle.id
+
+// ============================================================================
+public function poolHandleFromIndex(int index) returns poolHandle
+  let id = index mod 10000
+  let gen = ((index - id) / 10000).ceil()
+  return poolHandle(id, gen)
+
+// ============================================================================
+public class Pool<T>
+  private Vector<PoolEntry<T>> m_entries
+  private int m_lastReservedIndex
+  private int m_reservedCount
+
+  // --------------------------------------------------------------------------
+  construct(int capacity)
+    m_entries = new Vector<PoolEntry<T>>(capacity)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for entry in m_entries
+      destroy entry
+    destroy m_entries
+
+  // --------------------------------------------------------------------------
+  function getCapacity() returns int
+    return m_entries.getCapacity()
+
+  // --------------------------------------------------------------------------
+  function getCount() returns int
+    return m_entries.getCount()
+
+  // --------------------------------------------------------------------------
+  function clear()
+    for entry in m_entries
+      // Make all entries available
+      entry.m_available = true
+      // Invalidate existing handles
+      entry.m_generation++
+
+  // --------------------------------------------------------------------------
+  function reserve() returns poolHandle
+    m_lastReservedIndex = findNextOpenSlot()
+    setIsAvailable(m_lastReservedIndex, false)
+    m_reservedCount++
+    return poolHandle(m_lastReservedIndex, getGeneration(m_lastReservedIndex))
+
+  // --------------------------------------------------------------------------
+  function reserve(T element) returns poolHandle
+    let poolHandle = reserve()
+    set(poolHandle, element)
+    return poolHandle
+
+  // --------------------------------------------------------------------------
+  function get(poolHandle poolHandle) returns T
+    validateHandle(poolHandle)
+    return m_entries.get(poolHandle.id).m_element
+
+  // --------------------------------------------------------------------------
+  function set(poolHandle poolHandle, T element)
+    validateHandle(poolHandle)
+    m_entries.get(poolHandle.id).m_element = element
+
+  // --------------------------------------------------------------------------
+  function release(poolHandle poolHandle)
+    validateHandle(poolHandle)
+    setIsAvailable(poolHandle.id, true)
+    incrementGeneration(poolHandle.id)
+    m_reservedCount--
+
+  // --------------------------------------------------------------------------
+  function iterator() returns PoolEnumerator<T>
+    return new PoolEnumerator<T>(m_entries)
+
+  // --------------------------------------------------------------------------
+  function toVector() returns Vector<poolHandle>
+    let vector = new Vector<poolHandle>(m_reservedCount)
+    for i = 0 to m_entries.getCount() - 1
+      let entry = m_entries.get(i)
+      if (not entry.m_available)
+        vector.add(poolHandle(i, entry.m_generation))
+    return vector
+
+  // --------------------------------------------------------------------------
+  function isHandleValid(poolHandle poolHandle) returns bool
+    if (poolHandle.id < 0 or poolHandle.id >= m_entries.getCount())
+      return false
+    if (getGeneration(poolHandle.id) != poolHandle.gen)
+      return false
+    return true
+
+  // --------------------------------------------------------------------------
+  private function validateHandle(poolHandle poolHandle)
+    if (not isHandleValid(poolHandle))
+      error("Pool handle " + poolHandle.id.toString() + " is invalid")
+
+  // --------------------------------------------------------------------------
+  private function getIsAvailable(int index) returns bool
+    return m_entries.get(index).m_available
+
+  // --------------------------------------------------------------------------
+  private function setIsAvailable(int index, bool available)
+    m_entries.get(index).m_available = available
+
+  // --------------------------------------------------------------------------
+  private function getGeneration(int index) returns int
+    return m_entries.get(index).m_generation
+
+  // --------------------------------------------------------------------------
+  private function incrementGeneration(int index)
+    let currentGen = getGeneration(index)
+    m_entries.get(index).m_generation = currentGen + 1
+
+  // --------------------------------------------------------------------------
+  private function findNextOpenSlot() returns int
+
+    if (not m_entries.isEmpty())
+
+      var index = m_lastReservedIndex
+
+      // Maybe we're already on an empty slot
+      if (getIsAvailable(index))
+        return index
+
+      let initialIndex = index
+      index = incrementIndex(index)
+
+      // Search for an open slot until we reach our initial pos
+      while (index != initialIndex)
+        if (getIsAvailable(index))
+          return index
+        index = incrementIndex(index)
+
+    // No available slots, add another
+    addEntry()
+    return m_entries.getCount() - 1
+
+  // --------------------------------------------------------------------------
+  private function incrementIndex(int index) returns int
+    return wrap(index + 1, 0, m_entries.getCount() - 1)
+
+  // --------------------------------------------------------------------------
+  private function addEntry()
+    m_entries.add(new PoolEntry<T>())
+
+// ============================================================================
+class PoolEntry<T>
+  T m_element
+  int m_generation
+  bool m_available
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_generation = 0
+    m_available = true
+
+// ============================================================================
+public class PoolEnumerator<T>
+  private Vector<PoolEntry<T>> m_entries
+  private int m_next
+
+  // --------------------------------------------------------------------------
+  construct (Vector<PoolEntry<T>> entries)
+    m_entries = entries
+    reset()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_entries = null
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_next = -1
+    findNextValidIndex()
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_next < m_entries.getCount()
+
+  // --------------------------------------------------------------------------
+  function next() returns T
+    let current = m_next
+    findNextValidIndex()
+    return m_entries.get(current).m_element
+
+  // --------------------------------------------------------------------------
+  function close()
+    destroy this
+
+  // --------------------------------------------------------------------------
+  private function findNextValidIndex()
+    m_next++
+    while (m_next < m_entries.getCount() and m_entries.get(m_next).m_available)
+      m_next++
+        

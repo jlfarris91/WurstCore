@@ -1,0 +1,47 @@
+package PriorityList
+import LinkedList
+import HashMap
+
+// ============================================================================
+public class PriorityList<T> extends LinkedList<T>
+  private HashMap<T, int> m_priorities
+  private Comparator<T> m_priorityComparator
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_priorities = new HashMap<T, int>()
+    m_priorityComparator = new PriorityComparator(this)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_priorities
+    m_priorities = null
+
+    destroy m_priorityComparator
+    m_priorityComparator = null
+
+  // --------------------------------------------------------------------------
+  function add(T listItem, int priority)
+    super.add(listItem)
+    m_priorities.put(listItem, priority)
+    super.sortWith(m_priorityComparator)
+
+  // --------------------------------------------------------------------------
+  function getPriority(T listItem) returns int
+    return m_priorities.get(listItem)
+
+ // ============================================================================
+class PriorityComparator<T> implements Comparator<T>
+  private PriorityList<T> m_list
+
+  // --------------------------------------------------------------------------
+  construct(PriorityList<T> list)
+    m_list = list
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_list = null
+
+  // --------------------------------------------------------------------------
+  override function compare(T item1, T item2) returns int
+    return m_list.getPriority(item1) - m_list.getPriority(item2)

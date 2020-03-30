@@ -1,0 +1,170 @@
+package Vector
+import ErrorIf
+import ErrorHandling
+import FixedArray
+import CollectionEnumerator
+import ICollection
+
+// ============================================================================
+public class Vector<T> implements ICollection<T>
+  private ICollection<T> m_storage
+  private int m_size
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_storage = new FixedArray32<T>()
+
+  // --------------------------------------------------------------------------
+  construct(int initialSize)
+    growToFit(initialSize)
+
+  // --------------------------------------------------------------------------
+  override function get(int index) returns T
+    ErrorIf.argumentIsOutOfBounds(index, 0, getCapacity() - 1, "index")
+    return m_storage.get(index)
+
+  // --------------------------------------------------------------------------
+  override function set(int index, T element)
+    ErrorIf.argumentIsOutOfBounds(index, 0, getCapacity() - 1, "index")
+    m_storage.set(index, element)
+
+  // --------------------------------------------------------------------------
+  override function getCount() returns int
+    return m_size
+
+  // --------------------------------------------------------------------------
+  function getCapacity() returns int
+    return m_storage.getCount()
+
+  // --------------------------------------------------------------------------
+  function isEmpty() returns bool
+    return m_size == 0
+
+  // --------------------------------------------------------------------------
+  function add(vararg T elements)
+    for element in elements
+      reserve(1)
+      m_storage.set(m_size, element)
+      m_size++
+
+  // --------------------------------------------------------------------------
+  function insert(int index, T element)
+    if ((index == 0 and isEmpty()) or index == getCount())
+      add(element)
+      return
+    ErrorIf.argumentIsOutOfBounds(index, 0, getCount() - 1, "index")
+    reserve(1)
+    shiftRight(index)
+    set(index, element)
+    m_size++
+
+  // --------------------------------------------------------------------------
+  function remove(T element) returns bool
+    for i = 0 to getCount() - 1
+      if (get(i) == element)
+        removeAt(i)
+        return true
+    return false
+    
+  // --------------------------------------------------------------------------
+  function removeAt(int index)
+    ErrorIf.argumentIsOutOfBounds(index, 0, getCount() - 1, "index")
+    shiftLeft(index)
+    m_size--
+
+  // --------------------------------------------------------------------------
+  function indexOf(T element) returns int
+    for i = 0 to getCount() - 1
+      if (get(i) == element)
+        return i
+    return -1
+
+  // --------------------------------------------------------------------------
+  function push(T element)
+    add(element)
+
+  // --------------------------------------------------------------------------
+  function pop() returns T
+    if (isEmpty())
+      error("Cannot pop empty Vector")
+    m_size--
+    return m_storage.get(m_size)
+
+  // --------------------------------------------------------------------------
+  function peek() returns T
+    if (isEmpty())
+      error("Cannot peek empty Vector")
+    return m_storage.get(m_size - 1)
+
+  // --------------------------------------------------------------------------
+  function clear()
+    m_size = 0
+
+  // --------------------------------------------------------------------------
+  function reserve(int size)
+    growToFit(getCount() + size)
+
+  // --------------------------------------------------------------------------
+  function iterator() returns CollectionEnumerator<T>
+    return new CollectionEnumerator<T>(this)
+
+  // --------------------------------------------------------------------------
+  function copyTo(ICollection<T> other, int index)
+    ErrorIf.argumentIsNull(other, "other")
+    
+    let otherCount = other.getCount()
+    ErrorIf.argumentIsOutOfBounds(index, 0, otherCount - 1, "index")
+
+    let thisCount = getCount()
+    if (otherCount - index < thisCount)
+      error("Collection 'other' does not have enough space to copy into. (index: " + index.toString() + " length: " + thisCount.toString() + " other.length: " + otherCount.toString() + ")")
+    
+    for i = 0 to thisCount - 1
+      other.set(index + i, get(i))
+
+  // --------------------------------------------------------------------------
+  function shrinkToFit()
+
+    if (m_storage == null)
+      return
+
+    let bestFitCapacity = FixedArray.getBestFitCapacity(getCount())
+    if (bestFitCapacity == getCapacity())
+      return
+
+    let newStorage = FixedArray.create<T>(bestFitCapacity)
+    if (newStorage == null)
+      error("Failed to create new storage")
+      return
+
+    copyTo(newStorage, 0)
+    destroy m_storage
+    m_storage = newStorage
+
+  // --------------------------------------------------------------------------
+  private function growToFit(int capacity)
+
+    if (m_storage != null and capacity <= m_storage.getCount())
+      return
+
+    let newStorage = FixedArray.createBestFit<T>(capacity)
+
+    if (m_storage != null)
+      copyTo(newStorage, 0)
+      destroy m_storage
+
+    m_storage = newStorage
+
+  // --------------------------------------------------------------------------
+  private function shiftLeft(int index)
+    for i = index to getCount() - 1
+      set(i, get(i + 1))
+
+  // --------------------------------------------------------------------------
+  private function shiftRight(int index)
+    let size = getCount()
+    growToFit(size + 1)
+    for i = 0 to (size - 1 - index)
+      let srcIndex = size - (i + 1)
+      let dstIndex = size - i
+      set(dstIndex, get(srcIndex))

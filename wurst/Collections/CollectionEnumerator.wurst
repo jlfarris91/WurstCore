@@ -1,0 +1,44 @@
+package CollectionEnumerator
+import ICollection
+import Range
+
+// ============================================================================
+public class CollectionEnumerator<T>
+  private int m_index
+  private rangeInt m_range
+  private ICollection<T> m_owner
+
+  // --------------------------------------------------------------------------
+  construct(ICollection<T> owner)
+    m_owner = owner
+    m_range = rangeInt(0, owner.getCount() - 1)
+    reset()
+
+  // --------------------------------------------------------------------------
+  construct(ICollection<T> owner, rangeInt range)
+    m_owner = owner
+    m_range = range
+    reset()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_owner = null
+    m_range = INT_RANGE_ZERO
+    m_index = 0
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_index = m_range.min - 1
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_index < m_range.max
+
+  // --------------------------------------------------------------------------
+  function next() returns T
+    m_index++
+    return m_owner.get(m_index)
+
+  // --------------------------------------------------------------------------
+  function close()
+    destroy this

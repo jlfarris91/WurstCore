@@ -24,12 +24,12 @@ public class ObservableList<T>
 
   function add(T elem)
     _items.add(elem)
-    itemAdded.invoke(this, elem)
+    itemAdded.call(this, elem)
 
   function remove(T elem)
     _items.remove(elem)
-    itemRemoved.invoke(this, elem)
+    itemRemoved.call(this, elem)
 
   function clear()
     _items.clear()
-    collectionCleared.invoke(this)
+    collectionCleared.call(this)

@@ -1,5 +1,6 @@
 package GenericEvent
 import public Action
+import public MulticastAction
 
 // ============================================================================
 public class GenericEvent<TSender> extends MulticastAction1<TSender>

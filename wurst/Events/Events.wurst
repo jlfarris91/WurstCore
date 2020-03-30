@@ -1,129 +1,27 @@
 package Events
-import RegisterEvents
-import Orders
 import GameConstants
 
 import public AnonymousEvent
 import public AnonymousArgsEvent
 import public GenericEvent
 import public GenericArgsEvent
-import public UnitHealedEvent
 
 trigger g_OnDayTrigger
 trigger g_OnNightTrigger
 
 // ============================================================================
-public class GameEvents
-  static AnonymousEvent dayStartEvent
-  static AnonymousEvent dayEndEvent
-  static AnonymousEvent nightStartEvent
-  static AnonymousEvent nightEndEvent
+public function registerDayEvent(code callback)
+  g_OnDayTrigger.addCondition(Filter(callback))
 
 // ============================================================================
-public class PlayerUnitEvents
-  static AnonymousEvent unitDamaged
-  static AnonymousEvent unitConstructed
-  static AnonymousEvent unitKilled
-  static AnonymousEvent itemAcquired
-  static AnonymousEvent itemDropped
-  static AnonymousEvent unitLoaded
-  static AnonymousEvent unitUnloaded
-  static AnonymousEvent unitIssuedOrder
-  static AnonymousEvent unitIssuedOrderTargettingUnit
-  static UnitHealedEvent unitHealed
-
-// ============================================================================
-function onUnitDamaged()
-  PlayerUnitEvents.unitDamaged.call()
-
-// ============================================================================
-function onConstructFinish()
-  PlayerUnitEvents.unitConstructed.call()
-
-// ============================================================================
-function onUnitDeath()
-  PlayerUnitEvents.unitKilled.call()
-    
-// ============================================================================
-function onItemAcquired()
-  PlayerUnitEvents.itemAcquired.call()
-
-// ============================================================================
-function onItemDropped()
-  PlayerUnitEvents.itemDropped.call()
-
-// ============================================================================
-function onUnitLoaded()
-  PlayerUnitEvents.unitLoaded.call()
-
-// ============================================================================
-function onUnitUnloaded()
-  PlayerUnitEvents.unitUnloaded.call()
-
-// ============================================================================
-function onUnitIssuedOrder()
-  PlayerUnitEvents.unitIssuedOrder.call()
-
-  let orderId = GetIssuedOrderId()
-  if (orderId == OrderIds.unload or orderId == OrderIds.standdown)
-    onUnitUnloaded()
-
-// ============================================================================
-function onUnitIssuedOrderTargettingUnit()
-  PlayerUnitEvents.unitIssuedOrderTargettingUnit.call()
-
-  let orderId = GetIssuedOrderId()
-  if (orderId == OrderIds.unload or orderId == OrderIds.standdown)
-    onUnitUnloaded()
-
-// ============================================================================
-function onDayStart()
-  GameEvents.dayStartEvent.call()
-  GameEvents.nightEndEvent.call()
-
-// ============================================================================
-function onNightStart()
-  GameEvents.nightStartEvent.call()
-  GameEvents.dayEndEvent.call()
+public function registerNightEvent(code callback)
+  g_OnNightTrigger.addCondition(Filter(callback))
 
 // ============================================================================
 init
 
-  PlayerUnitEvents.unitDamaged = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DAMAGED, function onUnitDamaged)
-
-  PlayerUnitEvents.unitConstructed = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_FINISH, function onConstructFinish)
-
-  PlayerUnitEvents.unitKilled = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)
-  
-  PlayerUnitEvents.itemAcquired = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function onItemAcquired)
-
-  PlayerUnitEvents.itemDropped = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DROP_ITEM, function onItemDropped)
-  
-  PlayerUnitEvents.unitLoaded = new AnonymousEvent()
-  PlayerUnitEvents.unitUnloaded = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_LOADED, function onUnitLoaded)
-
-  PlayerUnitEvents.unitIssuedOrder = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function onUnitIssuedOrder)
-
-  PlayerUnitEvents.unitIssuedOrderTargettingUnit = new AnonymousEvent()
-  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_UNIT_ORDER, function onUnitIssuedOrderTargettingUnit)
-
-  PlayerUnitEvents.unitHealed = new UnitHealedEvent()
-
-  GameEvents.dayStartEvent = new AnonymousEvent()
-  GameEvents.dayEndEvent = new AnonymousEvent()
   g_OnDayTrigger = CreateTrigger()
   g_OnDayTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_DAY)
-  g_OnDayTrigger.addAction(function onDayStart)
 
-  GameEvents.nightStartEvent = new AnonymousEvent()
-  GameEvents.nightEndEvent = new AnonymousEvent()
   g_OnNightTrigger = CreateTrigger()
   g_OnNightTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_NIGHT)
-  g_OnNightTrigger.addAction(function onNightStart)
