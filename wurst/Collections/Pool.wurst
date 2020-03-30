@@ -20,19 +20,23 @@ public function poolHandleFromIndex(int index) returns poolHandle
 
 // ============================================================================
 public class Pool<T>
-  private Vector<PoolEntry<T>> m_entries
+  private Vector<T> m_entries
+  private Vector<int> m_generations
+  private Vector<bool> m_availablity
   private int m_lastReservedIndex
   private int m_reservedCount
 
   // --------------------------------------------------------------------------
   construct(int capacity)
-    m_entries = new Vector<PoolEntry<T>>(capacity)
+    m_entries = new Vector<T>(capacity)
+    m_generations = new Vector<int>(capacity)
+    m_availablity = new Vector<bool>(capacity)
 
   // --------------------------------------------------------------------------
   ondestroy
-    for entry in m_entries
-      destroy entry
     destroy m_entries
+    destroy m_generations
+    destroy m_availablity
 
   // --------------------------------------------------------------------------
   function getCapacity() returns int
@@ -44,11 +48,11 @@ public class Pool<T>
 
   // --------------------------------------------------------------------------
   function clear()
-    for entry in m_entries
+    for i = 0 to m_entries.getCount() - 1
       // Make all entries available
-      entry.m_available = true
+      m_availablity.set(i, true)
       // Invalidate existing handles
-      entry.m_generation++
+      incrementGeneration(i)
 
   // --------------------------------------------------------------------------
   function reserve() returns poolHandle
@@ -66,12 +70,12 @@ public class Pool<T>
   // --------------------------------------------------------------------------
   function get(poolHandle poolHandle) returns T
     validateHandle(poolHandle)
-    return m_entries.get(poolHandle.id).m_element
+    return m_entries.get(poolHandle.id)
 
   // --------------------------------------------------------------------------
   function set(poolHandle poolHandle, T element)
     validateHandle(poolHandle)
-    m_entries.get(poolHandle.id).m_element = element
+    m_entries.set(poolHandle.id, element)
 
   // --------------------------------------------------------------------------
   function release(poolHandle poolHandle)
@@ -82,15 +86,14 @@ public class Pool<T>
 
   // --------------------------------------------------------------------------
   function iterator() returns PoolEnumerator<T>
-    return new PoolEnumerator<T>(m_entries)
+    return new PoolEnumerator<T>(m_availablity, m_generations)
 
   // --------------------------------------------------------------------------
   function toVector() returns Vector<poolHandle>
     let vector = new Vector<poolHandle>(m_reservedCount)
     for i = 0 to m_entries.getCount() - 1
-      let entry = m_entries.get(i)
-      if (not entry.m_available)
-        vector.add(poolHandle(i, entry.m_generation))
+      if (not getIsAvailable(i))
+        vector.add(poolHandle(i, getGeneration(i)))
     return vector
 
   // --------------------------------------------------------------------------
@@ -108,25 +111,25 @@ public class Pool<T>
 
   // --------------------------------------------------------------------------
   private function getIsAvailable(int index) returns bool
-    return m_entries.get(index).m_available
+    return m_availablity.get(index)
 
   // --------------------------------------------------------------------------
   private function setIsAvailable(int index, bool available)
-    m_entries.get(index).m_available = available
+    m_availablity.set(index, available)
 
   // --------------------------------------------------------------------------
   private function getGeneration(int index) returns int
-    return m_entries.get(index).m_generation
+    return m_generations.get(index)
 
   // --------------------------------------------------------------------------
   private function incrementGeneration(int index)
     let currentGen = getGeneration(index)
-    m_entries.get(index).m_generation = currentGen + 1
+    m_generations.set(index, currentGen + 1)
 
   // --------------------------------------------------------------------------
   private function findNextOpenSlot() returns int
 
-    if (not m_entries.isEmpty())
+    if (not m_entries.isEmpty() and m_reservedCount < m_entries.getCount())
 
       var index = m_lastReservedIndex
 
@@ -149,36 +152,31 @@ public class Pool<T>
 
   // --------------------------------------------------------------------------
   private function incrementIndex(int index) returns int
-    return wrap(index + 1, 0, m_entries.getCount() - 1)
+    let newIndex = wrap(index + 1, 0, m_entries.getCount() - 1)
+    return newIndex
 
   // --------------------------------------------------------------------------
   private function addEntry()
-    m_entries.add(new PoolEntry<T>())
-
-// ============================================================================
-class PoolEntry<T>
-  T m_element
-  int m_generation
-  bool m_available
-
-  // --------------------------------------------------------------------------
-  construct()
-    m_generation = 0
-    m_available = true
+    m_entries.add(0 castTo T)
+    m_generations.add(0)
+    m_availablity.add(true)
 
 // ============================================================================
 public class PoolEnumerator<T>
-  private Vector<PoolEntry<T>> m_entries
+  private Vector<bool> m_availability
+  private Vector<int> m_generations
   private int m_next
 
   // --------------------------------------------------------------------------
-  construct (Vector<PoolEntry<T>> entries)
-    m_entries = entries
+  construct (Vector<bool> availability, Vector<int> generations)
+    m_availability = availability
+    m_generations = generations
     reset()
 
   // --------------------------------------------------------------------------
   ondestroy
-    m_entries = null
+    m_availability = null
+    m_generations = null
 
   // --------------------------------------------------------------------------
   function reset()
@@ -187,13 +185,13 @@ public class PoolEnumerator<T>
 
   // --------------------------------------------------------------------------
   function hasNext() returns bool
-    return m_next < m_entries.getCount()
+    return m_next < m_availability.getCount()
 
   // --------------------------------------------------------------------------
   function next() returns poolHandle
     let current = m_next
     findNextValidIndex()
-    return poolHandle(current, m_entries.get(current).m_generation)
+    return poolHandle(current, m_generations.get(current))
 
   // --------------------------------------------------------------------------
   function close()
@@ -202,6 +200,6 @@ public class PoolEnumerator<T>
   // --------------------------------------------------------------------------
   private function findNextValidIndex()
     m_next++
-    while (m_next < m_entries.getCount() and m_entries.get(m_next).m_available)
+    while (m_next < m_availability.getCount() and m_availability.get(m_next))
       m_next++
         

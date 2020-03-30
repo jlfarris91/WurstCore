@@ -36,6 +36,10 @@ public class MulticastAction implements Action, IMulticast
     m_invocationPool = new Pool<Action>(DEFAULT_INVOCATION_POOL_SIZE)
 
   // --------------------------------------------------------------------------
+  construct(Pool<Action> pool)
+    m_invocationPool = pool
+
+  // --------------------------------------------------------------------------
   ondestroy
     destroy m_invocationPool
     m_invocationPool = null
@@ -57,13 +61,11 @@ public class MulticastAction implements Action, IMulticast
 
   // --------------------------------------------------------------------------
   override function call()
-    let handleList = m_invocationPool.toVector()
-    for h in handleList
-      if (m_invocationPool.isHandleValid(h))
-        let action = m_invocationPool.get(h)
+    for ph in m_invocationPool
+      if (m_invocationPool.isHandleValid(ph))
+        let action = m_invocationPool.get(ph)
         if (action != null)
           action.call()
-    destroy handleList
 
 // ============================================================================
 public class MulticastAction1<TArg1> implements Action1<TArg1>, IMulticast
@@ -93,13 +95,11 @@ public class MulticastAction1<TArg1> implements Action1<TArg1>, IMulticast
 
   // --------------------------------------------------------------------------
   override function call(TArg1 arg1)
-    let handleList = m_invocationPool.toVector()
-    for h in handleList
-      if (m_invocationPool.isHandleValid(h))
-        let action = m_invocationPool.get(h)
+    for ph in m_invocationPool
+      if (m_invocationPool.isHandleValid(ph))
+        let action = m_invocationPool.get(ph)
         if (action != null)
           action.call(arg1)
-    destroy handleList
 
 // ============================================================================
 public class MulticastAction2<TArg1, TArg2> implements Action2<TArg1, TArg2>, IMulticast
@@ -129,13 +129,11 @@ public class MulticastAction2<TArg1, TArg2> implements Action2<TArg1, TArg2>, IM
 
   // --------------------------------------------------------------------------
   override function call(TArg1 arg1, TArg2 arg2)
-    let handleList = m_invocationPool.toVector()
-    for h in handleList
-      if (m_invocationPool.isHandleValid(h))
-        let action = m_invocationPool.get(h)
+    for ph in m_invocationPool
+      if (m_invocationPool.isHandleValid(ph))
+        let action = m_invocationPool.get(ph)
         if (action != null)
           action.call(arg1, arg2)
-    destroy handleList
 
 // ============================================================================
 public class MulticastAction3<TArg1, TArg2, TArg3> implements Action3<TArg1, TArg2, TArg3>, IMulticast
@@ -165,10 +163,8 @@ public class MulticastAction3<TArg1, TArg2, TArg3> implements Action3<TArg1, TAr
 
   // --------------------------------------------------------------------------
   override function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
-    let handleList = m_invocationPool.toVector()
-    for h in handleList
-      if (m_invocationPool.isHandleValid(h))
-        let action = m_invocationPool.get(h)
+    for ph in m_invocationPool
+      if (m_invocationPool.isHandleValid(ph))
+        let action = m_invocationPool.get(ph)
         if (action != null)
           action.call(arg1, arg2, arg3)
-    destroy handleList

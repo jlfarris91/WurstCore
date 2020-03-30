@@ -427,3 +427,17 @@ public class FixedArray
 
   for i = 0 to collection1.getCount() - 1
     collection2.get(7 + i).assertEquals(i.toString())
+
+// ============================================================================
+@test function copyTo_stressTest()
+
+  let collection1 = FixedArray.create<string>(8192)
+  let collection2 = FixedArray.create<string>(8192)
+
+  for i = 0 to collection1.getCount() - 1
+    collection1.set(i, i.toString())
+
+  FixedArray.copyTo(collection1, collection2, 0)
+
+  for i = 0 to collection1.getCount() - 1
+    collection2.get(i).assertEquals(i.toString())

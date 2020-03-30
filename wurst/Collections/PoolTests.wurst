@@ -2,6 +2,16 @@ package PoolTests
 import Pool
 
 // ============================================================================
+@test function poolHandleToIndex_test()
+
+  let ph = poolHandle(123, 456)
+  let index = poolHandleToIndex(ph)
+  index.assertEquals(4560123)
+  let ph2 = poolHandleFromIndex(index)
+  ph2.id.assertEquals(123)
+  ph2.gen.assertEquals(456)
+
+// ============================================================================
 @test function reserve_finds_available_slot()
   let pool = new Pool<string>(8)
   let h = pool.reserve("Hello World!")
