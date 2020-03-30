@@ -190,10 +190,10 @@ public class PoolEnumerator<T>
     return m_next < m_entries.getCount()
 
   // --------------------------------------------------------------------------
-  function next() returns T
+  function next() returns poolHandle
     let current = m_next
     findNextValidIndex()
-    return m_entries.get(current).m_element
+    return poolHandle(current, m_entries.get(current).m_generation)
 
   // --------------------------------------------------------------------------
   function close()
