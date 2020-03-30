@@ -50,9 +50,6 @@ public class CompositionManager implements IComposite
   override function getComponent(Type componentType) returns IComponent
     return _typeToComponentMap.get(componentType.id)
 
-  // override function getComponentsOfType<TComponent>() returns IEnumerable<TComponent>
-  //   skip
-
   // --------------------------------------------------------------------------
   function iterator() returns LLIterator<IComponent>
     return _components.iterator()

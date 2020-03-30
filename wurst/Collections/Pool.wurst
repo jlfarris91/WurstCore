@@ -3,6 +3,8 @@ import Vector
 import ErrorHandling
 import Math
 
+public constant INVALID_POOL_HANDLE = poolHandle(-1, -1)
+
 // ============================================================================
 public tuple poolHandle(int id, int gen)
 

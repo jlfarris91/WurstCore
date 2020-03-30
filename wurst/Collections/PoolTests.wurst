@@ -1,6 +1,5 @@
 package PoolTests
 import Pool
-import Enumerable
 
 // ============================================================================
 @test function reserve_finds_available_slot()
@@ -49,7 +48,7 @@ import Enumerable
   pool.reserve("3")
 
   var counter = 1
-  pool.forEach() (elem) -> 
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter++
 
@@ -64,7 +63,7 @@ import Enumerable
   pool.release(h1)
 
   var counter = 2
-  pool.forEach() (elem) ->
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter++
 
@@ -79,7 +78,7 @@ import Enumerable
   pool.release(h2)
 
   var counter = 1
-  pool.forEach() (elem) ->
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter += 2
 
@@ -94,7 +93,7 @@ import Enumerable
   pool.release(h3)
 
   var counter = 1
-  pool.forEach() (elem) ->
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter++
 
@@ -112,7 +111,7 @@ import Enumerable
   pool.release(h2)
 
   var counter = 3
-  pool.forEach() (elem) ->
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter++
 
@@ -131,7 +130,7 @@ import Enumerable
   pool.release(h4)
 
   var counter = 1
-  pool.forEach() (elem) ->
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter += 4
 
@@ -149,6 +148,6 @@ import Enumerable
   pool.release(h5)
 
   var counter = 1
-  pool.forEach() (elem) ->
+  for elem in pool
     elem.assertEquals(counter.toString())
     counter++
