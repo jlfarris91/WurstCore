@@ -1,34 +1,30 @@
-package MulticastActionTests
-import MulticastAction
-import Pool
+package EventTests
+import Events
 import ErrorHandling
+import LinkedList
 
 // ============================================================================
 @test function stressTest_register()
 
-  let pool = new Pool<Action>(8)
-  let ma = new MulticastAction(pool)
+  let pool = new LinkedList<Action>()
+  let ma = new Event(pool)
 
   for i = 1 to 9999
     let mah = ma.register() -> 
       Log.info("Hello World! " + i.toString())
     ma.unregister(mah).assertTrue()
 
-  pool.getCapacity().assertEquals(8)
-  pool.getCount().assertEquals(1)
+  pool.size().assertEquals(1)
 
 // ============================================================================
 @test function stressTest_call()
 
-  let pool = new Pool<Action>(8)
-  let ma = new MulticastAction(pool)
+  let pool = new LinkedList<Action>()
+  let ma = new Event(pool)
 
   for i = 1 to 512
     ma.register() -> 
       skip
-
-  pool.getCapacity().assertEquals(512)
-  pool.getCount().assertEquals(512)
 
   for i = 1 to 100
     Log.info("call " + i.toString())
@@ -36,13 +32,13 @@ import ErrorHandling
 
 // ============================================================================
 class Foo
-  MulticastAction m_action
-  MulticastRegistration registration
+  Event m_action
+  Action registration
   Foo m_other
   int m_index
   bool m_shouldNotBeExecuted
 
-  construct(MulticastAction action, int index)
+  construct(Event action, int index)
     m_action = action
     m_index = index
 
@@ -72,8 +68,8 @@ Foo array g_foos
 // ============================================================================
 @test function unregister_during_call()
 
-  let pool = new Pool<Action>(32)
-  let ma = new MulticastAction(pool)
+  let pool = new LinkedList<Action>()
+  let ma = new Event(pool)
 
   for i = 0 to 32
     g_foos[i] = new Foo(ma, i)

@@ -1,6 +1,0 @@
-package AnonymousArgsEvent
-import public Action
-import public MulticastAction
-
-// ============================================================================
-public class AnonymousArgsEvent<TArg> extends MulticastAction1<TArg>

@@ -1,6 +1,0 @@
-package GenericArgsEvent
-import public Action
-import public MulticastAction
-
-// ============================================================================
-public class GenericArgsEvent<TSender, TArg> extends MulticastAction2<TSender, TArg>

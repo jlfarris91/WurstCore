@@ -1,27 +1,124 @@
 package Events
-import GameConstants
-
-import public AnonymousEvent
-import public AnonymousArgsEvent
-import public GenericEvent
-import public GenericArgsEvent
-
-trigger g_OnDayTrigger
-trigger g_OnNightTrigger
+import LinkedList
+import ErrorIf
+import public Action
 
 // ============================================================================
-public function registerDayEvent(code callback)
-  g_OnDayTrigger.addCondition(Filter(callback))
+public class Event implements Action
+  private LinkedList<Action> m_handlers
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_handlers = new LinkedList<Action>()
+
+  // --------------------------------------------------------------------------
+  construct(LinkedList<Action> handlers)
+    m_handlers = handlers
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_handlers
+    m_handlers = null
+
+  // --------------------------------------------------------------------------
+  function register(Action action) returns Action
+    ErrorIf.argumentIsNull(action, "action")
+    m_handlers.add(action)
+    return action
+
+  // --------------------------------------------------------------------------
+  function unregister(Action action) returns bool
+    ErrorIf.argumentIsNull(action, "action")
+    return m_handlers.remove(action)
+
+  // --------------------------------------------------------------------------
+  override function call()
+    for handler in m_handlers
+      handler.call()
 
 // ============================================================================
-public function registerNightEvent(code callback)
-  g_OnNightTrigger.addCondition(Filter(callback))
+public class Event1<TArg1> implements Action1<TArg1>
+  private LinkedList<Action1<TArg1>> m_handlers
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_handlers = new LinkedList<Action1<TArg1>>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_handlers
+    m_handlers = null
+
+  // --------------------------------------------------------------------------
+  function register(Action1<TArg1> action) returns Action1<TArg1>
+    ErrorIf.argumentIsNull(action, "action")
+    m_handlers.add(action)
+    return action
+
+  // --------------------------------------------------------------------------
+  function unregister(Action1<TArg1> action) returns bool
+    ErrorIf.argumentIsNull(action, "action")
+    return m_handlers.remove(action)
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1)
+    for handler in m_handlers
+      handler.call(arg1)
 
 // ============================================================================
-init
+public class Event2<TArg1, TArg2> implements Action2<TArg1, TArg2>
+  private LinkedList<Action2<TArg1, TArg2>> m_handlers
 
-  g_OnDayTrigger = CreateTrigger()
-  g_OnDayTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_DAY)
+  // --------------------------------------------------------------------------
+  construct()
+    m_handlers = new LinkedList<Action2<TArg1, TArg2>>()
 
-  g_OnNightTrigger = CreateTrigger()
-  g_OnNightTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, TIME_OF_NIGHT)
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_handlers
+    m_handlers = null
+
+  // --------------------------------------------------------------------------
+  function register(Action2<TArg1, TArg2> action) returns Action2<TArg1, TArg2>
+    ErrorIf.argumentIsNull(action, "action")
+    m_handlers.add(action)
+    return action
+
+  // --------------------------------------------------------------------------
+  function unregister(Action2<TArg1, TArg2> action) returns bool
+    ErrorIf.argumentIsNull(action, "action")
+    return m_handlers.remove(action)
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1, TArg2 arg2)
+    for handler in m_handlers
+      handler.call(arg1, arg2)
+
+// ============================================================================
+public class Event3<TArg1, TArg2, TArg3> implements Action3<TArg1, TArg2, TArg3>
+  private LinkedList<Action3<TArg1, TArg2, TArg3>> m_handlers
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_handlers = new LinkedList<Action3<TArg1, TArg2, TArg3>>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_handlers
+    m_handlers = null
+
+  // --------------------------------------------------------------------------
+  function register(Action3<TArg1, TArg2, TArg3> action) returns Action3<TArg1, TArg2, TArg3>
+    ErrorIf.argumentIsNull(action, "action")
+    m_handlers.add(action)
+    return action
+
+  // --------------------------------------------------------------------------
+  function unregister(Action3<TArg1, TArg2, TArg3> action) returns bool
+    ErrorIf.argumentIsNull(action, "action")
+    return m_handlers.remove(action)
+
+  // --------------------------------------------------------------------------
+  override function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
+    for handler in m_handlers
+      handler.call(arg1, arg2, arg3)
