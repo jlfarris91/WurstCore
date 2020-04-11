@@ -9,9 +9,9 @@ public class ObservableList<T>
 
   private LinkedList<T> _items
 
-  GenericArgsEvent<ObservableList<T>, T> itemAdded
-  GenericArgsEvent<ObservableList<T>, T> itemRemoved
-  GenericEvent<ObservableList<T>> collectionCleared
+  Event2<ObservableList<T>, T> itemAdded
+  Event2<ObservableList<T>, T> itemRemoved
+  Event1<ObservableList<T>> collectionCleared
 
   construct()
     _items = new LinkedList<T>()
