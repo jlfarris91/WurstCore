@@ -1,0 +1,57 @@
+package UnitDefinitionInitModule
+
+// ============================================================================
+public module UnitDefinitionInitModule
+  
+  // --------------------------------------------------------------------------
+  protected function init_all()
+    init_abilities()
+    init_art()
+    init_combat()
+    init_editor()
+    init_movement()
+    init_pathing()
+    init_sound()
+    init_stats()
+    init_techtree()
+    init_text()
+
+  // --------------------------------------------------------------------------
+  protected function init_abilities()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_art()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_combat()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_editor()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_movement()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_pathing()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_sound()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_stats()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_techtree()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function init_text()
+    skip
