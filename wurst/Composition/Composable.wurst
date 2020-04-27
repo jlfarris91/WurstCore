@@ -1,0 +1,33 @@
+package Composable
+import IComposite
+import CompositionManager
+import IComponent
+
+// ============================================================================
+public abstract class Composable implements IComposite
+  protected CompositionManager _compositionManager
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (_compositionManager != null)
+      destroy _compositionManager
+      _compositionManager = null
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function addComponent(IComponent component) returns IComponent
+    if (_compositionManager == null)
+      _compositionManager = new CompositionManager()
+    return _compositionManager.addComponent(component)
+   
+  // --------------------------------------------------------------------------
+  @inline
+  override function removeComponent(IComponent component) returns bool
+    if (_compositionManager == null)
+      return false
+    return _compositionManager.removeComponent(component)
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function getComponent(typeInfo componentType) returns IComponent
+    return _compositionManager != null ? _compositionManager.getComponent(componentType) : null

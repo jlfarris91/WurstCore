@@ -4,6 +4,18 @@ import Type
 
 // ============================================================================
 public interface IComposite
-  function getComponent(Type componentType) returns IComponent
+  function getComponent(typeInfo componentType) returns IComponent
   function addComponent(IComponent component) returns IComponent
   function removeComponent(IComponent component) returns bool
+
+// ============================================================================
+public function IComposite.getComponent(int typeid) returns IComponent
+  return this.getComponent(typeInfo(typeid))
+
+// ============================================================================
+public function IComposite.hasComponent(int typeid) returns bool
+  return this.hasComponent(typeInfo(typeid))
+
+// ============================================================================
+public function IComposite.hasComponent(typeInfo componentType) returns bool
+  return this.getComponent(componentType) != null

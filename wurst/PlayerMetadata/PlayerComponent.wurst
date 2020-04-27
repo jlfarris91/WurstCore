@@ -1,0 +1,20 @@
+package PlayerComponent
+import PlayerMetadata
+import Composition
+
+// ============================================================================
+public abstract class PlayerComponent extends Component
+  private IPlayerMetadata m_owner
+
+  // --------------------------------------------------------------------------
+  construct(IPlayerMetadata owner)
+    super(owner)
+    m_owner = owner
+
+  // --------------------------------------------------------------------------
+  override function getOwner() returns IPlayerMetadata
+    return m_owner
+
+  // --------------------------------------------------------------------------
+  function getOwnerPlayer() returns player
+    return m_owner.getPlayer()

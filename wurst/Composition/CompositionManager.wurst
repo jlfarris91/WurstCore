@@ -47,7 +47,7 @@ public class CompositionManager implements IComposite
 
   // --------------------------------------------------------------------------
   @inline
-  override function getComponent(Type componentType) returns IComponent
+  override function getComponent(typeInfo componentType) returns IComponent
     return _typeToComponentMap.get(componentType.id)
 
   // --------------------------------------------------------------------------

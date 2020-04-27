@@ -1,0 +1,102 @@
+package PlayerMetadata
+import HashMap
+import Composition
+import StringExtensions
+import public initlater PlayerMetadataExtensions
+
+HashMap<player, IPlayerMetadata> g_PlayerMetadata
+
+// ============================================================================
+public interface IPlayerMetadata extends IComposite
+  function getPlayer() returns player
+  function getDisplayName() returns string
+  function setDisplayName(string displayName)
+  function reset()
+
+// ============================================================================
+public class PlayerMetadata extends Composable implements IPlayerMetadata
+  private player m_player
+  private string m_displayName
+
+  // --------------------------------------------------------------------------
+  construct(player p)
+    this.m_player = p
+    this.setDisplayName(p.getName())
+    this.reset()
+
+  // --------------------------------------------------------------------------
+  override function reset()
+    skip
+
+  // --------------------------------------------------------------------------
+  override function getPlayer() returns player
+    return m_player
+
+  // --------------------------------------------------------------------------
+  override function getDisplayName() returns string
+    return m_displayName
+
+  // --------------------------------------------------------------------------
+  override function setDisplayName(string displayName)
+    m_displayName = displayName
+
+  // --------------------------------------------------------------------------
+  function resetDisplayName()
+    setDisplayName(m_player.getName())
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function addComponent(IComponent component) returns IComponent
+    return super.addComponent(component)
+   
+  // --------------------------------------------------------------------------
+  @inline
+  override function removeComponent(IComponent component) returns bool
+    return super.removeComponent(component)
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function getComponent(typeInfo componentType) returns IComponent
+    return getComponent(componentType)
+
+// ============================================================================
+public function player.getDisplayName() returns string
+  return this.getMetadata().getDisplayName()
+
+// ============================================================================
+public function player.setDisplayName(string displayName)
+  this.getMetadata().setDisplayName(displayName)
+
+// ============================================================================
+public function player.getDisplayNameColored() returns string
+  return this.getDisplayName().colorize(this.getColor().toColor())
+
+// ============================================================================
+public function player.resetPlayerMetadata()
+  this.getMetadata().reset()
+
+// ============================================================================
+/**
+*   Gets the PlayerMetadata instance registered for player p or creates a new PlayerMetadata instance if
+*   one has not been registered yet.
+*/
+@inline
+public function player.getMetadata() returns IPlayerMetadata
+  return g_PlayerMetadata.get(this)
+
+// ============================================================================
+@inline
+public function unit.getOwnerMetadata() returns IPlayerMetadata
+  return g_PlayerMetadata.get(this.getOwner())
+
+// ============================================================================
+public function registerPlayerMetadata(IPlayerMetadata playerMetadata)
+  g_PlayerMetadata.put(playerMetadata.getPlayer(), playerMetadata)
+
+// ============================================================================
+public function unregisterPlayerMetadata(IPlayerMetadata playerMetadata)
+  g_PlayerMetadata.remove(playerMetadata.getPlayer())
+
+// ============================================================================
+init
+  g_PlayerMetadata = new HashMap<player, IPlayerMetadata>()

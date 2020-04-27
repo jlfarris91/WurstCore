@@ -136,7 +136,7 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   @inline
-  override function getComponent(Type componentType) returns IComponent
+  override function getComponent(typeInfo componentType) returns IComponent
     return m_compositionManager != null ? m_compositionManager.getComponent(componentType) : null
 
   // --------------------------------------------------------------------------
