@@ -57,7 +57,7 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   // --------------------------------------------------------------------------
   @inline
   override function getComponent(typeInfo componentType) returns IComponent
-    return getComponent(componentType)
+    return super.getComponent(componentType)
 
 // ============================================================================
 public function player.getDisplayName() returns string
