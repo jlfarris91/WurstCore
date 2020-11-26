@@ -2,6 +2,7 @@ package Math
 
 rect g_WorldBounds
 constant real BOUNDARY_OFFSET = 512.0
+public constant int UNLIMITED = 99999
 
 // ============================================================================
 public function clamp(int value, int min, int max) returns int
