@@ -80,7 +80,10 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   function onKilled()
-    setAllComponentsEnabled(false)
+    if (m_compositionManager != null)
+      for comp in m_compositionManager
+        let unitComp = comp castTo UnitComponent
+        unitComp.onOwnerKilled()
 
   // --------------------------------------------------------------------------
   protected function onUnitChanged(unit _oldUnit, unit _newUnit)
@@ -113,7 +116,8 @@ public class UnitMetadata implements IUnitMetadata
     // components that were enabled with the old unit, also alert them
     if (enabledComponents != null)
       for comp in enabledComponents
-        comp.setEnabled(true)
+        if (comp != null)
+          comp.setEnabled(true)
         let unitComp = comp castTo UnitComponent
         if (unitComp != null)
           unitComp.onUnitChanged(oldUnit, newUnit)
@@ -138,12 +142,6 @@ public class UnitMetadata implements IUnitMetadata
   @inline
   override function getComponent(typeInfo componentType) returns IComponent
     return m_compositionManager != null ? m_compositionManager.getComponent(componentType) : null
-
-  // --------------------------------------------------------------------------
-  private function setAllComponentsEnabled(bool enabled)
-    if (m_compositionManager != null)
-      for comp in m_compositionManager
-        comp.setEnabled(enabled)
 
 // ============================================================================
 public function unit.hasMetadata() returns bool

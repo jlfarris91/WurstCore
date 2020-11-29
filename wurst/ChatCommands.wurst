@@ -1,0 +1,528 @@
+package ChatCommands
+import HashMap
+import IterableMapExtensions
+import LinkedList
+import LinkedListExtensions
+import StringBuilder
+import Union
+import ErrorHandling
+import StringUtils
+import TriggerExtensions
+import PriorityList
+import DisplayTextToPlayer
+import StringComparison
+
+constant string COMMAND_PREFIX = "-"
+constant string COMMAND_HELP_STR = "help"
+constant int COMMAND_HELP_PRIORITY = -999
+PriorityList<ChatCommandHandler> g_commandHandlers
+trigger g_chatCommandTrigger
+ChatCommand g_chatCommand
+player g_chatCommandPlayer
+ChatCommandHandler g_chatCommandHandler
+
+// ============================================================================
+public function getChatCommand() returns ChatCommand
+  return g_chatCommand
+
+// ============================================================================
+public function getChatCommandHandler() returns ChatCommandHandler
+  return g_chatCommandHandler
+
+// ============================================================================
+public function getChatCommandPlayer() returns player
+  return g_chatCommandPlayer
+
+// ============================================================================
+public interface IChatCommandHandler
+  function handleChatCommand(player p, string command, LinkedList<string> commandArgs) returns bool
+
+// ============================================================================
+public class ChatCommandHandler implements IChatCommandHandler
+  private string m_name
+  private IterableMap<string, trigger> m_commandTriggerMap
+  private IterableMap<string, ChatCommandDefinition> m_commandDefinitionMap
+
+  // --------------------------------------------------------------------------
+  construct(string name)
+    m_name = name
+    m_commandTriggerMap = new IterableMap<string, trigger>()
+    m_commandDefinitionMap = new IterableMap<string, ChatCommandDefinition>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    for key in m_commandTriggerMap
+      m_commandTriggerMap.get(key).destr()
+
+    destroy m_commandTriggerMap
+    m_commandTriggerMap = null
+
+    for key in m_commandDefinitionMap
+      destroy m_commandDefinitionMap.get(key)
+
+    destroy m_commandDefinitionMap
+    m_commandDefinitionMap = null
+
+  // --------------------------------------------------------------------------
+  function getName() returns string
+    return m_name
+
+  // --------------------------------------------------------------------------
+  function addHandler(string command, trigger handler)
+    m_commandTriggerMap.put(command, handler)
+
+  // --------------------------------------------------------------------------
+  function getHandler(string command) returns trigger
+    return m_commandTriggerMap.get(command)
+  
+  // --------------------------------------------------------------------------
+  function registerCommandDefinition(string command, code handler) returns ChatCommandDefinition
+    let commandDefinition = new ChatCommandDefinition(command)
+    registerCommandDefinition(commandDefinition, handler)
+    return commandDefinition
+  
+  // --------------------------------------------------------------------------
+  function registerCommandDefinition(ChatCommandDefinition commandDefinition, code handler)
+    m_commandDefinitionMap.put(commandDefinition.getCommand(), commandDefinition)
+    registerHandlerAction(commandDefinition.getCommand(), handler)
+
+  // --------------------------------------------------------------------------
+  function getCommandDefinition(string command) returns ChatCommandDefinition
+    return m_commandDefinitionMap.get(command)
+
+  // --------------------------------------------------------------------------
+  function registerHandlerAction(string command, code action)
+    var handler = getCommandHandler(command)
+    if (handler == null)
+      handler = CreateTrigger()
+      addHandler(command, handler)
+    handler.addCondition(Filter(action))
+
+  // --------------------------------------------------------------------------
+  function getCommandHandler(string command) returns trigger
+    let def = m_commandDefinitionMap.get(command)
+    if (def == null)
+      error("No command definition registered for command '{0}'".format(command))
+      return null
+    return m_commandTriggerMap.get(command)
+
+  // --------------------------------------------------------------------------
+  function getCommandDefinitions() returns LinkedList<ChatCommandDefinition>
+    return m_commandDefinitionMap.getValues()
+
+  // --------------------------------------------------------------------------
+  override function handleChatCommand(player p, string command, LinkedList<string> commandArgs) returns bool
+    
+    let commandDef = getCommandDefinition(command)
+    if (commandDef == null)
+      return false
+
+    let handler = getCommandHandler(command)
+    if (handler == null)
+      return false
+      
+    let parseResult = commandDef.tryParse(commandArgs)
+    if (not parseResult.succeeded)
+      error("Error parsing command: " + parseResult.errorMsg)
+      return true
+
+    g_chatCommandPlayer = p
+    g_chatCommand = parseResult.command
+
+    handler.evaluate()
+
+    destroy g_chatCommand
+    g_chatCommand = null
+
+    g_chatCommandPlayer = null
+
+    return commandDef.getDoesHandleCommand()
+
+// ============================================================================
+public tuple ChatCommandResult(bool succeeded, ChatCommand command, string errorMsg)
+
+// ============================================================================
+public class ChatCommandDefinition
+  private string m_command
+  private LinkedList<ChatCommandArgument> m_arguments
+  private bool m_doesHandleCommand
+
+  // --------------------------------------------------------------------------
+  construct(string command)
+    m_command = command
+    m_arguments = new LinkedList<ChatCommandArgument>()
+    m_doesHandleCommand = true
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    for arg in m_arguments
+      destroy arg
+
+    destroy m_arguments
+    m_arguments = null
+
+  // --------------------------------------------------------------------------
+  function getCommand() returns string
+    return m_command
+
+  // --------------------------------------------------------------------------
+  function addArgument(ChatCommandArgument argument)
+
+    if (not argument.getIsOptional() and not m_arguments.isEmpty() and m_arguments.getLast().getIsOptional())
+      error("Optional arguments can only appear at the end of the argument list following all required arguments")
+      return
+
+    m_arguments.add(argument)
+
+  // --------------------------------------------------------------------------
+  function getArgument(int index) returns ChatCommandArgument
+    return m_arguments.get(index)
+
+  // --------------------------------------------------------------------------
+  function getArgumentCount() returns int
+    return m_arguments.size()
+
+  // --------------------------------------------------------------------------
+  function getDoesHandleCommand() returns bool
+    return m_doesHandleCommand
+
+  // --------------------------------------------------------------------------
+  function setDoesHandleCommand(bool value)
+    m_doesHandleCommand = value
+
+  // --------------------------------------------------------------------------
+  function getHelpString() returns string
+    let sb = new StringBuilder()
+
+    sb.append("-" + m_command)
+
+    for arg in m_arguments
+      sb.append(" ")
+      sb.append(arg.getHelpString())
+
+    return sb.toStringAndDestroy()
+
+  // --------------------------------------------------------------------------
+  function tryParse(LinkedList<string> commandArgs) returns ChatCommandResult
+
+    let argumentValueMap = new IterableMap<ChatCommandArgument, Union>()
+
+    var result = ChatCommandResult(true, null, "")
+
+    let numberOfArguments = m_arguments.size()
+
+    for i = 0 to commandArgs.size() - 1
+      let argStr = commandArgs.get(i)
+
+      if (i >= numberOfArguments)
+        result.errorMsg = "Unexpected number of arguments: expected {0} but received {1}".format(numberOfArguments.toString(), commandArgs.size().toString())
+        result.succeeded = false
+        break
+      else
+        let arg = getArgument(i)
+        if (arg != null)
+          let parseResult = arg.tryParse(argStr)
+          if (parseResult.succeeded)
+            argumentValueMap.put(arg, parseResult.union)
+          else
+            result.errorMsg = "Failed to parse argument {0}: {1}".format(i.toString(), parseResult.errorMsg)
+            result.succeeded = false
+            break
+        else
+          result.errorMsg = "Found no argument at index " + i.toString()
+          result.succeeded = false
+          break
+
+    if (result.succeeded)
+      result.command = new ChatCommand(this, argumentValueMap)
+
+    return result
+
+// ============================================================================
+public function ChatCommandDefinition.addStringArgument(string name, bool optional) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.STRING, optional))
+  return this
+
+// ============================================================================
+public function ChatCommandDefinition.addIntegerArgument(string name, bool optional) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.INT, optional))
+  return this
+
+// ============================================================================
+public function ChatCommandDefinition.addRealArgument(string name, bool optional) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.REAL, optional))
+  return this
+
+// ============================================================================
+public function ChatCommandDefinition.addBoolArgument(string name, bool optional) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.BOOL, optional))
+  return this
+
+// ============================================================================
+public function ChatCommandDefinition.addFourCCArgument(string name, bool optional) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.FOURCC, optional))
+  return this
+
+// ============================================================================
+public enum ChatCommandArgumentType
+  STRING
+  INT
+  REAL
+  BOOL
+  FOURCC
+
+// ============================================================================
+public class ChatCommandArgument
+  private string m_name
+  private ChatCommandArgumentType m_argType
+  private bool m_isOptional
+  private LinkedList<Union> m_options
+
+  // --------------------------------------------------------------------------
+  construct(string name, ChatCommandArgumentType argType, bool isOptional)
+    m_name = name
+    m_argType = argType
+    m_isOptional = isOptional
+    m_options = new LinkedList<Union>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for u in m_options
+      destroy u
+    destroy m_options
+    m_options = null
+
+  // --------------------------------------------------------------------------
+  function getName() returns string
+    return m_name
+
+  // --------------------------------------------------------------------------
+  function getArgumentType() returns ChatCommandArgumentType
+    return m_argType
+
+  // --------------------------------------------------------------------------
+  function getIsOptional() returns bool
+    return m_isOptional
+
+  // --------------------------------------------------------------------------
+  function getOptions() returns LinkedList<Union>
+    return m_options
+
+  // --------------------------------------------------------------------------
+  function setStringOptions(vararg string options)
+    m_options.clear()
+    for option in options
+      m_options.add(Union.fromString(option))
+
+  // --------------------------------------------------------------------------
+  function setIntOptions(vararg int options)
+    m_options.clear()
+    for option in options
+      m_options.add(Union.fromInt(option))
+
+  // --------------------------------------------------------------------------
+  function setRealOptions(vararg real options)
+    m_options.clear()
+    for option in options
+      m_options.add(Union.fromReal(option))
+
+  // --------------------------------------------------------------------------
+  function getHelpString() returns string
+    let sb = new StringBuilder()
+
+    sb.append(m_isOptional ? "(" : "[")
+
+    if (not m_options.isEmpty())
+      let size = m_options.size()
+      var i = 0
+      for option in m_options
+        sb.append("'{0}'".format(option.toString()))
+        i++
+        if (i != size)
+          sb.append(", ")
+    else
+      sb.append(m_name)
+
+    sb.append(m_isOptional ? ")" : "]")
+
+    return sb.toStringAndDestroy()
+
+  // --------------------------------------------------------------------------
+  function tryParse(string argumentString) returns UnionResult
+
+    var result = UnionResult(true, null, "")
+
+    switch (m_argType)
+      case ChatCommandArgumentType.STRING
+        result.union = new Union(UnionType.String, argumentString)
+      case ChatCommandArgumentType.INT
+        result.union = new Union(UnionType.Int, argumentString)
+      case ChatCommandArgumentType.REAL
+        result.union = new Union(UnionType.Real, argumentString)
+      case ChatCommandArgumentType.BOOL
+        result.union = new Union(UnionType.Bool, argumentString)
+      case ChatCommandArgumentType.FOURCC
+        if (argumentString.length() != 4)
+          result.succeeded = false
+          result.errorMsg = "FOURCC argument must be a 4 character length string"
+        else
+          result.union = new Union(UnionType.FourCC, argumentString)
+
+    result.succeeded = result.union != null
+
+    if (result.union != null and not m_options.isEmpty())
+      var foundMatchingOption = false
+      for option in m_options
+        if (option.equals(result.union))
+          foundMatchingOption = true
+          break
+      if (not foundMatchingOption)
+        result.succeeded = false
+        result.errorMsg = "'{0} is not a valid option for argument".format(argumentString)
+
+    return result
+
+// ============================================================================
+public tuple UnionResult(bool succeeded, Union union, string errorMsg)
+
+// ============================================================================
+public class ChatCommand
+  private ChatCommandDefinition m_definition
+  private IterableMap<ChatCommandArgument, Union> m_argumentValues
+
+  // --------------------------------------------------------------------------
+  construct(ChatCommandDefinition definition, IterableMap<ChatCommandArgument, Union> arguments)
+    m_definition = definition
+    m_argumentValues = arguments
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for arg in m_argumentValues
+      destroy m_argumentValues.get(arg)
+    destroy m_argumentValues
+    m_argumentValues = null
+
+  // --------------------------------------------------------------------------
+  function getArgument(int index) returns Union
+    let arg = m_definition.getArgument(index)
+    return arg != null ? getArgument(arg) : null
+
+  // --------------------------------------------------------------------------
+  function getArgument(ChatCommandArgument arg) returns Union
+    return m_argumentValues.get(arg)
+
+  // --------------------------------------------------------------------------
+  function getArgumentCount() returns int
+    return m_argumentValues.size()
+
+// ============================================================================
+public function registerChatCommandHandler(ChatCommandHandler handler, int priority)
+  g_commandHandlers.add(handler, priority)
+
+// ============================================================================
+function parseChatCommand()
+  let p = GetTriggerPlayer()
+
+  var commandLine = GetEventPlayerChatString()
+  commandLine = commandLine.substring(1, commandLine.length())
+
+  let commandArgs = commandLine.split(" ")
+  if (commandArgs.isEmpty())
+    destroy commandArgs
+    return
+
+  let command = commandArgs.getFirst()
+  commandArgs.removeAt(0)
+
+  var handled = false
+  for chatCommandHandler in g_commandHandlers
+    handled = chatCommandHandler.handleChatCommand(p, command, commandArgs)
+    if (handled)
+      break
+
+  if (not handled)
+    printPartialMatchingCommands(command, p)
+
+  destroy commandArgs
+
+// ============================================================================
+class ChatCommandDefinitionComparator implements Comparator<ChatCommandDefinition>
+  override function compare(ChatCommandDefinition def1, ChatCommandDefinition def2) returns int
+    return stringCompare(def1.getCommand(), def2.getCommand())
+
+// ============================================================================
+function getPartialMatchingCommands(string partialCommandName) returns LinkedList<ChatCommandDefinition>
+  let matchingCommandDefs = new LinkedList<ChatCommandDefinition>()
+  for commandHandler in g_commandHandlers
+    let commandDefs = commandHandler.getCommandDefinitions()
+    for commandDef in commandDefs
+      if (commandDef != null and commandDef.getCommand().contains(partialCommandName))
+        matchingCommandDefs.add(commandDef)
+    destroy commandDefs
+  return matchingCommandDefs
+
+// ============================================================================
+function printPartialMatchingCommands(string command, player p)
+  let matchingCommandDefs = getPartialMatchingCommands(command)
+    
+  let comparator = new ChatCommandDefinitionComparator()
+  matchingCommandDefs.sortWith(comparator)
+  destroy comparator
+  
+  for commandDef in matchingCommandDefs
+    displayMessageToPlayer(p, commandDef.getHelpString())
+
+  destroy matchingCommandDefs
+
+// ============================================================================
+function printHelp()
+
+  let chatCommand = getChatCommand()
+  let chatPlayer = getChatCommandPlayer()
+
+  LinkedList<ChatCommandDefinition> matchingCommandDefs
+
+  // Show help for a specific command
+  let commandNameArg = chatCommand.getArgument(0)
+  if (commandNameArg != null)
+    let partialCommandName = commandNameArg.getString()
+    matchingCommandDefs = getPartialMatchingCommands(partialCommandName)
+    if (matchingCommandDefs.isEmpty())
+      error("No commands found matching partial name '{0}'".format(partialCommandName))
+      return
+
+  // Show help for all commands
+  else
+    matchingCommandDefs = new LinkedList<ChatCommandDefinition>()
+
+    for commandHandler in g_commandHandlers
+      let commandDefinitions = commandHandler.getCommandDefinitions()
+      for commandDef in commandDefinitions
+        matchingCommandDefs.add(commandDef)
+      destroy commandDefinitions
+
+  let comparator = new ChatCommandDefinitionComparator()
+  matchingCommandDefs.sortWith(comparator)
+  destroy comparator
+
+  for commandDef in matchingCommandDefs
+    displayMessageToPlayer(chatPlayer, commandDef.getHelpString())
+
+  destroy matchingCommandDefs
+
+// ============================================================================
+init
+  g_commandHandlers = new PriorityList<ChatCommandHandler>()
+
+  g_chatCommandTrigger = CreateTrigger()
+  g_chatCommandTrigger.registerAnyPlayerChatEvent(COMMAND_PREFIX, false)
+  g_chatCommandTrigger.addAction(function parseChatCommand)
+
+  // A special chat command handler that prints helpful information about registered commands
+  let helpCommandHandler = new ChatCommandHandler("HELP")
+  helpCommandHandler.registerCommandDefinition(COMMAND_HELP_STR, function printHelp)
+    ..addStringArgument("COMMAND_NAME", true)
+
+  registerChatCommandHandler(helpCommandHandler, COMMAND_HELP_PRIORITY)

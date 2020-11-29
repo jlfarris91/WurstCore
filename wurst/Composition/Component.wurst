@@ -34,6 +34,14 @@ public abstract class Component implements IComponent
     return _enabled
 
   // --------------------------------------------------------------------------
+  function enable()
+    setEnabled(true)
+
+  // --------------------------------------------------------------------------
+  function disable()
+    setEnabled(false)
+
+  // --------------------------------------------------------------------------
   function initialize()
     skip
 

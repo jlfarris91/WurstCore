@@ -48,6 +48,10 @@ public function LinkedList<TElem>.toWeightedSet<TElem>(Selector<TElem, real> sel
   return output
 
 // ============================================================================
+public function LinkedList<TElem>.getLast<TElem>() returns TElem
+  return this.isEmpty() ? null : this.get(this.size() - 1)
+
+// ============================================================================
 //
 // Tests
 //

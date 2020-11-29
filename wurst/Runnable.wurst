@@ -1,85 +1,165 @@
 package Runnable
 import ErrorHandling
+import Events
 
 // ============================================================================
 public interface IRunnable
-  function getHasStarted() returns bool
-  function getIsRunning() returns bool
+  function getState() returns RunnableState
+  function getError() returns string
   function start()
-  function stop()
   function pause()
   function resume()
+  function fail(string error)
+  function complete()
+  function reset()
+
+// ============================================================================
+public function IRunnable.hasStarted() returns bool
+  return this.getState() != RunnableState.WAITING
+
+// ============================================================================
+public function IRunnable.isRunning() returns bool
+  return this.getState() == RunnableState.RUNNING
+
+// ============================================================================
+public function IRunnable.isPaused() returns bool
+  return this.getState() == RunnableState.PAUSED
+
+// ============================================================================
+public function IRunnable.isCompleted() returns bool
+  return this.getState() == RunnableState.COMPLETED
+
+// ============================================================================
+public function IRunnable.succeeded() returns bool
+  return this.isCompleted() and this.getError() == null
+
+// ============================================================================
+public function IRunnable.failed() returns bool
+  return this.isCompleted() and this.getError() != null
+
+// ============================================================================
+public function IRunnable.cancel()
+  this.fail("Canceled")
+
+// ============================================================================
+public enum RunnableState
+  WAITING
+  RUNNING
+  PAUSED
+  COMPLETED
 
 // ============================================================================
 public abstract class Runnable implements IRunnable
-  private bool m_started
-  private bool m_running
+  private RunnableState m_state
+  private string m_error
+  private Event1<Runnable> m_stateChangedEvent
   
+  // --------------------------------------------------------------------------
   construct()
-    m_started = false
-    m_running = false
+    m_state = RunnableState.WAITING
+    m_error = null
 
   // --------------------------------------------------------------------------
-  override function getHasStarted() returns bool
-    return m_started
+  ondestroy
+    if (not this.isCompleted())
+      this.cancel()
+    if (m_stateChangedEvent != null)
+      destroy m_stateChangedEvent
 
   // --------------------------------------------------------------------------
-  override function getIsRunning() returns bool
-    return m_running
+  override function getState() returns RunnableState
+    return m_state
+
+  // --------------------------------------------------------------------------
+  override function getError() returns string
+    return m_error
+
+  // --------------------------------------------------------------------------
+  function getStateChangedEvent() returns Event1<Runnable>
+    if (m_stateChangedEvent == null)
+      m_stateChangedEvent = new Event1<Runnable>()
+    return m_stateChangedEvent
 
   // --------------------------------------------------------------------------
   override function start()
-    if (m_started)
-      error("Runnable has already been started")
+    if (m_state == RunnableState.RUNNING)
+      error("Attempted to start a runnable that was already running")
       return
 
-    m_started = true
-    m_running = true
+    m_state = RunnableState.RUNNING
+    m_error = null
     onStarted()
-  
-  // --------------------------------------------------------------------------
-  override function stop()
-    if (not m_started)
-      error("Attempted to stop a runnable that was not running")
-      return
-
-    m_started = false
-    m_running = false
-    onStopped()
+    raiseStateChangedEvent()
 
   // --------------------------------------------------------------------------
   override function pause()
-    if (not m_running)
-      error("Attempted to pause a runnable when it was not running")
+    if (m_state != RunnableState.RUNNING)
+      error("Attempted to pause a runnable that was not running")
       return
 
-    m_running = false
-    onPaused()    
+    m_state = RunnableState.PAUSED
+    onPaused()
+    raiseStateChangedEvent()
 
   // --------------------------------------------------------------------------
   override function resume()
-    if (m_running)
-      error("Runnable is already running")
+    if (m_state != RunnableState.PAUSED)
+      error("Attempted to resume a runnable that was not paused")
       return
 
-    m_running = true
-    onResumed()    
+    m_state = RunnableState.RUNNING
+    onResumed()
+    raiseStateChangedEvent()
+
+  // --------------------------------------------------------------------------
+  override function fail(string error)
+    m_error = error
+    complete()
+
+  // --------------------------------------------------------------------------
+  override function complete()
+    if (m_state != RunnableState.COMPLETED)
+      m_state = RunnableState.COMPLETED
+      onCompleted()
+      raiseStateChangedEvent()
+
+  // --------------------------------------------------------------------------
+  override function reset()
+    m_error = null
+
+    if (m_state != RunnableState.WAITING)
+      m_state = RunnableState.WAITING
+      raiseStateChangedEvent()
 
   // --------------------------------------------------------------------------
   protected function onStarted()
-
-  // --------------------------------------------------------------------------
-  protected function onStopped()
+    skip
   
   // --------------------------------------------------------------------------
   protected function onPaused()
+    skip
   
   // --------------------------------------------------------------------------
   protected function onResumed()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function onCompleted()
+    skip
 
   // --------------------------------------------------------------------------
   function getStatusString() returns string
-    if (getHasStarted())
-      return getIsRunning() ? "Running" : "Paused"
-    else
-      return "Stopped"
+    switch (m_state)
+      case RunnableState.WAITING
+        return "Waiting"
+      case RunnableState.RUNNING
+        return "Running"
+      case RunnableState.PAUSED
+        return "Paused"
+      case RunnableState.COMPLETED
+        return m_error != null ? "Failed" : "Succeeded"
+
+  // --------------------------------------------------------------------------
+  private function raiseStateChangedEvent()
+    if (m_stateChangedEvent != null)
+      m_stateChangedEvent.call(this)

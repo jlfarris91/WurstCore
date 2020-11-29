@@ -1,0 +1,17 @@
+package IterableMapExtensions
+import HashMap
+import LinkedList
+
+// ============================================================================
+public function IterableMap<TKey, TValue>.getKeys<TKey, TValue>() returns LinkedList<TKey>
+  let keys = new LinkedList<TKey>()
+  for key in this
+    keys.add(key)
+  return keys
+
+// ============================================================================
+public function IterableMap<TKey, TValue>.getValues<TKey, TValue>() returns LinkedList<TValue>
+  let values = new LinkedList<TValue>()
+  for key in this
+    values.add(this.get(key))
+  return values

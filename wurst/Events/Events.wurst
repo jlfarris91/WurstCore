@@ -4,121 +4,177 @@ import ErrorIf
 import public Action
 
 // ============================================================================
-public class Event implements Action
-  private LinkedList<Action> m_handlers
+public class Event
+  private LinkedList<EventCallback> m_callbacks
 
   // --------------------------------------------------------------------------
   construct()
-    m_handlers = new LinkedList<Action>()
+    m_callbacks = new LinkedList<EventCallback>()
 
   // --------------------------------------------------------------------------
-  construct(LinkedList<Action> handlers)
-    m_handlers = handlers
+  construct(LinkedList<EventCallback> callbacks)
+    m_callbacks = callbacks
 
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_handlers
-    m_handlers = null
+    destroy m_callbacks
+    m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Action action) returns Action
-    ErrorIf.argumentIsNull(action, "action")
-    m_handlers.add(action)
-    return action
+  function register(EventCallback callback) returns EventCallback
+    ErrorIf.argumentIsNull(callback, "callback")
+    callback.e = this
+    m_callbacks.add(callback)
+    return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Action action) returns bool
-    ErrorIf.argumentIsNull(action, "action")
-    return m_handlers.remove(action)
+  function unregister(EventCallback callback) returns bool
+    ErrorIf.argumentIsNull(callback, "callback")
+    if (not m_callbacks.remove(callback))
+      return false
+    callback.e = null
+    return true
 
   // --------------------------------------------------------------------------
-  override function call()
-    for handler in m_handlers
-      handler.call()
+  function call()
+    for handler in m_callbacks
+      if (handler != null)
+        handler.call()
 
 // ============================================================================
-public class Event1<TArg1> implements Action1<TArg1>
-  private LinkedList<Action1<TArg1>> m_handlers
+public class Event1<TArg1>
+  private LinkedList<Event1Callback<TArg1>> m_callbacks
 
   // --------------------------------------------------------------------------
   construct()
-    m_handlers = new LinkedList<Action1<TArg1>>()
+    m_callbacks = new LinkedList<Event1Callback<TArg1>>()
 
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_handlers
-    m_handlers = null
+    destroy m_callbacks
+    m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Action1<TArg1> action) returns Action1<TArg1>
-    ErrorIf.argumentIsNull(action, "action")
-    m_handlers.add(action)
-    return action
+  function register(Event1Callback<TArg1> callback) returns Event1Callback<TArg1>
+    ErrorIf.argumentIsNull(callback, "callback")
+    callback.e = this
+    m_callbacks.add(callback)
+    return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Action1<TArg1> action) returns bool
-    ErrorIf.argumentIsNull(action, "action")
-    return m_handlers.remove(action)
+  function unregister(Event1Callback<TArg1> callback) returns bool
+    ErrorIf.argumentIsNull(callback, "callback")
+    if (not m_callbacks.remove(callback))
+      return false
+    callback.e = null
+    return true
 
   // --------------------------------------------------------------------------
-  override function call(TArg1 arg1)
-    for handler in m_handlers
-      handler.call(arg1)
+  function call(TArg1 arg1)
+    for handler in m_callbacks
+      if (handler != null)
+        handler.call(arg1)
 
 // ============================================================================
-public class Event2<TArg1, TArg2> implements Action2<TArg1, TArg2>
-  private LinkedList<Action2<TArg1, TArg2>> m_handlers
+public class Event2<TArg1, TArg2>
+  private LinkedList<Event2Callback<TArg1, TArg2>> m_callbacks
 
   // --------------------------------------------------------------------------
   construct()
-    m_handlers = new LinkedList<Action2<TArg1, TArg2>>()
+    m_callbacks = new LinkedList<Event2Callback<TArg1, TArg2>>()
 
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_handlers
-    m_handlers = null
+    destroy m_callbacks
+    m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Action2<TArg1, TArg2> action) returns Action2<TArg1, TArg2>
-    ErrorIf.argumentIsNull(action, "action")
-    m_handlers.add(action)
-    return action
+  function register(Event2Callback<TArg1, TArg2> callback) returns Event2Callback<TArg1, TArg2>
+    ErrorIf.argumentIsNull(callback, "callback")
+    m_callbacks.add(callback)
+    callback.e = this
+    return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Action2<TArg1, TArg2> action) returns bool
-    ErrorIf.argumentIsNull(action, "action")
-    return m_handlers.remove(action)
+  function unregister(Event2Callback<TArg1, TArg2> callback) returns bool
+    ErrorIf.argumentIsNull(callback, "callback")
+    if (not m_callbacks.remove(callback))
+      return false
+    callback.e = null
+    return true
 
   // --------------------------------------------------------------------------
-  override function call(TArg1 arg1, TArg2 arg2)
-    for handler in m_handlers
-      handler.call(arg1, arg2)
+  function call(TArg1 arg1, TArg2 arg2)
+    for handler in m_callbacks
+      if (handler != null)
+        handler.call(arg1, arg2)
 
 // ============================================================================
-public class Event3<TArg1, TArg2, TArg3> implements Action3<TArg1, TArg2, TArg3>
-  private LinkedList<Action3<TArg1, TArg2, TArg3>> m_handlers
+public class Event3<TArg1, TArg2, TArg3>
+  private LinkedList<Event3Callback<TArg1, TArg2, TArg3>> m_callbacks
 
   // --------------------------------------------------------------------------
   construct()
-    m_handlers = new LinkedList<Action3<TArg1, TArg2, TArg3>>()
+    m_callbacks = new LinkedList<Event3Callback<TArg1, TArg2, TArg3>>()
 
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_handlers
-    m_handlers = null
+    destroy m_callbacks
+    m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Action3<TArg1, TArg2, TArg3> action) returns Action3<TArg1, TArg2, TArg3>
-    ErrorIf.argumentIsNull(action, "action")
-    m_handlers.add(action)
-    return action
+  function register(Event3Callback<TArg1, TArg2, TArg3> callback) returns Event3Callback<TArg1, TArg2, TArg3>
+    ErrorIf.argumentIsNull(callback, "callback")
+    m_callbacks.add(callback)
+    callback.e = this
+    return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Action3<TArg1, TArg2, TArg3> action) returns bool
-    ErrorIf.argumentIsNull(action, "action")
-    return m_handlers.remove(action)
+  function unregister(Event3Callback<TArg1, TArg2, TArg3> callback) returns bool
+    ErrorIf.argumentIsNull(callback, "callback")
+    if (not m_callbacks.remove(callback))
+      return false
+    callback.e = null
+    return true
 
   // --------------------------------------------------------------------------
-  override function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
-    for handler in m_handlers
-      handler.call(arg1, arg2, arg3)
+  function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
+    for handler in m_callbacks
+      if (handler != null)
+        handler.call(arg1, arg2, arg3)
+
+// ============================================================================
+public abstract class EventCallback
+  protected Event e
+  abstract function call()
+  ondestroy
+    if (e != null)
+      e.unregister(this)
+    e = null
+
+// ============================================================================
+public abstract class Event1Callback<TArg1>
+  protected Event1<TArg1> e
+  abstract function call(TArg1 arg1)
+  ondestroy
+    if (e != null)
+      e.unregister(this)
+    e = null
+
+// ============================================================================
+public abstract class Event2Callback<TArg1, TArg2>
+  protected Event2<TArg1, TArg2> e
+  abstract function call(TArg1 arg1, TArg2 arg2)
+  ondestroy
+    if (e != null)
+      e.unregister(this)
+    e = null
+
+// ============================================================================
+public abstract class Event3Callback<TArg1, TArg2, TArg3>
+  protected Event3<TArg1, TArg2, TArg3> e
+  abstract function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
+  ondestroy
+    if (e != null)
+      e.unregister(this)
+    e = null

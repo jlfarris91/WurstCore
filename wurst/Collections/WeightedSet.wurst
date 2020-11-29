@@ -66,6 +66,23 @@ public class WeightedSet<T>
     this.totalWeight = 0
 
   // --------------------------------------------------------------------------
+  /** Sets the weight of an element in the set. The element is added to the set if it is not found. */
+  function setWeight(T elem, real weight)
+    let entry = findEntry(elem)
+    if (entry == null)
+      add(elem, weight)
+      return
+    totalWeight -= entry.weight
+    totalWeight += weight
+    entry.weight = weight
+
+  // --------------------------------------------------------------------------
+  /** Returns the weight of an element in the set. Returns zero if the element could not be found. */
+  function getWeight(T elem) returns real
+    let entry = findEntry(elem)
+    return entry == null ? 0.0 : entry.weight
+
+  // --------------------------------------------------------------------------
   /** Returns true if the set contains no elements */
   function isEmpty() returns bool
     return this.size == 0

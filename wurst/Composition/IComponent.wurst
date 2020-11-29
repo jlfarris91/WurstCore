@@ -6,3 +6,4 @@ public interface IComponent
   function getOwner() returns IComposite
   function setEnabled(bool enabled)
   function getEnabled() returns bool
+  function getTypeId() returns int

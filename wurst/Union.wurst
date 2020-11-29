@@ -1,5 +1,6 @@
 package Union
 import ErrorHandling
+import ObjectIds
 
 // ============================================================================
 public enum UnionType
@@ -7,6 +8,7 @@ public enum UnionType
   Real
   Int
   Bool
+  FourCC
 
 // ============================================================================
 public class Union
@@ -17,6 +19,11 @@ public class Union
   construct()
     m_type = UnionType.String
     m_value = ""
+
+  // --------------------------------------------------------------------------
+  construct(UnionType unionType, string value)
+    m_type = unionType
+    m_value = value
 
   // --------------------------------------------------------------------------
   function getType() returns UnionType
@@ -67,6 +74,38 @@ public class Union
     m_value = value.toString()
 
   // --------------------------------------------------------------------------
+  function setRawCode(int id)
+    m_type = UnionType.FourCC
+    m_value = id.toRawCode()
+
+  // --------------------------------------------------------------------------
+  function getRawCode() returns int
+    if (getType() != UnionType.FourCC)
+      error("Expected union to be type FourCC")
+    return m_value.fromRawCode()    
+
+  // --------------------------------------------------------------------------
+  function setFourCC(string fourCC)
+    if (fourCC.length() != 4)
+      error("FourCC value must be 4 characters long")
+    m_type = UnionType.FourCC
+    m_value = fourCC
+
+  // --------------------------------------------------------------------------
+  function getFourCC() returns string
+    if (getType() != UnionType.FourCC)
+      error("Expected union to be type FourCC")
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function toString() returns string
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function equals(Union other) returns bool
+    return m_value == other.m_value
+
+  // --------------------------------------------------------------------------
   function clone() returns Union
     let clone = new Union()
     switch (m_type)
@@ -78,4 +117,22 @@ public class Union
         clone.setInt(getInt())
       case UnionType.Bool
         clone.setBool(getBool())
+      case UnionType.FourCC
+        clone.setFourCC(getFourCC())
     return clone
+
+  // --------------------------------------------------------------------------
+  static function fromString(string value) returns Union
+    return new Union(UnionType.String, value)
+
+  // --------------------------------------------------------------------------
+  static function fromInt(int value) returns Union
+    return new Union(UnionType.Int, value.toString())
+
+  // --------------------------------------------------------------------------
+  static function fromReal(real value) returns Union
+    return new Union(UnionType.Real, value.toString())
+
+  // --------------------------------------------------------------------------
+  static function fromBool(bool value) returns Union
+    return new Union(UnionType.Bool, value.toString())

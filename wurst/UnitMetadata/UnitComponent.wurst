@@ -5,6 +5,7 @@ import public initlater Component
 // ============================================================================
 public abstract class UnitComponent extends Component
   private IUnitMetadata m_owner
+  private bool m_disableOnDeath = true
 
   // --------------------------------------------------------------------------
   construct(IUnitMetadata ownerUnit)
@@ -18,6 +19,19 @@ public abstract class UnitComponent extends Component
   // --------------------------------------------------------------------------
   function getOwnerUnit() returns unit
     return m_owner.getUnit()
+
+  // --------------------------------------------------------------------------
+  function setDisableOnDeath(bool disableOnDeath)
+    m_disableOnDeath = disableOnDeath
+
+  // --------------------------------------------------------------------------
+  function getDisableOnDeath() returns bool
+    return m_disableOnDeath
+
+  // --------------------------------------------------------------------------
+  function onOwnerKilled()
+    if (m_disableOnDeath)
+      disable()
 
   // --------------------------------------------------------------------------
   function onUnitChanged(unit _oldUnit, unit _newUnit)
