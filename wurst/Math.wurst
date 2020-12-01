@@ -68,6 +68,15 @@ public function lerpInt(int start, int _end, real t) returns int
   return start + R2I(I2R(_end - start) * t)
 
 // ============================================================================
+public function parameterize(real start, real _end, real value) returns real
+  let diff = RAbsBJ(_end - start)
+  return diff == 0.0 ? 0.0 : (value - start) / diff
+
+// ============================================================================
+public function parameterize01(real start, real _end, real value) returns real
+  return clamp01(parameterize(start, _end, value))
+
+// ============================================================================
 init
   g_WorldBounds = GetPlayableMapRect()
 

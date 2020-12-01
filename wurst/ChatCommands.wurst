@@ -11,6 +11,7 @@ import TriggerExtensions
 import PriorityList
 import DisplayTextToPlayer
 import StringComparison
+import StringExtensions
 
 constant string COMMAND_PREFIX = "-"
 constant string COMMAND_HELP_STR = "help"
@@ -147,6 +148,7 @@ public class ChatCommandDefinition
   private string m_command
   private LinkedList<ChatCommandArgument> m_arguments
   private bool m_doesHandleCommand
+  private string m_description
 
   // --------------------------------------------------------------------------
   construct(string command)
@@ -191,6 +193,14 @@ public class ChatCommandDefinition
   // --------------------------------------------------------------------------
   function setDoesHandleCommand(bool value)
     m_doesHandleCommand = value
+
+  // --------------------------------------------------------------------------
+  function getDescription() returns string
+    return m_description
+
+  // --------------------------------------------------------------------------
+  function setDescription(string description)
+    m_description = description
 
   // --------------------------------------------------------------------------
   function getHelpString() returns string
@@ -246,8 +256,18 @@ public function ChatCommandDefinition.addStringArgument(string name, bool option
   return this
 
 // ============================================================================
+public function ChatCommandDefinition.addStringArgument(string name, bool optional, string description) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.STRING, optional)..setDescription(description))
+  return this
+
+// ============================================================================
 public function ChatCommandDefinition.addIntegerArgument(string name, bool optional) returns ChatCommandDefinition
   this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.INT, optional))
+  return this
+
+// ============================================================================
+public function ChatCommandDefinition.addIntegerArgument(string name, bool optional, string description) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.INT, optional)..setDescription(description))
   return this
 
 // ============================================================================
@@ -256,13 +276,28 @@ public function ChatCommandDefinition.addRealArgument(string name, bool optional
   return this
 
 // ============================================================================
+public function ChatCommandDefinition.addRealArgument(string name, bool optional, string description) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.REAL, optional)..setDescription(description))
+  return this
+
+// ============================================================================
 public function ChatCommandDefinition.addBoolArgument(string name, bool optional) returns ChatCommandDefinition
   this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.BOOL, optional))
   return this
 
 // ============================================================================
+public function ChatCommandDefinition.addBoolArgument(string name, bool optional, string description) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.BOOL, optional)..setDescription(description))
+  return this
+
+// ============================================================================
 public function ChatCommandDefinition.addFourCCArgument(string name, bool optional) returns ChatCommandDefinition
   this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.FOURCC, optional))
+  return this
+
+// ============================================================================
+public function ChatCommandDefinition.addFourCCArgument(string name, bool optional, string description) returns ChatCommandDefinition
+  this.addArgument(new ChatCommandArgument(name, ChatCommandArgumentType.FOURCC, optional)..setDescription(description))
   return this
 
 // ============================================================================
@@ -274,11 +309,26 @@ public enum ChatCommandArgumentType
   FOURCC
 
 // ============================================================================
+public function ChatCommandArgumentType.toString() returns string
+  switch (this)
+    case STRING
+      return "String"
+    case INT
+      return "Integer"
+    case REAL
+      return "Real"
+    case BOOL
+      return "Boolean"
+    case FOURCC
+      return "FourCC"
+
+// ============================================================================
 public class ChatCommandArgument
   private string m_name
   private ChatCommandArgumentType m_argType
   private bool m_isOptional
   private LinkedList<Union> m_options
+  private string m_description
 
   // --------------------------------------------------------------------------
   construct(string name, ChatCommandArgumentType argType, bool isOptional)
@@ -329,24 +379,38 @@ public class ChatCommandArgument
       m_options.add(Union.fromReal(option))
 
   // --------------------------------------------------------------------------
+  function getDescription() returns string
+    return m_description
+
+  // --------------------------------------------------------------------------
+  function setDescription(string description)
+    m_description = description
+
+  // --------------------------------------------------------------------------
   function getHelpString() returns string
     let sb = new StringBuilder()
 
     sb.append(m_isOptional ? "(" : "[")
 
     if (not m_options.isEmpty())
-      let size = m_options.size()
-      var i = 0
-      for option in m_options
-        sb.append("'{0}'".format(option.toString()))
-        i++
-        if (i != size)
-          sb.append(", ")
+      sb.append(getOptionsString())
     else
       sb.append(m_name)
 
     sb.append(m_isOptional ? ")" : "]")
 
+    return sb.toStringAndDestroy()
+
+  // --------------------------------------------------------------------------
+  function getOptionsString() returns string
+    let sb = new StringBuilder()
+    let size = m_options.size()
+    var i = 0
+    for option in m_options
+      sb.append("'{0}'".format(option.toString()))
+      i++
+      if (i != size)
+        sb.append(", ")
     return sb.toStringAndDestroy()
 
   // --------------------------------------------------------------------------
@@ -477,6 +541,43 @@ function printPartialMatchingCommands(string command, player p)
   destroy matchingCommandDefs
 
 // ============================================================================
+function printDetailedHelp(player p, ChatCommandDefinition commandDef)
+  let sb = new StringBuilder()
+  
+  let commandDefDesc = commandDef.getDescription()
+  if (commandDefDesc != null)
+    displayMessageToPlayer(p, commandDefDesc)
+  
+  for i = 0 to commandDef.getArgumentCount()
+    sb.reset()
+    sb.append(" - ")
+    let commandArg = commandDef.getArgument(i)
+    if (commandArg != null)
+
+      sb.append(commandArg.getName().colorize(COLOR_GOLD))
+
+      sb.append(" ({0})".format(commandArg.getArgumentType().toString()))
+      
+      if (commandArg.getIsOptional())
+        sb.append(" (OPTIONAL)")
+
+      let options = commandArg.getOptions()
+      if (not options.isEmpty())
+        sb.append(" " + commandArg.getOptionsString())
+
+      sb.append(": ")
+
+      let commandArgDesc = commandArg.getDescription()
+      if (commandArgDesc != null)
+        sb.append(commandArgDesc)
+      else
+        sb.append("<No Description>")
+
+    displayMessageToPlayer(p, sb.toString())
+  
+  destroy sb
+
+// ============================================================================
 function printHelp()
 
   let chatCommand = getChatCommand()
@@ -509,6 +610,11 @@ function printHelp()
 
   for commandDef in matchingCommandDefs
     displayMessageToPlayer(chatPlayer, commandDef.getHelpString())
+
+  // Print detailed info if the user wants help with a specific command
+  if (matchingCommandDefs.size() == 1)
+    let commandDef = matchingCommandDefs.getFirst()
+    printDetailedHelp(chatPlayer, commandDef)
 
   destroy matchingCommandDefs
 

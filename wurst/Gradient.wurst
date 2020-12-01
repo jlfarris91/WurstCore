@@ -1,0 +1,187 @@
+package Gradient
+import LinkedList
+import Math
+import Func
+
+// ============================================================================
+public class GradientEntry<T>
+  T value
+  real time
+
+  // --------------------------------------------------------------------------
+  construct(T value, real time)
+    this.value = value
+    this.time = time
+
+// ============================================================================
+public class GradientList<T>
+  private LinkedList<GradientEntry<T>> m_entries
+  private Func3<T, T, real, T> m_sampleFunc
+  private T m_defaultValue
+
+  // --------------------------------------------------------------------------
+  construct(Func3<T, T, real, T> sampleFunc, T defaultValue)
+    m_entries = new LinkedList<GradientEntry<T>>()
+    m_sampleFunc = sampleFunc
+    m_defaultValue = defaultValue
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for entry in m_entries
+      destroy entry
+    destroy m_entries
+    m_entries = null
+
+    destroy m_sampleFunc
+    m_sampleFunc = null
+
+  // --------------------------------------------------------------------------
+  function addEntry(real time, T value)
+    m_entries.add(new GradientEntry<T>(value, time))
+
+  // --------------------------------------------------------------------------
+  function getEntry(int index) returns GradientEntry<T>
+    return m_entries.get(index)
+
+  // --------------------------------------------------------------------------
+  function getEntryCount() returns int
+    return m_entries.size()
+
+  // --------------------------------------------------------------------------
+  function sample(real time) returns T
+    if (m_entries.isEmpty())
+      return m_defaultValue
+
+    let firstEntry = m_entries.getFirst()
+    if (firstEntry == null)
+      return m_defaultValue
+
+    if (m_entries.size() == 1)
+      return firstEntry.value
+
+    let clampedT = clamp01(time)
+    
+    var firstTime = firstEntry.time
+    var firstValue = firstEntry.value
+
+    var secondTime = firstEntry.time
+    var secondValue = firstEntry.value
+
+    for i = 0 to m_entries.size()
+      let entry = m_entries.get(i)
+      if (entry.time <= clampedT)
+        firstTime = entry.time
+        firstValue = entry.value
+        secondTime = entry.time
+        secondValue = entry.value
+      else if (entry.time > clampedT)
+        secondTime = entry.time
+        secondValue = entry.value
+        break
+    
+    let normalizedSegmentT = parameterize(firstTime, secondTime, clampedT)
+    return m_sampleFunc.call(firstValue, secondValue, normalizedSegmentT)
+
+
+// ============================================================================
+public class GradientColorEntry
+  colorA value
+  real time
+
+  // --------------------------------------------------------------------------
+  construct(colorA value, real time)
+    this.value = value
+    this.time = time
+
+// ============================================================================
+public interface GradientColorSampleFunc
+  function call(colorA color1, colorA color2, real t) returns colorA
+
+// ============================================================================
+public class GradientColorList
+  private LinkedList<GradientColorEntry> m_entries
+  private GradientColorSampleFunc m_sampleFunc
+  private colorA m_defaultValue
+
+  // --------------------------------------------------------------------------
+  construct(GradientColorSampleFunc sampleFunc, colorA defaultValue)
+    m_entries = new LinkedList<GradientColorEntry>()
+    m_sampleFunc = sampleFunc
+    m_defaultValue = defaultValue
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for entry in m_entries
+      destroy entry
+    destroy m_entries
+    m_entries = null
+
+    destroy m_sampleFunc
+    m_sampleFunc = null
+
+  // --------------------------------------------------------------------------
+  function addEntry(real time, colorA value)
+    m_entries.add(new GradientColorEntry(value, time))
+
+  // --------------------------------------------------------------------------
+  function getEntry(int index) returns GradientColorEntry
+    return m_entries.get(index)
+
+  // --------------------------------------------------------------------------
+  function getEntryCount() returns int
+    return m_entries.size()
+
+  // --------------------------------------------------------------------------
+  function sample(real time) returns colorA
+    if (m_entries.isEmpty())
+      Log.info("no entries")
+      return m_defaultValue
+
+    let firstEntry = m_entries.getFirst()
+    if (firstEntry == null)
+      Log.info("entry is null")
+      return m_defaultValue
+
+    if (m_entries.size() == 1)
+      return firstEntry.value
+
+    let clampedT = clamp01(time)
+    
+    var firstTime = firstEntry.time
+    var firstValue = firstEntry.value
+
+    var secondTime = firstEntry.time
+    var secondValue = firstEntry.value
+
+    for i = 0 to m_entries.size()
+      let entry = m_entries.get(i)
+      if (entry.time <= clampedT)
+        firstTime = entry.time
+        firstValue = entry.value
+        secondTime = entry.time
+        secondValue = entry.value
+      else if (entry.time > clampedT)
+        secondTime = entry.time
+        secondValue = entry.value
+        break
+    
+    let normalizedSegmentT = parameterize(firstTime, secondTime, clampedT)
+    return m_sampleFunc.call(firstValue, secondValue, normalizedSegmentT)
+
+// ============================================================================
+@test function sample()
+
+  let gradient = new GradientList<real>((real a, real b, real t) -> lerp(a, b, t), 0.0)
+  ..addEntry(1.0, 100.0)
+  ..addEntry(0.0, 0.0)
+
+  gradient.getEntryCount().assertEquals(2)
+  
+  gradient.getEntry(0).time.assertEquals(0.0)
+  gradient.getEntry(0).value.assertEquals(0.0)
+  
+  gradient.getEntry(1).time.assertEquals(1.0)
+  gradient.getEntry(1).value.assertEquals(100.0)
+
+  gradient.sample(0.5).assertEquals(50.0)
+
