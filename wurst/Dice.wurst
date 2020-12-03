@@ -1,0 +1,32 @@
+package Dice
+import Range
+
+// ============================================================================
+public tuple dice(int base, int numberOfDice, int sidesPerDie)
+
+// ============================================================================
+public function dice.toRange() returns rangeInt
+  return rangeInt(this.min(), this.max())
+
+// ============================================================================
+public function dice.min() returns int
+  return this.base + this.numberOfDice
+
+// ============================================================================
+public function dice.max() returns int
+  return this.base + this.numberOfDice * this.sidesPerDie
+
+// ============================================================================
+public function dice.roll() returns int
+  return GetRandomInt(this.min(), this.max())
+
+// ============================================================================
+public function rangeInt.toDice() returns dice
+  let base = this.min == this.max ? this.min : this.min - 1
+  let numberOfDice = this.min == this.max ? 0 : 1
+  let sidesPerDie = this.min == this.max ? this.max - this.min : (this.max - this.min) + 1
+  return dice(base, numberOfDice, sidesPerDie)  
+
+// ============================================================================
+public function int.toDice() returns dice
+  return dice(this, 0, 0)

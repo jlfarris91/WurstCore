@@ -13,6 +13,13 @@ IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
 int array g_ignoreIndexingCounter
 
+@configurable public bool g_enableUnitMetadataDebugLogging = false
+
+// ============================================================================
+function logDebug(string message)
+  if (g_enableUnitMetadataDebugLogging)
+    logDebug(message)
+
 // ============================================================================
 public interface IUnitMetadata extends IComposite
   function getUnit() returns unit
@@ -58,7 +65,7 @@ public class UnitMetadata implements IUnitMetadata
     g_unitMetadatas[newIndex] = this
     setUnit(unitToAttachTo)
 
-    Log.debug("[UnitMetadata.attach] Attached to " + this.getName())
+    logDebug("[UnitMetadata.attach] Attached to " + this.getName())
 
   // --------------------------------------------------------------------------
   override function detach()
@@ -76,7 +83,7 @@ public class UnitMetadata implements IUnitMetadata
     g_unitMetadatas[currentIndex] = null
     setUnit(null)
 
-    Log.debug("[UnitMetadata.detach] Detached from " + this.getName())
+    logDebug("[UnitMetadata.detach] Detached from " + this.getName())
 
   // --------------------------------------------------------------------------
   function onKilled()
@@ -182,7 +189,7 @@ public function constructUnitMetadata(unit u) returns IUnitMetadata
       break
   if (metadata == null)
     metadata = new UnitMetadata()
-    Log.debug("No unit metadata factory handled unit " + u.getName() + ". defaulting to UnitMetadata")
+    logDebug("No unit metadata factory handled unit " + u.getName() + ". defaulting to UnitMetadata")
   metadata.attach(u)
   return metadata
 
@@ -211,7 +218,7 @@ public function createUnitTLS(IUnitMetadata metadata, player owner, integer unit
 
   metadata.attach(newUnit)
 
-  Log.debug("[createUnitTLS] Reattached metadata from unit " + (oldUnit != null ? oldUnit.getName() : "null") + " to unit " + newUnit.getName())
+  logDebug("[createUnitTLS] Reattached metadata from unit " + (oldUnit != null ? oldUnit.getName() : "null") + " to unit " + newUnit.getName())
 
   return newUnit
 
@@ -227,7 +234,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
     existingMetadata.detach()
     startIgnoreIndexing(owningPlayer)
   else
-    Log.debug("[replaceUnitTLS] Replacing unit " + whichUnit.getName() + " with no attached metadata")
+    logDebug("[replaceUnitTLS] Replacing unit " + whichUnit.getName() + " with no attached metadata")
 
   let newUnit = replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod)
 
@@ -238,7 +245,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
     stopIgnoreIndexing(owningPlayer)
     existingMetadata.attach(newUnit)
 
-  Log.debug("[replaceUnitTLS] Reattached metadata from unit " + oldUnitName + " to unit " + newUnit.getName())
+  logDebug("[replaceUnitTLS] Reattached metadata from unit " + oldUnitName + " to unit " + newUnit.getName())
     
   return newUnit
 
@@ -251,12 +258,12 @@ function onUnitKilled()
     return
 
   metadata.onKilled()
-  Log.debug("[onUnitKilled] " + dyingUnit.getName() + " was killed")
+  logDebug("[onUnitKilled] " + dyingUnit.getName() + " was killed")
 
 // ============================================================================
 function onUnitIndexed(unit indexingUnit)
   if (isIgnoringIndexing(indexingUnit.getOwner()))
-    Log.debug("[onUnitIndexed] Ignoring indexed unit")
+    logDebug("[onUnitIndexed] Ignoring indexed unit")
     return
 
   let index = indexingUnit.getIndex()
@@ -269,12 +276,12 @@ function onUnitIndexed(unit indexingUnit)
   metadata = constructUnitMetadata(indexingUnit)
   g_unitMetadatas[index] = metadata
 
-  Log.debug("[onUnitIndexed] Created metadata for unit " + indexingUnit.getName())
+  logDebug("[onUnitIndexed] Created metadata for unit " + indexingUnit.getName())
 
 // ============================================================================
 function onUnitDeindexed(unit indexingUnit)
   if (isIgnoringIndexing(indexingUnit.getOwner()))
-    Log.debug("[onUnitDeindexed] Ignoring deindexed unit")
+    logDebug("[onUnitDeindexed] Ignoring deindexed unit")
     return
 
   let index = indexingUnit.getIndex()
@@ -282,19 +289,19 @@ function onUnitDeindexed(unit indexingUnit)
 
   if (metadata != null)
     destroy metadata
-    Log.debug("[onUnitDeindexed] Destroyed metadata for unit " + indexingUnit.getName())
+    logDebug("[onUnitDeindexed] Destroyed metadata for unit " + indexingUnit.getName())
 
   g_unitMetadatas[index] = null
 
 // ============================================================================
 public function startIgnoreIndexing(player p)
   g_ignoreIndexingCounter[p.getId()]++
-  Log.debug("Start ignoring indexing " + I2S(g_ignoreIndexingCounter[p.getId()]))
+  logDebug("Start ignoring indexing " + I2S(g_ignoreIndexingCounter[p.getId()]))
 
 // ============================================================================
 public function stopIgnoreIndexing(player p)
   g_ignoreIndexingCounter[p.getId()]--
-  Log.debug("Stop ignoring indexing " + I2S(g_ignoreIndexingCounter[p.getId()]))
+  logDebug("Stop ignoring indexing " + I2S(g_ignoreIndexingCounter[p.getId()]))
 
 // ============================================================================
 public function isIgnoringIndexing(player p) returns bool

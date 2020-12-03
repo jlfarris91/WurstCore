@@ -1,0 +1,31 @@
+package Unit2
+import Dice
+import Range
+
+// ============================================================================
+public function unit.setGoldAwarded(dice dice)
+  this.setField(UNIT_IF_GOLD_BOUNTY_AWARDED_BASE, dice.base)
+  this.setField(UNIT_IF_GOLD_BOUNTY_AWARDED_NUMBER_OF_DICE, dice.numberOfDice)
+  this.setField(UNIT_IF_GOLD_BOUNTY_AWARDED_SIDES_PER_DIE, dice.sidesPerDie)
+
+// ============================================================================
+public function unit.setGoldAwarded(rangeInt range)
+  this.setGoldAwarded(range.toDice())
+
+// ============================================================================
+public function unit.setGoldAwarded(int gold)
+  this.setGoldAwarded(gold.toDice())
+
+// ============================================================================
+public function unit.setLumberAwarded(dice dice)
+  this.setField(UNIT_IF_LUMBER_BOUNTY_AWARDED_BASE, dice.base)
+  this.setField(UNIT_IF_LUMBER_BOUNTY_AWARDED_NUMBER_OF_DICE, dice.numberOfDice)
+  this.setField(UNIT_IF_LUMBER_BOUNTY_AWARDED_SIDES_PER_DIE, dice.sidesPerDie)
+
+// ============================================================================
+public function unit.setLumberAwarded(rangeInt range)
+  this.setLumberAwarded(range.toDice())
+
+// ============================================================================
+public function unit.setLumberAwarded(int lumber)
+  this.setLumberAwarded(lumber.toDice())
