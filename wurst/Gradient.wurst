@@ -67,9 +67,10 @@ public class GradientList<T>
     var secondTime = firstEntry.time
     var secondValue = firstEntry.value
 
-    for i = 0 to m_entries.size()
-      let entry = m_entries.get(i)
-      if (entry.time <= clampedT)
+    for entry in m_entries
+      if (entry.time == clampedT)
+        return entry.value
+      else if (entry.time < clampedT)
         firstTime = entry.time
         firstValue = entry.value
         secondTime = entry.time
@@ -153,9 +154,10 @@ public class GradientColorList
     var secondTime = firstEntry.time
     var secondValue = firstEntry.value
 
-    for i = 0 to m_entries.size()
-      let entry = m_entries.get(i)
-      if (entry.time <= clampedT)
+    for entry in m_entries
+      if (entry.time == clampedT)
+        return entry.value
+      else if (entry.time < clampedT)
         firstTime = entry.time
         firstValue = entry.value
         secondTime = entry.time
@@ -172,8 +174,8 @@ public class GradientColorList
 @test function sample()
 
   let gradient = new GradientList<real>((real a, real b, real t) -> lerp(a, b, t), 0.0)
-  ..addEntry(1.0, 100.0)
   ..addEntry(0.0, 0.0)
+  ..addEntry(1.0, 100.0)
 
   gradient.getEntryCount().assertEquals(2)
   
@@ -183,5 +185,7 @@ public class GradientColorList
   gradient.getEntry(1).time.assertEquals(1.0)
   gradient.getEntry(1).value.assertEquals(100.0)
 
+  gradient.sample(0.0).assertEquals(0.0)
   gradient.sample(0.5).assertEquals(50.0)
+  gradient.sample(1.0).assertEquals(100.0)
 
