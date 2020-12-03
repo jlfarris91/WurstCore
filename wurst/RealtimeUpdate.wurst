@@ -1,0 +1,93 @@
+package RealtimeUpdate
+import HashMap
+import LinkedList
+import ClosureTimers
+
+constant real BACKGROUND_UPDATE_INTERVAL = 1.0
+constant real SLOW_UPDATE_INTERVAL = 0.4
+constant real FAST_UPDATE_INTERVAL = 0.1
+constant real REALTIME_UPDATE_INTERVAL = ANIMATION_PERIOD
+
+LinkedList<IRealtimeListener> g_backgroundComponents
+LinkedList<IRealtimeListener> g_slowComponents
+LinkedList<IRealtimeListener> g_fastComponents
+LinkedList<IRealtimeListener> g_realtimeComponents
+HashMap<IRealtimeListener, RealtimeUpdatePriority> g_priorities
+
+// ============================================================================
+public interface IRealtimeListener
+  function realtimeUpdate(real dt)
+
+// ============================================================================
+public enum RealtimeUpdatePriority
+  Idle
+  Background
+  Slow
+  Fast
+  Realtime
+
+// ============================================================================
+public function IRealtimeListener.registerForRealtimeUpdate(RealtimeUpdatePriority priority)
+  this.unregisterForRealtimeUpdate()
+  switch (priority)
+    case RealtimeUpdatePriority.Background
+      g_backgroundComponents.add(this)
+    case RealtimeUpdatePriority.Slow
+      g_slowComponents.add(this)
+    case RealtimeUpdatePriority.Fast
+      g_fastComponents.add(this)
+    case RealtimeUpdatePriority.Realtime
+      g_realtimeComponents.add(this)
+    default
+      skip
+  g_priorities.put(this, priority)
+
+// ============================================================================
+public function IRealtimeListener.unregisterForRealtimeUpdate()
+  let priority = this.getRealtimeUpdatePriority()
+  switch (priority)
+    case RealtimeUpdatePriority.Realtime
+      g_realtimeComponents.remove(this)
+    case RealtimeUpdatePriority.Fast
+      g_fastComponents.remove(this)
+    case RealtimeUpdatePriority.Background
+      g_backgroundComponents.remove(this)
+    default
+      skip
+  g_priorities.remove(this)
+
+// ============================================================================
+public function IRealtimeListener.getRealtimeUpdatePriority() returns RealtimeUpdatePriority
+  if (g_priorities.has(this))
+    return g_priorities.get(this)
+  return RealtimeUpdatePriority.Idle
+
+// ============================================================================
+function updateListeners(LinkedList<IRealtimeListener> activeComponents, real dt)
+  for comp in activeComponents
+    if (comp != null)
+      comp.realtimeUpdate(dt)
+
+// ============================================================================
+init
+  g_backgroundComponents = new LinkedList<IRealtimeListener>()
+  g_slowComponents = new LinkedList<IRealtimeListener>()
+  g_fastComponents = new LinkedList<IRealtimeListener>()
+  g_realtimeComponents = new LinkedList<IRealtimeListener>()
+  g_priorities = new HashMap<IRealtimeListener, RealtimeUpdatePriority>()
+
+  let backgroundTimer = CreateTimer()
+  backgroundTimer.doPeriodically(BACKGROUND_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
+    updateListeners(g_backgroundComponents, BACKGROUND_UPDATE_INTERVAL)
+
+  let slowTimer = CreateTimer()
+  slowTimer.doPeriodically(SLOW_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
+    updateListeners(g_slowComponents, SLOW_UPDATE_INTERVAL)
+
+  let fastTimer = CreateTimer()
+  fastTimer.doPeriodically(FAST_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
+    updateListeners(g_fastComponents, FAST_UPDATE_INTERVAL)
+
+  let realtimeTimer = CreateTimer()
+  realtimeTimer.doPeriodically(REALTIME_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
+    updateListeners(g_realtimeComponents, REALTIME_UPDATE_INTERVAL)

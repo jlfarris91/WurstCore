@@ -1,0 +1,97 @@
+package TimeOfDayProgress
+import TimeOfDay
+import IProgress
+import Events
+import RealtimeUpdate
+import Math
+
+public TimeOfDayProgress g_dayProgress
+public TimeOfDayProgress g_nightProgress
+
+// ============================================================================
+public class TimeOfDayProgress implements IProgress, IRealtimeListener
+  private Event1<IProgress> m_progressChangedEvent
+  private real m_duration = 1.0
+  private real m_timeOfDayOnStart = 0
+  private real m_startTime
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    this.unregisterForRealtimeUpdate()
+
+    if (m_progressChangedEvent != null)
+      destroy m_progressChangedEvent
+      m_progressChangedEvent = null
+
+  // --------------------------------------------------------------------------
+  function getDuration() returns real
+    return m_duration
+
+  // --------------------------------------------------------------------------
+  function setDuration(real duration)
+    m_duration = duration
+
+  // --------------------------------------------------------------------------
+  function getStartTime() returns real
+    return m_timeOfDayOnStart
+
+  // --------------------------------------------------------------------------
+  function setStartTime(real timeOfDayOnStart)
+    m_timeOfDayOnStart = timeOfDayOnStart
+
+  // --------------------------------------------------------------------------
+  function getElapsed() returns real
+    return timeOfDayDelta(m_startTime, GetTimeOfDay())
+
+  // --------------------------------------------------------------------------
+  function start()
+    m_startTime = m_timeOfDayOnStart
+    raiseProgressChangedEvent()
+    this.registerForRealtimeUpdate(RealtimeUpdatePriority.Fast)
+
+  // --------------------------------------------------------------------------
+  function complete()
+    raiseProgressChangedEvent()
+    this.unregisterForRealtimeUpdate()
+
+  // --------------------------------------------------------------------------
+  override function getProgress() returns real
+    return clamp01(getElapsed() / m_duration)
+
+  // --------------------------------------------------------------------------
+  override function getProgressChangedEvent() returns Event1<IProgress>
+    if (m_progressChangedEvent == null)
+      m_progressChangedEvent = new Event1<IProgress>()
+    return m_progressChangedEvent
+
+  // --------------------------------------------------------------------------
+  override function realtimeUpdate(real dt)
+    raiseProgressChangedEvent()
+
+  // --------------------------------------------------------------------------
+  function raiseProgressChangedEvent()
+    if (m_progressChangedEvent != null)
+      m_progressChangedEvent.call(this)
+
+// ============================================================================
+function onDayStart()
+  g_nightProgress.complete()
+  g_dayProgress.start()
+
+// ============================================================================
+function onNightStart()
+  g_dayProgress.complete()
+  g_nightProgress.start()
+
+// ============================================================================
+init
+  g_dayProgress = new TimeOfDayProgress()
+    ..setStartTime(TIME_OF_DAY)
+    ..setDuration(TIME_OF_DAY_LENGTH)
+
+  g_nightProgress = new TimeOfDayProgress()
+    ..setStartTime(TIME_OF_NIGHT)
+    ..setDuration(TIME_OF_NIGHT_LENGTH)
+
+  registerDayEvent(function onDayStart)
+  registerNightEvent(function onNightStart)

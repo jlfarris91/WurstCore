@@ -1,0 +1,7 @@
+package IProgress
+import Events
+
+// ============================================================================
+public interface IProgress
+  function getProgress() returns real
+  function getProgressChangedEvent() returns Event1<IProgress>

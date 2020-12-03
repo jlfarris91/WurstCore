@@ -57,7 +57,7 @@ public abstract class Runnable implements IRunnable
   // --------------------------------------------------------------------------
   construct()
     m_state = RunnableState.WAITING
-    m_error = null
+    resetInternal()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -65,6 +65,7 @@ public abstract class Runnable implements IRunnable
       this.cancel()
     if (m_stateChangedEvent != null)
       destroy m_stateChangedEvent
+      m_stateChangedEvent = null
 
   // --------------------------------------------------------------------------
   override function getState() returns RunnableState
@@ -83,18 +84,19 @@ public abstract class Runnable implements IRunnable
   // --------------------------------------------------------------------------
   override function start()
     if (m_state == RunnableState.RUNNING)
-      error("Attempted to start a runnable that was already running")
+      Log.warn("Attempted to start a runnable that was already running")
       return
 
+    resetInternal()
+
     m_state = RunnableState.RUNNING
-    m_error = null
     onStarted()
     raiseStateChangedEvent()
 
   // --------------------------------------------------------------------------
   override function pause()
     if (m_state != RunnableState.RUNNING)
-      error("Attempted to pause a runnable that was not running")
+      Log.warn("Attempted to pause a runnable that was not running")
       return
 
     m_state = RunnableState.PAUSED
@@ -104,7 +106,7 @@ public abstract class Runnable implements IRunnable
   // --------------------------------------------------------------------------
   override function resume()
     if (m_state != RunnableState.PAUSED)
-      error("Attempted to resume a runnable that was not paused")
+      Log.warn("Attempted to resume a runnable that was not paused")
       return
 
     m_state = RunnableState.RUNNING
@@ -125,11 +127,15 @@ public abstract class Runnable implements IRunnable
 
   // --------------------------------------------------------------------------
   override function reset()
-    m_error = null
+    resetInternal()
 
     if (m_state != RunnableState.WAITING)
       m_state = RunnableState.WAITING
       raiseStateChangedEvent()
+
+  // --------------------------------------------------------------------------
+  private function resetInternal()
+    m_error = null
 
   // --------------------------------------------------------------------------
   protected function onStarted()

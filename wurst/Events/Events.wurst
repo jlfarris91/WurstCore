@@ -2,14 +2,17 @@ package Events
 import LinkedList
 import ErrorIf
 import public Action
+import ErrorHandling
 
 // ============================================================================
 public class Event
   private LinkedList<EventCallback> m_callbacks
+  private LinkedList<EventCallback> m_unregisteredCallbacks
 
   // --------------------------------------------------------------------------
   construct()
     m_callbacks = new LinkedList<EventCallback>()
+    m_unregisteredCallbacks = new LinkedList<EventCallback>()
 
   // --------------------------------------------------------------------------
   construct(LinkedList<EventCallback> callbacks)
@@ -20,128 +23,174 @@ public class Event
     destroy m_callbacks
     m_callbacks = null
 
+    destroy m_unregisteredCallbacks
+    m_unregisteredCallbacks = null
+
   // --------------------------------------------------------------------------
   function register(EventCallback callback) returns EventCallback
     ErrorIf.argumentIsNull(callback, "callback")
+    if (callback.e != null)
+      error("Attempting to double register a callback")
     callback.e = this
     m_callbacks.add(callback)
     return callback
 
   // --------------------------------------------------------------------------
-  function unregister(EventCallback callback) returns bool
+  function unregister(EventCallback callback)
     ErrorIf.argumentIsNull(callback, "callback")
-    if (not m_callbacks.remove(callback))
-      return false
+    if (callback.e == null)
+      error("Attempting to double unregister a callback")
+    if (callback.e != this)
+      error("Attempting to unregister a callback that was registered with a different event")
+    m_unregisteredCallbacks.add(callback)
     callback.e = null
-    return true
 
   // --------------------------------------------------------------------------
   function call()
-    for handler in m_callbacks
-      if (handler != null)
-        handler.call()
+    for callback in m_callbacks
+      if (callback !=null and not m_unregisteredCallbacks.has(callback) and callback.isValid())
+        callback.call()
+    for callback in m_unregisteredCallbacks
+      m_callbacks.remove(callback)
+    m_unregisteredCallbacks.clear()
 
 // ============================================================================
 public class Event1<TArg1>
   private LinkedList<Event1Callback<TArg1>> m_callbacks
+  private LinkedList<Event1Callback<TArg1>> m_unregisteredCallbacks
 
   // --------------------------------------------------------------------------
   construct()
     m_callbacks = new LinkedList<Event1Callback<TArg1>>()
+    m_unregisteredCallbacks = new LinkedList<Event1Callback<TArg1>>()
 
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_callbacks
     m_callbacks = null
+
+    destroy m_unregisteredCallbacks
+    m_unregisteredCallbacks = null
 
   // --------------------------------------------------------------------------
   function register(Event1Callback<TArg1> callback) returns Event1Callback<TArg1>
     ErrorIf.argumentIsNull(callback, "callback")
+    if (callback.e != null)
+      error("Attempting to double register a callback")
     callback.e = this
     m_callbacks.add(callback)
     return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Event1Callback<TArg1> callback) returns bool
+  function unregister(Event1Callback<TArg1> callback)
     ErrorIf.argumentIsNull(callback, "callback")
-    if (not m_callbacks.remove(callback))
-      return false
+    if (callback.e == null)
+      error("Attempting to double unregister a callback")
+    if (callback.e != this)
+      error("Attempting to unregister a callback that was registered with a different event")
+    m_unregisteredCallbacks.add(callback)
     callback.e = null
-    return true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1)
-    for handler in m_callbacks
-      if (handler != null)
-        handler.call(arg1)
+    for callback in m_callbacks
+      if (callback !=null and not m_unregisteredCallbacks.has(callback) and callback.isValid())
+        callback.call(arg1)
+    for callback in m_unregisteredCallbacks
+      m_callbacks.remove(callback)
+    m_unregisteredCallbacks.clear()
 
 // ============================================================================
 public class Event2<TArg1, TArg2>
   private LinkedList<Event2Callback<TArg1, TArg2>> m_callbacks
+  private LinkedList<Event2Callback<TArg1, TArg2>> m_unregisteredCallbacks
 
   // --------------------------------------------------------------------------
   construct()
     m_callbacks = new LinkedList<Event2Callback<TArg1, TArg2>>()
+    m_unregisteredCallbacks = new LinkedList<Event2Callback<TArg1, TArg2>>()
 
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_callbacks
     m_callbacks = null
+
+    destroy m_unregisteredCallbacks
+    m_unregisteredCallbacks = null
 
   // --------------------------------------------------------------------------
   function register(Event2Callback<TArg1, TArg2> callback) returns Event2Callback<TArg1, TArg2>
     ErrorIf.argumentIsNull(callback, "callback")
+    if (callback.e != null)
+      error("Attempting to double register a callback")
     m_callbacks.add(callback)
     callback.e = this
     return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Event2Callback<TArg1, TArg2> callback) returns bool
+  function unregister(Event2Callback<TArg1, TArg2> callback)
     ErrorIf.argumentIsNull(callback, "callback")
-    if (not m_callbacks.remove(callback))
-      return false
+    if (callback.e == null)
+      error("Attempting to double unregister a callback")
+    if (callback.e != this)
+      error("Attempting to unregister a callback that was registered with a different event")
+    m_unregisteredCallbacks.add(callback)
     callback.e = null
-    return true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1, TArg2 arg2)
-    for handler in m_callbacks
-      if (handler != null)
-        handler.call(arg1, arg2)
+    for callback in m_callbacks
+      if (callback !=null and not m_unregisteredCallbacks.has(callback) and callback.isValid())
+        callback.call(arg1, arg2)
+    for callback in m_unregisteredCallbacks
+      m_callbacks.remove(callback)
+    m_unregisteredCallbacks.clear()
 
 // ============================================================================
 public class Event3<TArg1, TArg2, TArg3>
   private LinkedList<Event3Callback<TArg1, TArg2, TArg3>> m_callbacks
+  private LinkedList<Event3Callback<TArg1, TArg2, TArg3>> m_unregisteredCallbacks
 
   // --------------------------------------------------------------------------
   construct()
     m_callbacks = new LinkedList<Event3Callback<TArg1, TArg2, TArg3>>()
+    m_unregisteredCallbacks = new LinkedList<Event3Callback<TArg1, TArg2, TArg3>>()
 
   // --------------------------------------------------------------------------
   ondestroy
     destroy m_callbacks
     m_callbacks = null
 
+    destroy m_unregisteredCallbacks
+    m_unregisteredCallbacks = null
+
   // --------------------------------------------------------------------------
   function register(Event3Callback<TArg1, TArg2, TArg3> callback) returns Event3Callback<TArg1, TArg2, TArg3>
     ErrorIf.argumentIsNull(callback, "callback")
+    if (callback.e != null)
+      error("Attempting to double register a callback")
     m_callbacks.add(callback)
     callback.e = this
     return callback
 
   // --------------------------------------------------------------------------
-  function unregister(Event3Callback<TArg1, TArg2, TArg3> callback) returns bool
+  function unregister(Event3Callback<TArg1, TArg2, TArg3> callback)
     ErrorIf.argumentIsNull(callback, "callback")
-    if (not m_callbacks.remove(callback))
-      return false
+    if (callback.e == null)
+      error("Attempting to double unregister a callback")
+    if (callback.e != this)
+      error("Attempting to unregister a callback that was registered with a different event")
+    m_unregisteredCallbacks.add(callback)
     callback.e = null
-    return true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
-    for handler in m_callbacks
-      if (handler != null)
-        handler.call(arg1, arg2, arg3)
+    for callback in m_callbacks
+      if (callback !=null and not m_unregisteredCallbacks.has(callback) and callback.isValid())
+        callback.call(arg1, arg2, arg3)
+    for callback in m_unregisteredCallbacks
+      m_callbacks.remove(callback)
+    m_unregisteredCallbacks.clear()
 
 // ============================================================================
 public abstract class EventCallback
@@ -151,6 +200,8 @@ public abstract class EventCallback
     if (e != null)
       e.unregister(this)
     e = null
+  function isValid() returns bool
+    return e != null
 
 // ============================================================================
 public abstract class Event1Callback<TArg1>
@@ -160,6 +211,8 @@ public abstract class Event1Callback<TArg1>
     if (e != null)
       e.unregister(this)
     e = null
+  function isValid() returns bool
+    return e != null
 
 // ============================================================================
 public abstract class Event2Callback<TArg1, TArg2>
@@ -169,6 +222,8 @@ public abstract class Event2Callback<TArg1, TArg2>
     if (e != null)
       e.unregister(this)
     e = null
+  function isValid() returns bool
+    return e != null
 
 // ============================================================================
 public abstract class Event3Callback<TArg1, TArg2, TArg3>
@@ -178,3 +233,5 @@ public abstract class Event3Callback<TArg1, TArg2, TArg3>
     if (e != null)
       e.unregister(this)
     e = null
+  function isValid() returns bool
+    return e != null
