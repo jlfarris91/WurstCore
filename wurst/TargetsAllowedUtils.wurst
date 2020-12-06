@@ -1,0 +1,18 @@
+package TargetsAllowedUtils
+import LinkedList
+import TargetsAllowed
+import StringUtils
+
+// ============================================================================
+public function getTargetsAllowedPretty(string targetsAllowed, LinkedList<string> targets)
+  let dataSplit = targetsAllowed.split(",")
+  for str in dataSplit
+    let trimmedStr = str.trim()
+    if (trimmedStr == TargetsAllowed.ground)
+      targets.add("Ground")
+    else if (trimmedStr == TargetsAllowed.air)
+      targets.add("Air")
+    else if (trimmedStr == TargetsAllowed.structure)
+      targets.add("Buildings")
+    else if (trimmedStr == TargetsAllowed.tree)
+      targets.add("Trees")

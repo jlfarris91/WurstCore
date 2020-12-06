@@ -83,7 +83,7 @@ public abstract class Runnable implements IRunnable
   // --------------------------------------------------------------------------
   override function start()
     if (m_state == RunnableState.RUNNING)
-      Log.warn("Attempted to start a runnable that was already running")
+      Log.debug("Attempted to start a runnable that was already running")
       return
 
     resetInternal()
@@ -95,7 +95,7 @@ public abstract class Runnable implements IRunnable
   // --------------------------------------------------------------------------
   override function pause()
     if (m_state != RunnableState.RUNNING)
-      Log.warn("Attempted to pause a runnable that was not running")
+      Log.debug("Attempted to pause a runnable that was not running")
       return
 
     m_state = RunnableState.PAUSED
@@ -105,7 +105,7 @@ public abstract class Runnable implements IRunnable
   // --------------------------------------------------------------------------
   override function resume()
     if (m_state != RunnableState.PAUSED)
-      Log.warn("Attempted to resume a runnable that was not paused")
+      Log.debug("Attempted to resume a runnable that was not paused")
       return
 
     m_state = RunnableState.RUNNING

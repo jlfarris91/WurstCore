@@ -4,6 +4,7 @@ import ErrorHandling
 import ErrorIf
 import WeightedSet
 import Selector
+import Func
 
 // ============================================================================
 public function LinkedList<T>.getRandom<T>() returns T
@@ -50,6 +51,13 @@ public function LinkedList<TElem>.toWeightedSet<TElem>(Selector<TElem, real> sel
 // ============================================================================
 public function LinkedList<TElem>.getLast<TElem>() returns TElem
   return this.isEmpty() ? null : this.get(this.size() - 1)
+
+// ============================================================================
+public function LinkedList<TElem>.select<TElem, TRet>(Func1<TElem, TRet> selector) returns LinkedList<TRet>
+  let result = new LinkedList<TRet>
+  for elem in this
+    result.add(selector.call(elem))
+  return result
 
 // ============================================================================
 //
