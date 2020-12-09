@@ -1,0 +1,214 @@
+package Time
+import Math
+
+trigger g_newDayTrigger
+int g_day
+
+public tuple time(int day, int hour, int minute)
+public tuple timespan(int days, int hours, int minutes)
+
+// ============================================================================
+public class Time
+  static time dawn = time(0, 6, 0)
+  static time noon = time(0, 12, 0)
+  static time dusk = time(0, 18, 0)
+  static time midnight = time(0, 24, 0)
+
+// ============================================================================
+public function getGameTime() returns time
+  return fromTimeOfDay(GetTimeOfDay())
+
+// ============================================================================
+public function getElapsedGameTime() returns timespan
+  return getGameTime().asTimeSpan()
+
+// ============================================================================
+public function fromTimeOfDay(real timeOfDay) returns time
+  return fromTimeOfDay(g_day, timeOfDay)
+
+// ============================================================================
+public function fromTimeOfDay(int day, real timeOfDay) returns time
+  let hour = R2I(timeOfDay)
+  let minute = R2I((timeOfDay - I2R(hour)) * 60.0)
+  return time(day, hour, minute)
+
+// ============================================================================
+public function fromTimeOfDaySpan(real timeOfDay) returns timespan
+  return fromTimeOfDay(timeOfDay).asTimeSpan()
+
+// ============================================================================
+public function time.asTimeSpan() returns timespan
+  return timespan(this.day, this.hour, this.minute)
+
+// ============================================================================
+// Returns the unclamped time of day in military time.
+public function time.getTimeOfDay() returns real
+  return I2R(this.hour) + I2R(this.minute) / 60.0
+
+// ============================================================================
+public function time.op_plus(timespan span) returns time
+  var day = this.day + span.days
+  var hour = this.hour + span.hours
+  var minute = this.minute + span.minutes
+
+  if (minute > 60)
+    hour++
+    minute -= 60
+
+  if (hour > 24)
+    day++
+    hour -= 24
+
+  return time(day, hour, minute)
+
+// ============================================================================
+public function time.op_minus(time other) returns timespan
+  var days = this.day - other.day
+  var hours = this.hour - other.hour
+  var minutes = this.minute - other.minute
+
+  if (minutes < 0)
+    hours--
+    minutes += 60
+
+  if (hours < 0)
+    days--
+    hours += 24
+
+  return timespan(days, hours, minutes)
+
+// ============================================================================
+public function time.op_minus(timespan span) returns time
+  var day = this.day - span.days
+  var hour = this.hour - span.hours
+  var minute = this.minute - span.minutes
+
+  if (minute < 0)
+    hour--
+    minute += 60
+
+  if (hour < 0)
+    day--
+    hour += 24
+
+  return time(day, hour, minute)
+
+// ============================================================================
+public function time.toString() returns string
+  return "{0} {1}:{2} {3}".format(this.day.toString(), this.hour.toString(), this.minute.toString(), this.hour < 12 ? "AM" : "PM")
+
+// ============================================================================
+public function time.assertEquals(time expected)
+  if this != expected
+    testFail("Expected <" + expected.toString() + ">, Actual <" + this.toString() + ">")
+
+// ============================================================================
+// Gets the total elapsed time in days.
+public function timespan.getTotalDays() returns real
+  return this.days + (this.hours + this.minutes / 60.0) / 24.0
+
+// ============================================================================
+// Gets the total elapsed time in hours.
+public function timespan.getTotalHours() returns real
+  return this.days * 24.0 + this.hours + this.minutes / 60.0
+
+// ============================================================================
+// Gets the total elapsed time in minutes.
+public function timespan.getTotalMinutes() returns real
+  return this.days * 24.0 * 60.0 + this.hours * 60.0 + this.minutes
+
+// ============================================================================
+public function timespan.op_plus(timespan span) returns timespan
+  var day = this.days + span.days
+  var hour = this.hours + span.hours
+  var minute = this.minutes + span.minutes
+
+  if (minute > 60)
+    hour++
+    minute -= 60
+
+  if (hour > 24)
+    day++
+    hour -= 24
+
+  return timespan(day, hour, minute)
+
+// ============================================================================
+public function timespan.op_minus(timespan other) returns timespan
+  var days = this.days - other.days
+  var hours = this.hours - other.hours
+  var minutes = this.minutes - other.minutes
+
+  if (minutes < 0)
+    hours--
+    minutes += 60
+
+  if (hours < 0)
+    days--
+    hours += 24
+
+  return timespan(days, hours, minutes)
+
+// ============================================================================
+public function timespan.op_divReal(timespan other) returns real
+  let divisor = other.getTotalMinutes()
+  return divisor == 0.0 ? 0.0 : this.getTotalMinutes() / divisor
+
+// ============================================================================
+public function timespan.toString() returns string
+  return "{0}:{1}:{2}".format(this.days.toString(), this.hours.toString(), this.minutes.toString())
+
+// ============================================================================
+public function timespan.assertEquals(timespan expected)
+  if this != expected
+    testFail("Expected <" + expected.toString() + ">, Actual <" + this.toString() + ">")
+
+// ============================================================================
+public function time.isBetween(time start, time _end) returns bool
+  return this.asTimeSpan().getTotalMinutes().isBetween(start.asTimeSpan().getTotalMinutes(), _end.asTimeSpan().getTotalMinutes())
+
+// ============================================================================
+public function clamp(time span, time min, time max) returns timespan
+  return timespan(
+    clamp(span.day, min.day, max.day),
+    clamp(span.hour, min.hour, max.hour),
+    clamp(span.minute, min.minute, max.minute))
+
+// ============================================================================
+public function clamp(timespan span, timespan min, timespan max) returns timespan
+  return timespan(
+    clamp(span.days, min.days, max.days),
+    clamp(span.hours, min.hours, max.hours),
+    clamp(span.minutes, min.minutes, max.minutes))
+
+// ============================================================================
+public function parameterize(time start, time _end, time value) returns real
+  return (value - start) / (_end - start)
+
+// ============================================================================
+public function getDay() returns int
+  return g_day
+
+// ============================================================================
+public function setDay(int day)
+  g_day = day
+
+// ============================================================================
+function onNewDay()
+  setDay(getDay() + 1)
+
+// ============================================================================
+init
+  g_newDayTrigger = CreateTrigger()
+  g_newDayTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, 0.0)
+  g_newDayTrigger.addCondition(Condition(function onNewDay))
+
+// ============================================================================
+@test function timeOpPlus()
+  (time(1, 2, 3) + timespan(1, 2, 3)).assertEquals(time(2, 4, 6))
+  (time(1, 12, 0) + timespan(1, 12, 0)).assertEquals(time(3, 0, 0))
+
+// ============================================================================
+@test function timeOpMinus()
+  (time(1, 2, 3) - timespan(1, 2, 3)).assertEquals(time(2, 4, 6))
+  (time(1, 12, 0) - timespan(1, 12, 0)).assertEquals(time(3, 0, 0))

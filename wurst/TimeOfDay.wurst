@@ -1,30 +1,16 @@
 package TimeOfDay
-import Math
+import Time
 
 @configurable public constant real TIME_OF_DAY = 6.0
 @configurable public constant real TIME_OF_NIGHT = 18.0
 
-public constant real TIME_OF_DAY_LENGTH = TIME_OF_NIGHT - TIME_OF_DAY
-public constant real TIME_OF_NIGHT_LENGTH = (24.0 - TIME_OF_NIGHT) + TIME_OF_DAY
+public constant time DAY_TIME = fromTimeOfDay(0, TIME_OF_DAY)
+public constant time NIGHT_TIME = fromTimeOfDay(0, TIME_OF_NIGHT)
+public constant timespan DAY_TIMESPAN = NIGHT_TIME - DAY_TIME
+public constant timespan NIGHT_TIMESPAN = fromTimeOfDay(1, TIME_OF_DAY) - NIGHT_TIME
 
 trigger g_OnDayTrigger
 trigger g_OnNightTrigger
-
-// ============================================================================
-public function getTimeOfDayElapsed() returns real
-  let currentTime = GetTimeOfDay()
-  if (currentTime >= TIME_OF_DAY and currentTime <= TIME_OF_NIGHT)
-    return currentTime - TIME_OF_DAY
-  return 0
-
-// ============================================================================
-public function getTimeOfNightElapsed() returns real
-  let currentTime = GetTimeOfDay()
-  if (currentTime >= TIME_OF_NIGHT)
-    return currentTime - TIME_OF_NIGHT
-  if (currentTime <= TIME_OF_DAY)
-    return (24.0 - TIME_OF_NIGHT) + currentTime
-  return 0
 
 // ============================================================================
 public function isDay() returns bool
@@ -35,20 +21,6 @@ public function isDay() returns bool
 public function isNight() returns bool
   let currentTime = GetTimeOfDay()
   return currentTime >= TIME_OF_NIGHT or currentTime < TIME_OF_DAY
-
-// ============================================================================
-public function timeOfDayDelta(real current, real target) returns real
-  if (current < target)
-    return target - current
-  return 24.0 - (current - target)
-
-// ============================================================================
-public function getTimeOfDayPercentage() returns real
-  return clamp01(getTimeOfDayElapsed() / TIME_OF_DAY_LENGTH)
-
-// ============================================================================
-public function getTimeOfNightPercentage() returns real
-  return clamp01(getTimeOfNightElapsed() / TIME_OF_NIGHT_LENGTH)
 
 // ============================================================================
 public function registerDayEvent(code callback)

@@ -4,6 +4,7 @@ import IProgress
 import Events
 import RealtimeUpdate
 import Math
+import Time
 
 public TimeOfDayProgress g_dayProgress
 public TimeOfDayProgress g_nightProgress
@@ -11,9 +12,9 @@ public TimeOfDayProgress g_nightProgress
 // ============================================================================
 public class TimeOfDayProgress implements IProgress, IRealtimeListener
   private Event1<IProgress> m_progressChangedEvent
-  private real m_duration = 1.0
-  private real m_timeOfDayOnStart = 0
-  private real m_startTime
+  private time m_timeOfDayOnStart
+  private timespan m_duration
+  private time m_startTime
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -24,30 +25,32 @@ public class TimeOfDayProgress implements IProgress, IRealtimeListener
       m_progressChangedEvent = null
 
   // --------------------------------------------------------------------------
-  function getDuration() returns real
+  function getDuration() returns timespan
     return m_duration
 
   // --------------------------------------------------------------------------
-  function setDuration(real duration)
+  function setDuration(timespan duration)
     m_duration = duration
 
   // --------------------------------------------------------------------------
-  function getStartTime() returns real
+  function getStartTime() returns time
     return m_timeOfDayOnStart
 
   // --------------------------------------------------------------------------
-  function setStartTime(real timeOfDayOnStart)
+  function setStartTime(time timeOfDayOnStart)
     m_timeOfDayOnStart = timeOfDayOnStart
 
   // --------------------------------------------------------------------------
-  function getElapsed() returns real
-    return timeOfDayDelta(m_startTime, GetTimeOfDay())
+  function getElapsed() returns timespan
+    return getGameTime() - m_startTime
 
   // --------------------------------------------------------------------------
   function start()
     m_startTime = m_timeOfDayOnStart
+    m_startTime.day = getDay()
+    
     raiseProgressChangedEvent()
-    this.registerForRealtimeUpdate(RealtimeUpdatePriority.Fast)
+    this.registerForRealtimeUpdate(RealtimeUpdatePriority.Slow)
 
   // --------------------------------------------------------------------------
   function complete()
@@ -86,12 +89,12 @@ function onNightStart()
 // ============================================================================
 init
   g_dayProgress = new TimeOfDayProgress()
-    ..setStartTime(TIME_OF_DAY)
-    ..setDuration(TIME_OF_DAY_LENGTH)
+    ..setStartTime(DAY_TIME)
+    ..setDuration(DAY_TIMESPAN)
 
   g_nightProgress = new TimeOfDayProgress()
-    ..setStartTime(TIME_OF_NIGHT)
-    ..setDuration(TIME_OF_NIGHT_LENGTH)
+    ..setStartTime(NIGHT_TIME)
+    ..setDuration(NIGHT_TIMESPAN)
 
   registerDayEvent(function onDayStart)
   registerNightEvent(function onNightStart)
