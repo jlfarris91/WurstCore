@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+  ],
+  "settings": {
+    "wurst.javaOpts": [
+      "-XX:+UseG1GC",
+      "-XX:+UseStringDeduplication",
+      "-XX:+AggressiveOpts",
+      "-Xmx1G"
+    ],
+    "files.associations": {
+      "wurst.build": "yaml"
+    },
+    "yaml.schemas": {
+      "./.vscode/wbschema.json": "/wurst.build"
+    },
+    "wurst.wurstJar": "C:\\Users\\jlfar\\.wurst\\wurstscript.jar",
+    "wurst.wc3path": "C:\\Program Files (x86)\\Warcraft III"
+  }
+}
