@@ -47,7 +47,7 @@ public class TimeOfDayProgress implements IProgress, IRealtimeListener
   // --------------------------------------------------------------------------
   function start()
     m_startTime = m_timeOfDayOnStart
-    m_startTime.day = getDay()
+    m_startTime = makeTime(getDay(), m_startTime.getHour(), m_startTime.getMinute())
     
     raiseProgressChangedEvent()
     this.registerForRealtimeUpdate(RealtimeUpdatePriority.Slow)
@@ -90,11 +90,11 @@ function onNightStart()
 init
   g_dayProgress = new TimeOfDayProgress()
     ..setStartTime(DAY_TIME)
-    ..setDuration(DAY_TIMESPAN)
+    ..setDuration(DAY_LENGTH)
 
   g_nightProgress = new TimeOfDayProgress()
     ..setStartTime(NIGHT_TIME)
-    ..setDuration(NIGHT_TIMESPAN)
+    ..setDuration(NIGHT_LENGTH)
 
   registerDayEvent(function onDayStart)
   registerNightEvent(function onNightStart)

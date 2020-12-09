@@ -1,0 +1,17 @@
+package ForceExtensions
+import LinkedList
+
+LinkedList<player> g_tempPlayerList
+
+// ==========================================================================
+public function force.toLinkedList() returns LinkedList<player>
+  g_tempPlayerList = new LinkedList<player>()
+  this.forEach(function addEnumPlayerToTempPlayerList)
+  let result = g_tempPlayerList
+  g_tempPlayerList = null
+  return result
+
+// ==========================================================================
+function addEnumPlayerToTempPlayerList()
+  g_tempPlayerList.add(GetEnumPlayer())
+  

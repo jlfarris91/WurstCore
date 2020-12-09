@@ -1,7 +1,9 @@
 package TriggerExtensions
+import ForceExtensions
 
+// ==========================================================================
 public function trigger.registerAnyPlayerChatEvent(string chatMessageToDetect, bool exactMatchOnly)
-  bj_FORCE_ALL_PLAYERS.forEach(function registerEnumPlayerChatEvent)
-
-function registerEnumPlayerChatEvent()
-  this.registerPlayerChatEvent(GetEnumPlayer(), chatMessageToDetect, exactMatchOnly)
+  let playerList = bj_FORCE_ALL_PLAYERS.toLinkedList()
+  for p in playerList
+    this.registerPlayerChatEvent(p, chatMessageToDetect, exactMatchOnly)
+  destroy playerList

@@ -402,6 +402,5 @@ public class WeightedSetIterator<T>
   while (not weightedSet.isEmpty())
     let lastSize = weightedSet.size()
     let elem = weightedSet.popRandom()
-    print (I2S(elem))
     assertTrue(elem >= 1 and elem <= 5)
     assertTrue(weightedSet.size() == lastSize - 1)  

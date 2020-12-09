@@ -17,6 +17,7 @@ public class Event
   // --------------------------------------------------------------------------
   construct(LinkedList<EventCallback> callbacks)
     m_callbacks = callbacks
+    m_unregisteredCallbacks = new LinkedList<EventCallback>()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -235,3 +236,87 @@ public abstract class Event3Callback<TArg1, TArg2, TArg3>
     e = null
   function isValid() returns bool
     return e != null
+
+// ============================================================================
+@test function stressTest_register()
+
+  let pool = new LinkedList<EventCallback>()
+  let ma = new Event(pool)
+
+  for i = 1 to 999
+    let mah = ma.register(() -> skip)
+    ma.unregister(mah)
+
+  pool.size().assertEquals(999)
+
+  ma.call()
+
+  pool.size().assertEquals(0)
+
+// ============================================================================
+@test function stressTest_call()
+
+  let pool = new LinkedList<EventCallback>()
+  let ma = new Event(pool)
+
+  for i = 1 to 512
+    ma.register(() -> skip)
+
+  for i = 1 to 100
+    ma.call()
+
+// ============================================================================
+class Foo
+  Event m_action
+  EventCallback registration
+  Foo m_other
+  int m_index
+  bool m_shouldNotBeExecuted
+
+  construct(Event action, int index)
+    m_action = action
+    m_index = index
+
+  function initialize(Foo other)
+    
+    m_other = other
+
+    if (m_other != null)
+      registration = m_action.register() () ->
+        m_other.unregister()
+        
+    else
+      registration = m_action.register() () ->
+        if (m_shouldNotBeExecuted)
+          error("This should not have been executed")
+
+  function unregister()
+    if (registration != null)
+      destroy registration
+      registration = null
+
+  function shouldNotBeExecuted()
+    m_shouldNotBeExecuted = true
+
+Foo array g_foos
+
+// ============================================================================
+@test function unregister_during_call()
+
+  let pool = new LinkedList<EventCallback>()
+  let ma = new Event(pool)
+
+  for i = 0 to 32
+    g_foos[i] = new Foo(ma, i)
+
+  for i = 0 to 32
+    Foo other = null
+    let k = i + 4
+    if (i mod 11 == 0)
+      other = g_foos[k]
+    g_foos[i].initialize(other)
+    if (other != null)
+      other.shouldNotBeExecuted()
+
+  for i = 0 to 100
+    ma.call()
