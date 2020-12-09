@@ -1,0 +1,24 @@
+package DisplayTextToPlayer
+
+force g_tempForce
+
+// ============================================================================
+public function displayMessageToPlayer(player p, string message)
+  g_tempForce.clear()
+  g_tempForce.addPlayer(p)
+  DisplayTextToForce(g_tempForce, message)
+
+// ============================================================================
+public function displayMessageToPlayers(string message)
+  DisplayTextToForce(bj_FORCE_ALL_PLAYERS, message)
+
+// ============================================================================
+public function displayMessageToAllExceptPlayer(player p, string message)
+  g_tempForce.clear()
+  bj_FORCE_ALL_PLAYERS.forEach(function fillTempForceWithEnumPlayers)
+  g_tempForce.removePlayer(p)
+  DisplayTextToForce(g_tempForce, message)
+
+// ============================================================================
+function fillTempForceWithEnumPlayers()
+  g_tempForce.addPlayer(GetEnumPlayer())
