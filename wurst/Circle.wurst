@@ -1,0 +1,16 @@
+package Circle
+
+// ============================================================================
+public tuple circle(vec2 center, real radius)
+
+// ============================================================================
+public function circle.getRadiusSq() returns real
+  return this.radius * this.radius
+
+// ============================================================================
+public function circle.containsPoint(vec2 point) returns bool
+  return this.center.distanceToSq(point) < this.getRadiusSq()
+
+// ============================================================================
+public function circle.overlaps(circle other) returns bool
+  return this.center.distanceToSq(other.center) < (this.getRadiusSq() + other.getRadiusSq())

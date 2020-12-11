@@ -22,6 +22,14 @@ public function rangeInt.getCount() returns int
   return this.max - this.min
 
 // ============================================================================
+public function rangeReal.getLength() returns real
+  return RAbsBJ(this.max - this.min)
+
+// ============================================================================
+public function rangeInt.getLength() returns int
+  return IAbsBJ(this.max - this.min)
+
+// ============================================================================
 public function int.toRange() returns rangeInt
   return rangeInt(this, this)
 
