@@ -8,14 +8,14 @@ import Func
 
 // ============================================================================
 public function LinkedList<T>.getRandom<T>() returns T
-  let randomIndex = GetRandomInt(0, this.size())
+  let randomIndex = GetRandomInt(0, this.size() - 1)
   return this.get(randomIndex)
 
 // ============================================================================
 public function LinkedList<T>.getRandom<T>(int count) returns LinkedList<T>
   let output = new LinkedList<T>()
   for i = 0 to count - 1
-    let randomIndex = GetRandomInt(0, this.size())
+    let randomIndex = GetRandomInt(0, this.size() - 1)
     output.add(this.get(randomIndex))
   return output
 
@@ -24,7 +24,7 @@ public function LinkedList<T>.getRandomUnique<T>(int count) returns LinkedList<T
   let clone = new LinkedList<T>(this)
   let output = new LinkedList<T>()
   for i = 0 to count - 1
-    let randomIndex = GetRandomInt(0, this.size())
+    let randomIndex = GetRandomInt(0, clone.size() - 1)
     output.add(clone.get(randomIndex))
     clone.removeAt(randomIndex)
   destroy clone
@@ -65,6 +65,7 @@ public function LinkedList<TElem>.select<TElem, TRet>(Func1<TElem, TRet> selecto
 //
 // ============================================================================
 
+// ============================================================================
 @test
 function take()
   // arrange
@@ -81,3 +82,29 @@ function take()
   first3.size().assertEquals(count)
   for i = 0 to count - 1
     first3.get(i).assertEquals(i)
+
+// ============================================================================
+@test function getRandomUnique()
+
+  let myList = new LinkedList<int>()
+  let count = 10
+
+  for i = 0 to 10
+    myList.add(i)
+
+  // act
+  let random3 = myList.getRandomUnique(count)
+
+  // assert
+  random3.size().assertEquals(count)
+  for randomItem in random3
+    var itemExistsInBaseList = false
+    for baseItem in myList
+      if (randomItem == baseItem)
+        itemExistsInBaseList = true
+    itemExistsInBaseList.assertTrue()
+    var itemOccurrenceCount = 0
+    for randomItem2 in random3
+      if (randomItem == randomItem2)
+        itemOccurrenceCount++
+    itemOccurrenceCount.assertEquals(1)
