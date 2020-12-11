@@ -6,8 +6,8 @@ import Time
 
 public constant time DAY_TIME = makeTime(0, TIME_OF_DAY)
 public constant time NIGHT_TIME = makeTime(0, TIME_OF_NIGHT)
-public constant timespan DAY_LENGTH = makeTimespan(1, 0, 0)
-public constant timespan NIGHT_LENGTH = makeTimespan(1, 0, 0)
+public constant timespan DAY_LENGTH = makeTimespan(0, 12, 0)
+public constant timespan NIGHT_LENGTH = makeTimespan(0, 12, 0)
 
 trigger g_OnDayTrigger
 trigger g_OnNightTrigger

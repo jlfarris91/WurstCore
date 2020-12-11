@@ -60,6 +60,29 @@ public function LinkedList<TElem>.select<TElem, TRet>(Func1<TElem, TRet> selecto
   return result
 
 // ============================================================================
+// Automatically destroys the selected LinkedList<> after enumerating
+public function LinkedList<TElem>.selectMany<TElem, TRet>(Func1<TElem, LinkedList<TRet>> selector) returns LinkedList<TRet>
+  let result = new LinkedList<TRet>
+  for elem in this
+    let selectedElems = selector.call(elem)
+    if (selectedElems != null)
+      for selectedElem in selectedElems
+        result.add(selectedElem)
+      destroy selectedElems
+  return result
+
+// ============================================================================
+// Does not destroy the selected LinkedList<> after enumerating
+public function LinkedList<TElem>.selectManyOwned<TElem, TRet>(Func1<TElem, LinkedList<TRet>> selector) returns LinkedList<TRet>
+  let result = new LinkedList<TRet>
+  for elem in this
+    let selectedElems = selector.call(elem)
+    if (selectedElems != null)
+      for selectedElem in selectedElems
+        result.add(selectedElem)
+  return result
+
+// ============================================================================
 //
 // Tests
 //

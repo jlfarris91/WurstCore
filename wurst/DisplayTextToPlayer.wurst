@@ -22,3 +22,7 @@ public function displayMessageToAllExceptPlayer(player p, string message)
 // ============================================================================
 function fillTempForceWithEnumPlayers()
   g_tempForce.addPlayer(GetEnumPlayer())
+
+// ============================================================================
+init
+  g_tempForce = CreateForce()
