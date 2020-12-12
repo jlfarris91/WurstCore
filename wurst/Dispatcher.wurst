@@ -1,0 +1,49 @@
+package Dispatcher
+import Action
+import LinkedList
+import ClosureTimers
+
+public Dispatcher g_dispatcher
+
+@configurable public constant real DISPATCHER_INTERVAL_HIGH = 0.2
+@configurable public constant real DISPATCHER_INTERVAL_LOW = 0.5
+@configurable public constant real DISPATCHER_INTERVAL_BACKGROUND = 1.0
+@configurable public constant int DISPATCHER_MAX_PROCESS = 100
+
+// ============================================================================
+public enum DispatchPriority
+  HIGH
+  LOW
+  BACKGROUND  
+
+// ============================================================================
+public class Dispatcher
+  private LinkedList<Action> array[3] m_dispatchQueue
+
+  // --------------------------------------------------------------------------
+  function invoke(Action action, DispatchPriority priority)
+    m_dispatchQueue[priority castTo int].add(action)
+
+  // --------------------------------------------------------------------------
+  function invokeAfter(Action action, real seconds, DispatchPriority priority)
+    doAfter(seconds) () ->
+      invoke(action, priority)
+
+  // --------------------------------------------------------------------------
+  protected function process(DispatchPriority priority)
+    let queue = m_dispatchQueue[priority castTo int]
+    if (queue.isEmpty())
+      return
+
+    var watchdog = 0
+    while (not queue.isEmpty() and watchdog < DISPATCHER_MAX_PROCESS)
+      let action = queue.dequeue()
+      action.call()
+      watchdog++
+
+// ============================================================================
+init
+  g_dispatcher = new Dispatcher()
+  doPeriodically(DISPATCHER_INTERVAL_HIGH, (CallbackPeriodic cb) -> g_dispatcher.process(DispatchPriority.HIGH))
+  doPeriodically(DISPATCHER_INTERVAL_LOW, (CallbackPeriodic cb) -> g_dispatcher.process(DispatchPriority.LOW))
+  doPeriodically(DISPATCHER_INTERVAL_BACKGROUND, (CallbackPeriodic cb) -> g_dispatcher.process(DispatchPriority.BACKGROUND))
