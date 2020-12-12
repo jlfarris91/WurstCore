@@ -1,0 +1,85 @@
+package Arc
+import Range
+import Circle
+import Math
+
+// ============================================================================
+public tuple arc(vec2 center, rangeReal angleRange, rangeReal distanceRange)
+
+// ============================================================================
+public function arc.getNormal() returns vec2
+  let angle = this.angleRange.getMid()
+  return vec2(Cos(angle), Sin(angle))
+
+// ============================================================================
+public function arc.overlaps(circle circle) returns bool
+  //Log.info("==========")  
+  let a = this.center.toVec3()
+  let b = circle.center.toVec3()
+  let d = this.getNormal().toVec3()
+  let ab = b - a
+  let abLen = ab.length()
+  let distanceRange = this.distanceRange
+
+  //Log.info("a: " + a.toString())
+  //Log.info("b: " + b.toString())
+  //Log.info("d: " + d.toString())
+  //Log.info("ab: " + ab.toString())
+  //Log.info("abLen: " + abLen.toString())
+  //Log.info("distanceRange: " + distanceRange.toString())
+
+  // Early out if not within the distance range of the arc
+  if (not abLen.inRange(distanceRange.grow(circle.radius)))
+    return false
+
+  let bProj = abLen * d
+  let abProj = bProj - a
+  let abProjLen = abProj.length()
+  let areaHalfAngle = this.angleRange.getLength() * 0.5
+  let areaArcHalfLength = (areaHalfAngle * abProjLen).abs()
+  let abAngle = ab.normalized().angleBetween(d)
+  let abArcHalfLen = (abAngle * abProjLen).abs()
+  let abArcHalfLenMinusRadius = abArcHalfLen - circle.radius
+
+  //Log.info("bProj: " + bProj.toString())
+  //Log.info("abProj: " + abProj.toString())
+  //Log.info("abProjLen: " + abProjLen.toString())
+  //Log.info("areaHalfAngle: " + areaHalfAngle.toDegrees().toString())
+  //Log.info("areaArcHalfLength: " + areaArcHalfLength.toString())
+  //Log.info("abAngle: " + abAngle.toDegrees().toString())
+  //Log.info("abArcHalfLen: " + abArcHalfLen.toString())
+  //Log.info("abArcHalfLenMinusRadius: " + abArcHalfLenMinusRadius.toString())
+
+  return abArcHalfLenMinusRadius <= areaArcHalfLength
+
+// ============================================================================
+@test function spawnAreaOverlapsCircle()  
+  let angleRange = rangeReal(-22.5 * bj_DEGTORAD, 22.5 * bj_DEGTORAD)
+  let distanceRange = rangeReal(5.0, 10.0)
+  
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(ZERO2, 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(ZERO2, 5.0)).assertTrue()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(ZERO2, 10.0)).assertTrue()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(ZERO2, 100.0)).assertTrue()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(7.5, 0), 10.0)).assertTrue()
+
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(11, 0), 1.0)).assertTrue()
+
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(10, 5), 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, 5), 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, 5), 2.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, 5), 3.0)).assertTrue()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, 5), 5.0)).assertTrue()
+
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(10, -5), 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, -5), 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, -5), 2.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, -5), 3.0)).assertTrue()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(5, -5), 5.0)).assertTrue()
+
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(-10, 5), 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(-5, 5), 1.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(-5, 5), 2.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(-5, 5), 3.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(-5, 5), 5.0)).assertFalse()
+  arc(ZERO2, angleRange, distanceRange).overlaps(circle(vec2(-5, 5), 100.0)).assertTrue()

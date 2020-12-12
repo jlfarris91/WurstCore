@@ -27,6 +27,8 @@ public function LinkedList<T>.getRandomUnique<T>(int count) returns LinkedList<T
     let randomIndex = GetRandomInt(0, clone.size() - 1)
     output.add(clone.get(randomIndex))
     clone.removeAt(randomIndex)
+    if (clone.isEmpty())
+      break
   destroy clone
   return output
 

@@ -3,6 +3,11 @@ package Math
 rect g_WorldBounds
 constant real BOUNDARY_OFFSET = 512.0
 public constant int UNLIMITED = 99999
+public constant real EPSILON = 0.00001
+
+public function real.assertApproximatelyEquals(real expected)
+  if (RAbsBJ(this - expected) > EPSILON)
+    testFail("Expected <" + expected.toString() + ">, Actual <" + this.toString() + ">")
 
 // ============================================================================
 public function clamp(int value, int min, int max) returns int
@@ -77,6 +82,41 @@ public function parameterize01(real start, real _end, real value) returns real
   return clamp01(parameterize(start, _end, value))
 
 // ============================================================================
+public function vec2.angleBetween(vec2 other) returns real
+  let thisLen = this.length()
+  if (thisLen == 0.0)
+    return 0.0
+  let otherLen = other.length()
+  if (otherLen == 0.0)
+    return 0.0
+  return Acos(this.dot(other) / (thisLen * otherLen))
+
+// ============================================================================
+public function vec3.angleBetween(vec3 other) returns real
+  let thisLen = this.length()
+  if (thisLen == 0.0)
+    return 0.0
+  let otherLen = other.length()
+  if (otherLen == 0.0)
+    return 0.0
+  return Acos(this.dot(other) / (thisLen * otherLen))
+
+// ============================================================================
+public function vec3.normalized() returns vec3
+  let l = this.length()
+  if (l == 0.0)
+    return vec3(0,0,0)
+  return vec3(this.x / l, this.y / l, this.z / l)
+
+// ============================================================================
+public function real.toDegrees() returns real
+  return this * bj_RADTODEG
+
+// ============================================================================
+public function real.toRadians() returns real
+  return this * bj_DEGTORAD
+
+// ============================================================================
 init
   g_WorldBounds = GetPlayableMapRect()
 
@@ -140,3 +180,12 @@ init
 // ============================================================================
 @test public function wrap_min_equals_max()
   assertTrue(wrap(-5, 0, 0) == 0)
+
+// ============================================================================
+@test public function angleBetween()
+  vec2(1, 0).angleBetween(vec2(0, 1)).assertApproximatelyEquals(bj_DEGTORAD * 90.0)
+  vec2(0, 1).angleBetween(vec2(-1, 0)).assertApproximatelyEquals(bj_DEGTORAD * 90.0)
+  vec2(-1, 0).angleBetween(vec2(0, -1)).assertApproximatelyEquals(bj_DEGTORAD * 90.0)
+  vec2(0, -1).angleBetween(vec2(1, 0)).assertApproximatelyEquals(bj_DEGTORAD * 90.0)
+  vec2(1, 0).angleBetween(vec2(1, 1)).assertApproximatelyEquals(bj_DEGTORAD * 45.0)
+  vec2(1, 0).angleBetween(vec2(1, -1)).assertApproximatelyEquals(bj_DEGTORAD * 45.0)

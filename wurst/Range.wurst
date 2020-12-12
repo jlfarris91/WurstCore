@@ -30,12 +30,44 @@ public function rangeInt.getLength() returns int
   return IAbsBJ(this.max - this.min)
 
 // ============================================================================
+public function rangeReal.getMid() returns real
+  return (this.min + this.max) / 2.0
+
+// ============================================================================
+public function rangeInt.getMid() returns int
+  return R2I(I2R(this.min + this.max) / 2.0)
+
+// ============================================================================
 public function int.toRange() returns rangeInt
   return rangeInt(this, this)
 
 // ============================================================================
 public function real.toRange() returns rangeReal
   return rangeReal(this, this)
+
+// ============================================================================
+public function real.inRange(rangeReal range) returns bool
+  return this.isBetween(range.min, range.max)
+
+// ============================================================================
+public function int.inRange(rangeInt range) returns bool
+  return this.isBetween(range.min, range.max)
+
+// ============================================================================
+public function rangeReal.grow(real value) returns rangeReal
+  return rangeReal(this.min - value, this.max + value)
+
+// ============================================================================
+public function rangeInt.grow(int value) returns rangeInt
+  return rangeInt(this.min - value, this.max + value)
+
+// ============================================================================
+public function rangeReal.toString() returns string
+  return "{0}-{1}".format(this.min.toString(), this.max.toString())
+
+// ============================================================================
+public function rangeInt.toString() returns string
+  return "{0}-{1}".format(this.min.toString(), this.max.toString())
 
 // ============================================================================
 public function lerp(rangeReal start, rangeReal _end, real t) returns rangeReal
