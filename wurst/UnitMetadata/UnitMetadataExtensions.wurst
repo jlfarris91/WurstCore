@@ -258,7 +258,7 @@ public function IUnitMetadata.isInventoryFull() returns boolean
 
 /** Checks if the unit is alive using the UnitAlive native */
 public function IUnitMetadata.isAlive() returns boolean
-	return UnitAlive(this.getUnit())
+	return this != null and UnitAlive(this.getUnit())
 
 /** Checks whether a unit is within range of a point.
 	Takes into account the units collision size **/
