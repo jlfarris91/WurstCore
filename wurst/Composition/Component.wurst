@@ -12,11 +12,6 @@ public abstract class Component implements IComponent
     _owner = owner
 
   // --------------------------------------------------------------------------
-  ondestroy
-    if (_enabled)
-      onDisabled()
-
-  // --------------------------------------------------------------------------
   override function getOwner() returns IComposite
     return _owner
 

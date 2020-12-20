@@ -20,7 +20,12 @@ public class CompositionManager implements IComposite
   // --------------------------------------------------------------------------
   ondestroy
     for component in _components
+      component.setEnabled(false)
+
+    for component in _components
+      let compTypeId = component.typeId
       destroy component
+      _typeToComponentMap.remove(compTypeId)
       
     destroy _components
     _components = null
