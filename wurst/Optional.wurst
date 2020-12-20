@@ -1,0 +1,54 @@
+package Optional
+
+public tuple optionalInt(bool hasValue, int value, string errorMessage)
+public tuple optionalReal(bool hasValue, real value, string errorMessage)
+public tuple optionalString(bool hasValue, string value, string errorMessage)
+public tuple optionalBool(bool hasValue, bool value, string errorMessage)
+
+// --------------------------------------------------------------------------
+public function some(int value) returns optionalInt
+  return optionalInt(true, value, null)
+
+// --------------------------------------------------------------------------
+public function some(real value) returns optionalReal
+  return optionalReal(true, value, null)
+
+// --------------------------------------------------------------------------
+public function some(string value) returns optionalString
+  return optionalString(true, value, null)
+
+// --------------------------------------------------------------------------
+public function some(bool value) returns optionalBool
+  return optionalBool(true, value, null)
+
+// --------------------------------------------------------------------------
+public function none_int() returns optionalInt
+  return optionalInt(false, 0, null)
+
+// --------------------------------------------------------------------------
+public function none_int(string error) returns optionalInt
+  return optionalInt(false, 0, error)
+
+// --------------------------------------------------------------------------
+public function none_real() returns optionalReal
+  return optionalReal(false, 0.0, null)
+
+// --------------------------------------------------------------------------
+public function none_real(string error) returns optionalReal
+  return optionalReal(false, 0.0, error)
+
+// --------------------------------------------------------------------------
+public function none_string() returns optionalString
+  return optionalString(false, null, null)
+
+// --------------------------------------------------------------------------
+public function none_string(string error) returns optionalString
+  return optionalString(false, null, error)
+
+// --------------------------------------------------------------------------
+public function none_bool() returns optionalBool
+  return optionalBool(false, false, null)
+
+// --------------------------------------------------------------------------
+public function none_bool(string error) returns optionalBool
+  return optionalBool(false, false, error)

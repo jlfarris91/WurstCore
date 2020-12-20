@@ -1,0 +1,54 @@
+package Result
+
+public tuple resultInt(int value, string errorMessage)
+public tuple resultReal(real value, string errorMessage)
+public tuple resultString(string value, string errorMessage)
+public tuple resultBool(bool value, string errorMessage)
+
+// --------------------------------------------------------------------------
+public function resultInt.succeeded() returns bool
+  return this.errorMessage == null
+
+// --------------------------------------------------------------------------
+public function resultReal.succeeded() returns bool
+  return this.errorMessage == null
+
+// --------------------------------------------------------------------------
+public function resultString.succeeded() returns bool
+  return this.errorMessage == null
+
+// --------------------------------------------------------------------------
+public function resultBool.succeeded() returns bool
+  return this.errorMessage == null
+
+// --------------------------------------------------------------------------
+public function succeeded(int value) returns resultInt
+  return resultInt(value, null)
+
+// --------------------------------------------------------------------------
+public function succeeded(real value) returns resultReal
+  return resultReal(value, null)
+
+// --------------------------------------------------------------------------
+public function succeeded(string value) returns resultString
+  return resultString(value, null)
+
+// --------------------------------------------------------------------------
+public function succeeded(bool value) returns resultBool
+  return resultBool(value, null)
+
+// --------------------------------------------------------------------------
+public function failed_int(string error) returns resultInt
+  return resultInt(0, error)
+
+// --------------------------------------------------------------------------
+public function failed_real(string error) returns resultReal
+  return resultReal(0.0, error)
+
+// --------------------------------------------------------------------------
+public function failed_string(string error) returns resultString
+  return resultString(null, error)
+
+// --------------------------------------------------------------------------
+public function failed_bool(string error) returns resultBool
+  return resultBool(false, error)
