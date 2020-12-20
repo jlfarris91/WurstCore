@@ -22,6 +22,22 @@ public function some(bool value) returns optionalBool
   return optionalBool(true, value, null)
 
 // --------------------------------------------------------------------------
+public function int.some() returns optionalInt
+  return some(this)
+
+// --------------------------------------------------------------------------
+public function real.some() returns optionalReal
+  return some(this)
+
+// --------------------------------------------------------------------------
+public function string.some() returns optionalString
+  return some(this)
+
+// --------------------------------------------------------------------------
+public function bool.some() returns optionalBool
+  return some(this)
+
+// --------------------------------------------------------------------------
 public function none_int() returns optionalInt
   return optionalInt(false, 0, null)
 
