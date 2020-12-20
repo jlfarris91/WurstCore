@@ -1,7 +1,6 @@
 package UnitMetadata
 import public Composition
 import LinkedList
-import public UnitMetadataExtensions
 import ErrorHandling
 import ErrorIf
 import ClosureEvents
@@ -65,7 +64,7 @@ public class UnitMetadata implements IUnitMetadata
     g_unitMetadatas[newIndex] = this
     setUnit(unitToAttachTo)
 
-    logDebug("[UnitMetadata.attach] Attached to " + this.getName())
+    logDebug("[UnitMetadata.attach] Attached to " + unitToAttachTo.getName())
 
   // --------------------------------------------------------------------------
   override function detach()
@@ -83,7 +82,7 @@ public class UnitMetadata implements IUnitMetadata
     g_unitMetadatas[currentIndex] = null
     setUnit(null)
 
-    logDebug("[UnitMetadata.detach] Detached from " + this.getName())
+    logDebug("[UnitMetadata.detach] Detached from " + currentUnit.getName())
 
   // --------------------------------------------------------------------------
   function onKilled()
