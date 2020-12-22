@@ -17,6 +17,7 @@ public interface IPlayerMetadata extends IComposite
 public class PlayerMetadata extends Composable implements IPlayerMetadata
   private player m_player
   private string m_displayName
+  private bool m_leftGame
 
   // --------------------------------------------------------------------------
   construct(player p)
@@ -43,6 +44,14 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   // --------------------------------------------------------------------------
   function resetDisplayName()
     setDisplayName(m_player.getName())
+
+  // --------------------------------------------------------------------------
+  function getHasLeftGame() returns bool
+    return m_leftGame
+
+  // --------------------------------------------------------------------------
+  function setHasLeftGame(bool value)
+    m_leftGame = value
 
   // --------------------------------------------------------------------------
   @inline
