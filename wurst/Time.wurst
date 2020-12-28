@@ -1,12 +1,21 @@
 package Time
 import Math
+import HashMap
 
-trigger g_newDayTrigger
-int g_day
+@configurable public constant real TIME_OF_DAY = 6.0
+@configurable public constant real TIME_OF_NIGHT = 18.0
+
+public constant time DAY_TIME = makeTime(0, TIME_OF_DAY)
+public constant time NIGHT_TIME = makeTime(0, TIME_OF_NIGHT)
+public constant timespan DAY_LENGTH = makeTimespan(0, 12, 0)
+public constant timespan NIGHT_LENGTH = makeTimespan(0, 12, 0)
 
 public constant TICKS_PER_MINUTE = 1
 public constant TICKS_PER_HOUR = 60
 public constant TICKS_PER_DAY = 1440
+
+int g_day
+HashMap<real, trigger> g_timeOfDayTriggerMap = new HashMap<real, trigger>()
 
 // ============================================================================
 public class Time
@@ -195,14 +204,39 @@ public function setDay(int day)
   g_day = day
 
 // ============================================================================
+public function isDay() returns bool
+  let currentTime = GetTimeOfDay()
+  return currentTime >= TIME_OF_DAY and currentTime < TIME_OF_NIGHT
+
+// ============================================================================
+public function isNight() returns bool
+  let currentTime = GetTimeOfDay()
+  return currentTime >= TIME_OF_NIGHT or currentTime < TIME_OF_DAY
+
+// ============================================================================
+public function registerDayEvent(code callback)
+  registerTimeOfDayEvent(TIME_OF_DAY, callback)
+
+// ============================================================================
+public function registerNightEvent(code callback)
+  registerTimeOfDayEvent(TIME_OF_NIGHT, callback)
+
+// ============================================================================
+public function registerTimeOfDayEvent(real timeOfDay, code callback)
+  var t = g_timeOfDayTriggerMap.get(timeOfDay)
+  if (t == null)
+    t = CreateTrigger()
+    t.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, timeOfDay)
+    g_timeOfDayTriggerMap.put(timeOfDay, t)
+  t.addCondition(Filter(callback))
+
+// ============================================================================
 function onNewDay()
   setDay(getDay() + 1)
 
 // ============================================================================
 init
-  g_newDayTrigger = CreateTrigger()
-  g_newDayTrigger.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, 0.0)
-  g_newDayTrigger.addCondition(Condition(function onNewDay))
+  registerTimeOfDayEvent(0.0, function onNewDay)
 
 // ============================================================================
 //

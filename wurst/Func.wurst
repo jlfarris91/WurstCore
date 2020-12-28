@@ -156,3 +156,11 @@ public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> implements Func3<TArg1
       result = impl.call(arg1, arg2, arg3)
     destroy invocations
     return result
+
+// ============================================================================
+public interface FuncVec2
+  function call() returns vec2
+
+// ============================================================================
+public interface FuncVec3
+  function call() returns vec3

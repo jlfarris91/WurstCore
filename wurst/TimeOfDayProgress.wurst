@@ -1,10 +1,9 @@
 package TimeOfDayProgress
-import TimeOfDay
+import Time
 import IProgress
 import Events
 import RealtimeUpdate
 import Math
-import Time
 
 public TimeOfDayProgress g_dayProgress
 public TimeOfDayProgress g_nightProgress
