@@ -70,12 +70,28 @@ public function rangeInt.toString() returns string
   return "{0}-{1}".format(this.min.toString(), this.max.toString())
 
 // ============================================================================
+public function rangeReal.parameterize(real value) returns real
+  return parameterize(this.min, this.max, value)
+
+// ============================================================================
+public function rangeReal.parameterize01(real value) returns real
+  return parameterize01(this.min, this.max, value)
+
+// ============================================================================
+public function rangeInt.parameterize(int value) returns real
+  return parameterize(this.min, this.max, value)
+
+// ============================================================================
+public function rangeInt.parameterize01(int value) returns real
+  return parameterize01(this.min, this.max, value)
+
+// ============================================================================
 public function lerp(rangeReal start, rangeReal _end, real t) returns rangeReal
   return rangeReal(lerp(start.min, _end.min, t), lerp(start.max, _end.max, t))  
 
 // ============================================================================
 public function lerp(rangeInt start, rangeInt _end, real t) returns rangeInt
-  return rangeInt(lerpInt(start.min, _end.min, t), lerpInt(start.max, _end.max, t))  
+  return rangeInt(lerpInt(start.min, _end.min, t), lerpInt(start.max, _end.max, t))
 
 // ============================================================================
 public interface RangeRealFunc<T>

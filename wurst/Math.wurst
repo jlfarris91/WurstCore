@@ -78,7 +78,15 @@ public function parameterize(real start, real _end, real value) returns real
   return diff == 0.0 ? 0.0 : (value - start) / diff
 
 // ============================================================================
+public function parameterize(int start, int _end, int value) returns real
+  return parameterize(I2R(start), I2R(_end), I2R(value))
+
+// ============================================================================
 public function parameterize01(real start, real _end, real value) returns real
+  return clamp01(parameterize(start, _end, value))
+
+// ============================================================================
+public function parameterize01(int start, int _end, int value) returns real
   return clamp01(parameterize(start, _end, value))
 
 // ============================================================================
