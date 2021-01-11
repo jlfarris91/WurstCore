@@ -31,6 +31,10 @@ public class WeightedSet<T>
     return this.size
 
   // --------------------------------------------------------------------------
+  function getTotalWeight() returns real
+    return totalWeight
+
+  // --------------------------------------------------------------------------
   /** Adds an element to the set */
   function add(T elem, real weight)
     this.addEntry(new WeightedSetEntry<T>(elem, weight))
@@ -88,16 +92,15 @@ public class WeightedSet<T>
     return this.size == 0
 
   // --------------------------------------------------------------------------
+  function get(real weight) returns T
+    let entry = getEntry(weight)
+    return entry != null ? entry.elem : null
+
+  // --------------------------------------------------------------------------
   /** Returns a random element from the set */
   function getRandom() returns T
-    var r = GetRandomReal(0, this.totalWeight)
-    var entry = this.head
-    while (entry != null)
-      if (r >= 0.0 and r < entry.weight)
-        return entry.elem
-      r -= entry.weight
-      entry = entry.next
-    return null
+    let entry = getEntry(GetRandomReal(0, this.totalWeight))
+    return entry != null ? entry.elem : null
 
   // --------------------------------------------------------------------------
   /** Returns N random elements from the set */
@@ -108,22 +111,22 @@ public class WeightedSet<T>
     return output
 
   // --------------------------------------------------------------------------
+  function pop(real weight) returns T
+    if (isEmpty())
+      error("Cannot pop from an empty set")
+      return null
+    let entry = getEntry(weight)
+    if (entry != null)
+      let elem = entry.elem
+      removeEntry(entry)
+      return elem
+    error("Pop failed: " + R2S(weight) + "/" + R2S(this.totalWeight))
+    return null
+
+  // --------------------------------------------------------------------------
   /** Removes and returns a random element from the set */
   function popRandom() returns T
-    if (isEmpty())
-      error("popRandom cannot pop from an empty set")
-      return null
-    var r = GetRandomReal(0, this.totalWeight)
-    var entry = this.head
-    while (entry != null)
-      if (r >= 0.0 and r < entry.weight)
-        let elem = entry.elem
-        removeEntry(entry)
-        return elem
-      r -= entry.weight
-      entry = entry.next
-    error("popRandom failed: " + R2S(r) + "/" + R2S(this.totalWeight))
-    return null
+    return pop(GetRandomReal(0, this.totalWeight))
 
   // --------------------------------------------------------------------------
   /** Removes and returns N random elements from the set */
@@ -147,6 +150,18 @@ public class WeightedSet<T>
   function iterator() returns WeightedSetIterator<T>
     return new WeightedSetIterator<T>(this)
     
+  // --------------------------------------------------------------------------
+  protected function getEntry(real weight) returns WeightedSetEntry<T>
+    var r = weight
+    var entry = this.head
+    while (entry != null)
+      if (r >= 0.0 and r <= entry.weight)
+        return entry
+      r -= entry.weight
+      entry = entry.next
+    error("getRandom failed: " + R2S(r) + "/" + R2S(this.totalWeight))
+    return null
+
   // --------------------------------------------------------------------------
   protected function findEntry(T elem) returns WeightedSetEntry<T>
     var entry = this.head
@@ -361,6 +376,26 @@ public class WeightedSetIterator<T>
   for elem in weightedSet
     assertTrue(elem == i)
     i++
+
+@test public function get()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+
+  // act + assert
+  weightedSet.get(0.0).assertEquals(1)
+  weightedSet.get(0.5).assertEquals(1)
+  weightedSet.get(1.0).assertEquals(1)
+
+  weightedSet.get(1.0001).assertEquals(2)
+  weightedSet.get(2.0).assertEquals(2)
+  weightedSet.get(3.0).assertEquals(2)
+
+  weightedSet.get(3.0001).assertEquals(3)
+  weightedSet.get(4.5).assertEquals(3)
+  weightedSet.get(6.0).assertEquals(3)
 
 @test public function getRandom()
   // arrange
