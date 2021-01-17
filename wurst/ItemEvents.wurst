@@ -1,0 +1,96 @@
+package ItemEvents
+import RegisterEvents
+import Events
+import HashMap
+
+var g_itemAcquiredEvents = new HashMap<int, Event2<unit, item>>()
+var g_itemDroppedEvents = new HashMap<int, Event2<unit, item>>()
+var g_itemActivatedEvents = new HashMap<int, Event2<unit, item>>()
+
+// ============================================================================
+public function getItemAcquiredEvent(int itemTypeId) returns Event2<unit, item>
+  if (g_itemAcquiredEvents == null)
+    g_itemAcquiredEvents = new HashMap<int, Event2<unit,item>>()
+  var _event = g_itemAcquiredEvents.get(itemTypeId)
+  if (_event == null)
+    _event = new Event2<unit, item>()
+    g_itemAcquiredEvents.put(itemTypeId, _event)
+  return _event
+
+// ============================================================================
+public function getItemDroppedEvent(int itemTypeId) returns Event2<unit, item>
+  if (g_itemDroppedEvents == null)
+    g_itemDroppedEvents = new HashMap<int, Event2<unit,item>>()
+  var _event = g_itemDroppedEvents.get(itemTypeId)
+  if (_event == null)
+    _event = new Event2<unit, item>()
+    g_itemDroppedEvents.put(itemTypeId, _event)
+  return _event
+
+// ============================================================================
+public function getItemActivatedEvent(int itemTypeId) returns Event2<unit, item>
+  if (g_itemActivatedEvents == null)
+    g_itemActivatedEvents = new HashMap<int, Event2<unit,item>>()
+  var _event = g_itemActivatedEvents.get(itemTypeId)
+  if (_event == null)
+    _event = new Event2<unit, item>()
+    g_itemActivatedEvents.put(itemTypeId, _event)
+  return _event
+
+// ============================================================================
+public function registerItemAcquiredEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Event2Callback<unit, item>
+  return getItemAcquiredEvent(itemTypeId).register(callback)
+
+// ============================================================================
+public function registerItemDroppedEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Event2Callback<unit, item>
+  return getItemDroppedEvent(itemTypeId).register(callback)
+
+// ============================================================================
+public function registerItemActivatedEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Event2Callback<unit, item>
+  return getItemActivatedEvent(itemTypeId).register(callback)
+
+// ============================================================================
+function raiseItemAcquiredEvent(unit _unit, item _item)
+  if (g_itemAcquiredEvents == null)
+    return
+  let _event = g_itemAcquiredEvents.get(_item.getTypeId())
+  if (_event == null)
+    return
+  _event.call(_unit, _item)  
+
+// ============================================================================
+function raiseItemDroppedEvent(unit _unit, item _item)
+  if (g_itemDroppedEvents == null)
+    return
+  let _event = g_itemDroppedEvents.get(_item.getTypeId())
+  if (_event == null)
+    return
+  _event.call(_unit, _item)  
+
+// ============================================================================
+function raiseItemActivatedEvent(unit _unit, item _item)
+  if (g_itemActivatedEvents == null)
+    return
+  let _event = g_itemActivatedEvents.get(_item.getTypeId())
+  if (_event == null)
+    return
+  _event.call(_unit, _item)  
+
+// ============================================================================
+function onItemAcquired()
+  raiseItemAcquiredEvent(GetManipulatingUnit(), GetManipulatedItem())
+
+// ============================================================================
+function onItemDropped()
+  raiseItemDroppedEvent(GetManipulatingUnit(), GetManipulatedItem())
+
+// ============================================================================
+function onItemActivated()
+  raiseItemActivatedEvent(GetManipulatingUnit(), GetManipulatedItem())
+
+// ============================================================================
+init
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_PICKUP_ITEM, function onItemAcquired)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DROP_ITEM, function onItemDropped)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_USE_ITEM, function onItemActivated)
+
