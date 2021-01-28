@@ -29,3 +29,11 @@ public function unit.setLumberAwarded(rangeInt range)
 // ============================================================================
 public function unit.setLumberAwarded(int lumber)
   this.setLumberAwarded(lumber.toDice())
+
+// ============================================================================
+public function unit.countTotalItemCharges(int itemTypeId) returns int
+  var charges = 0
+  for _item in this.inventory()
+    if (_item.getTypeId() == itemTypeId)
+      charges += _item.getCharges()
+  return charges
