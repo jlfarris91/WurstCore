@@ -6,6 +6,7 @@ import IComposite
 import Component
 import public Type
 import ErrorIf
+import ClosureTimers
 
 // ============================================================================
 public class CompositionManager implements IComposite
@@ -50,7 +51,8 @@ public class CompositionManager implements IComposite
     if (not _components.remove(component))
       return false    
     component.setEnabled(false)
-    destroy component
+    _typeToComponentMap.remove(component.typeId)
+    nullTimer(() -> destroy component)
     return true
 
   // --------------------------------------------------------------------------
