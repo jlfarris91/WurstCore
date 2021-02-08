@@ -21,6 +21,10 @@ public abstract class UnitComponent extends Component
     return m_owner.getUnit()
 
   // --------------------------------------------------------------------------
+  function getOwningPlayer() returns player
+    return getOwnerUnit().getOwner()
+
+  // --------------------------------------------------------------------------
   function setDisableOnDeath(bool disableOnDeath)
     m_disableOnDeath = disableOnDeath
 
