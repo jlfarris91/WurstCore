@@ -163,6 +163,10 @@ public function timespan.op_minus(timespan other) returns timespan
   return timespan(this.ticks - other.ticks)
 
 // ============================================================================
+public function timespan.op_mult(real value) returns timespan
+  return timespan(R2I(this.ticks * value))
+
+// ============================================================================
 public function timespan.op_divReal(timespan other) returns real
   return this.ticks / other.ticks
 
