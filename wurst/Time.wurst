@@ -227,12 +227,16 @@ public function registerNightEvent(code callback)
 
 // ============================================================================
 public function registerTimeOfDayEvent(real timeOfDay, code callback)
+  registerTimeOfDayEvent(timeOfDay, Filter(callback))
+
+// ============================================================================
+public function registerTimeOfDayEvent(real timeOfDay, filterfunc callback)
   var t = g_timeOfDayTriggerMap.get(timeOfDay)
   if (t == null)
     t = CreateTrigger()
     t.registerGameStateEvent(GAME_STATE_TIME_OF_DAY, EQUAL, timeOfDay)
     g_timeOfDayTriggerMap.put(timeOfDay, t)
-  t.addCondition(Filter(callback))
+  t.addCondition(callback)
 
 // ============================================================================
 function onNewDay()

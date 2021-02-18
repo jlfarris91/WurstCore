@@ -1,0 +1,12 @@
+package GroupExtensions
+
+// ============================================================================
+public function group.getClosestUnit(vec2 pos) returns unit
+  var closestDistSq = REAL_MAX
+  unit closestUnit = null
+  for _unit in this
+    let distSq = _unit.getPos().distanceToSq(pos)
+    if (distSq < closestDistSq)
+      closestDistSq = distSq
+      closestUnit = _unit
+  return closestUnit

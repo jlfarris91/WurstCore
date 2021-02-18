@@ -11,7 +11,7 @@ import TriggerExtensions
 import PriorityList
 import DisplayTextToPlayer
 import StringComparison
-import StringExtensions
+import ColorUtility
 
 constant string COMMAND_PREFIX = "-"
 constant string COMMAND_HELP_STR = "help"

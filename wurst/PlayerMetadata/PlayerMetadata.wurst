@@ -1,8 +1,8 @@
 package PlayerMetadata
 import HashMap
 import Composition
-import StringExtensions
 import public initlater PlayerMetadataExtensions
+import ColorUtility
 
 HashMap<player, IPlayerMetadata> g_PlayerMetadata
 

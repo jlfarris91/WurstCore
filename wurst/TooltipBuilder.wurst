@@ -1,0 +1,131 @@
+package TooltipBuilder
+import LinkedList
+import ErrorHandling
+import StringBuilder
+import StringExtensions
+import ColorUtility
+
+constant int MAX_TOOLTIP_ITEM_COUNT = 32
+constant colorA ITEM_NAME_COLOR = fromHexString("FF3B97D3")
+constant colorA ITEM_VALUE_COLOR = COLOR_GOLD
+
+// ============================================================================
+public interface ITooltipItem
+  function getName() returns string
+  function getValue(int index) returns string
+  function getValueCount() returns int
+
+// ============================================================================
+public class TooltipItem implements ITooltipItem
+  private string m_name
+  private LinkedList<string> m_values
+
+  // --------------------------------------------------------------------------
+  construct(string name)
+    m_values = new LinkedList<string>()
+    m_name = name
+
+  // --------------------------------------------------------------------------
+  construct(string name, string value)
+    m_values = new LinkedList<string>()
+    m_name = name
+    addValue(value)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    clear()
+    destroy m_values
+    m_values = null
+
+  // --------------------------------------------------------------------------
+  function clear()
+    m_name = null
+    m_values.clear()
+
+  // --------------------------------------------------------------------------
+  override function getName() returns string
+    return m_name
+
+  // --------------------------------------------------------------------------
+  override function getValue(int index) returns string
+    return m_values.get(index)
+  
+  // --------------------------------------------------------------------------
+  override function getValueCount() returns int
+    return m_values.size()
+
+  // --------------------------------------------------------------------------
+  function addValue(string value) returns TooltipItem
+    if (m_values.size() == MAX_TOOLTIP_ITEM_COUNT)
+      error("Reached limit of number of values " + I2S(MAX_TOOLTIP_ITEM_COUNT))
+    m_values.add(value)
+    return this
+
+// ============================================================================
+public class TooltipBuilder
+  private string m_description
+  private LinkedList<ITooltipItem> m_items
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_items = new LinkedList<ITooltipItem>()
+
+  // --------------------------------------------------------------------------
+  ondestroy 
+    clear()
+
+    destroy m_items
+    m_items = null
+
+  // --------------------------------------------------------------------------
+  function clear()
+    m_description = null
+    for itm in m_items
+      destroy itm
+    m_items.clear()
+
+  // --------------------------------------------------------------------------
+  function addItem(string name) returns TooltipBuilder
+    return addItem(new TooltipItem(name))
+
+  // --------------------------------------------------------------------------
+  function addItem(string name, string value) returns TooltipBuilder
+    return addItem(new TooltipItem(name, value))
+
+  // --------------------------------------------------------------------------
+  function addItem(ITooltipItem itm) returns TooltipBuilder
+    if (m_items.size() == MAX_TOOLTIP_ITEM_COUNT)
+      error("Reached limit of tooltip items " + I2S(MAX_TOOLTIP_ITEM_COUNT))
+    m_items.add(itm)
+    return this
+
+  // --------------------------------------------------------------------------
+  function getDescription() returns string
+    return m_description
+
+  // --------------------------------------------------------------------------
+  function setDescription(string description) returns TooltipBuilder
+    m_description = description
+    return this
+    
+  // --------------------------------------------------------------------------  
+  function getTooltipBasic() returns string
+    return m_description
+
+  // --------------------------------------------------------------------------  
+  function getTooltipExtended() returns string
+    let sb = new StringBuilder()
+
+    let padStr = " "
+    for itm in m_items      
+      sb.append(itm.getName().colorize(ITEM_NAME_COLOR))
+
+      let itemValueCount = itm.getValueCount()
+      if (itemValueCount == 1)
+        sb.appendLine(itm.getValue(0).colorize(ITEM_VALUE_COLOR))
+      else
+        sb.appendLine()
+        for j = 0 to itemValueCount - 1
+          sb.appendLine(itm.getValue(j).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
+
+    return sb.toStringAndDestroy()
