@@ -117,15 +117,24 @@ public class TooltipBuilder
     let sb = new StringBuilder()
 
     let padStr = " "
-    for itm in m_items      
+    var index = 0
+    for itm in m_items
+    //{
+
+      if (index > 0)
+        sb.appendLine()
+
       sb.append(itm.getName().colorize(ITEM_NAME_COLOR))
 
       let itemValueCount = itm.getValueCount()
       if (itemValueCount == 1)
-        sb.appendLine(itm.getValue(0).colorize(ITEM_VALUE_COLOR))
+        sb.append(itm.getValue(0).colorize(ITEM_VALUE_COLOR))
       else
-        sb.appendLine()
         for j = 0 to itemValueCount - 1
-          sb.appendLine(itm.getValue(j).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
+          sb.appendLine()
+          sb.append(itm.getValue(j).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
+
+      index++
+    //}
 
     return sb.toStringAndDestroy()
