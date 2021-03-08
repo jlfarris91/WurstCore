@@ -46,12 +46,14 @@ public function IRealtimeListener.registerForRealtimeUpdate(RealtimeUpdatePriori
 public function IRealtimeListener.unregisterForRealtimeUpdate()
   let priority = this.getRealtimeUpdatePriority()
   switch (priority)
+    case RealtimeUpdatePriority.Background
+      g_backgroundComponents.remove(this)
+    case RealtimeUpdatePriority.Slow
+      g_slowComponents.remove(this)
     case RealtimeUpdatePriority.Realtime
       g_realtimeComponents.remove(this)
     case RealtimeUpdatePriority.Fast
       g_fastComponents.remove(this)
-    case RealtimeUpdatePriority.Background
-      g_backgroundComponents.remove(this)
     default
       skip
   g_priorities.remove(this)
@@ -64,9 +66,12 @@ public function IRealtimeListener.getRealtimeUpdatePriority() returns RealtimeUp
 
 // ============================================================================
 function updateListeners(LinkedList<IRealtimeListener> activeComponents, real dt)
-  for comp in activeComponents
+  let iter = activeComponents.staticItr()
+  while (iter.hasNext())
+    let comp = iter.next()
     if (comp != null)
       comp.realtimeUpdate(dt)
+  iter.close()
 
 // ============================================================================
 init

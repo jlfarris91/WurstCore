@@ -1,0 +1,303 @@
+package FixedArray
+import ErrorHandling
+
+// ============================================================================
+public abstract class FixedArray<T>
+  abstract function getCapacity() returns int
+  abstract function getItem(int i) returns T
+  abstract function setItem(int i, T _item)
+
+  // --------------------------------------------------------------------------
+  static function growArray<T>(FixedArray<T> fixedArray, int newSize) returns FixedArray<T>
+    let currentCapacity = fixedArray.getCapacity()
+    let newFixedArrayCapacity = growCapacityToFit(newSize)
+    if (currentCapacity >= newFixedArrayCapacity)
+      return fixedArray
+    let newArray = createArray<T>(newFixedArrayCapacity)
+    for i = 0 to currentCapacity - 1
+      newArray.setItem(i, fixedArray.getItem(i))
+    destroy fixedArray
+    return newArray
+
+  // --------------------------------------------------------------------------
+  static function createArray<T>(int capacity) returns FixedArray<T>
+    errorIfCapacityOutOfBounds(capacity, 8192)
+
+    let size = growCapacityToFit(capacity)
+
+    switch (size)
+      case 8
+        return new FixedArray8<T>()
+      case 16
+        return new FixedArray16<T>()
+      case 32
+        return new FixedArray32<T>()
+      case 64
+        return new FixedArray64<T>()
+      case 128
+        return new FixedArray128<T>()
+      case 256
+        return new FixedArray256<T>()
+      case 512
+        return new FixedArray512<T>()
+      case 1024
+        return new FixedArray1024<T>()
+      case 2048
+        return new FixedArray2048<T>()
+      case 4096
+        return new FixedArray4096<T>()
+      case 8192
+        return new FixedArray8192<T>()
+    
+    error("Argument out of range: " + capacity.toString())
+    return null
+
+  // --------------------------------------------------------------------------
+  protected static function growCapacityToFit(int size) returns int
+    var capacity = 8
+    while (capacity < size)
+      if (size < capacity)
+        break
+      capacity *= 2
+    return capacity
+
+  // --------------------------------------------------------------------------
+  protected static function errorIfIndexOutOfBounds(int i, int capacity)
+    if (i < 0 or i >= capacity)
+      error("Index out of range: {0} (capacity: {1})".format(i.toString(), capacity.toString()))
+
+  // --------------------------------------------------------------------------
+  protected static function errorIfCapacityOutOfBounds(int i, int capacity)
+    if (i < 0 or i > capacity)
+      error("Index out of range: {0} (capacity: {1})".format(i.toString(), capacity.toString()))
+
+// ============================================================================
+class FixedArray8<T> extends FixedArray<T>
+  private T array[8] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 8
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray16<T> extends FixedArray<T>
+  private T array[16] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 16
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray32<T> extends FixedArray<T>
+  private T array[32] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 32
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray64<T> extends FixedArray<T>
+  private T array[64] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 64
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray128<T> extends FixedArray<T>
+  private T array[128] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 128
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray256<T> extends FixedArray<T>
+  private T array[256] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 256
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray512<T> extends FixedArray<T>
+  private T array[512] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 512
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray1024<T> extends FixedArray<T>
+  private T array[1024] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 1024
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray2048<T> extends FixedArray<T>
+  private T array[2048] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 2048
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray4096<T> extends FixedArray<T>
+  private T array[4096] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 4096
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item
+
+// ============================================================================
+class FixedArray8192<T> extends FixedArray<T>
+  private T array[8192] m_items
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    for i = 0 to getCapacity()
+      m_items[i] = null
+
+  // --------------------------------------------------------------------------
+  override function getCapacity() returns int
+    return 8192
+
+  // --------------------------------------------------------------------------
+  override function getItem(int i) returns T
+    return m_items[i]
+
+  // --------------------------------------------------------------------------
+  override function setItem(int i, T _item)
+    m_items[i] = _item

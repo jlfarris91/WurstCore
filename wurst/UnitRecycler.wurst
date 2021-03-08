@@ -1,0 +1,389 @@
+package UnitRecycler
+import ErrorHandling
+import HashMap
+import Vector
+import Bounds
+import UnitReviver
+import RegisterEvents
+import ClosureTimers
+import ColorUtility
+import UnitIndexer
+
+// ============================================================================
+// Based on Unit Recycler by AGD https://www.hiveworkshop.com/threads/snippet-unit-recycler.286701/
+// ============================================================================
+
+@configurable constant player UNIT_RECYCLER_OWNER = DUMMY_PLAYER
+@configurable constant int INITIAL_CAPACITY = 512
+@configurable constant real INITIAL_AUTO_RECYCLE_TIME = 4.0
+
+constant int MAX_CAPACITY = 8192
+constant vec2 DEACTIVATED_POS = mapBounds.max
+
+trigger g_onRecycledTrigger
+unit g_lastRecycledUnit
+
+trigger g_onStockedTrigger
+unit g_lastStockedUnit
+
+UnitRecycler g_triggerUnitRecycler
+
+public IterableMap<int, UnitRecycler> g_unitIdToUnitRecyclerMap = new IterableMap<int, UnitRecycler>()
+HashMap<unit, UnitRecycler> g_unitToRecyclerMap = new HashMap<unit, UnitRecycler>()
+
+// ============================================================================
+public function isUnitRecyclable(unit _unit) returns bool
+  return not IsUnitIllusion(_unit) and not IsUnitType(_unit, UNIT_TYPE_SUMMONED)
+
+// ============================================================================
+public function onUnitRecycled(code func)
+  g_onRecycledTrigger.addCondition(Condition(func))
+
+// ============================================================================
+public function getLastRecycledUnit() returns unit
+  return g_lastRecycledUnit
+
+// ============================================================================
+public function onUnitStocked(code func)
+  g_onStockedTrigger.addCondition(Condition(func))
+
+// ============================================================================
+public function getLastStockedUnit() returns unit
+  return g_lastStockedUnit
+
+// ============================================================================
+public function getTriggerUnitRecycler() returns UnitRecycler
+  return g_triggerUnitRecycler
+  
+// ============================================================================
+public class UnitRecycler
+  private player m_owner
+  private Vector<unit> m_units
+  private HashMap<unit, bool> m_isActiveMap
+  private int m_unitId
+  private int m_numberOfActive
+  private int m_lastDeactivatedIndex = -1
+  private bool m_autoRecycleDead = true
+  private real m_deathTime = INITIAL_AUTO_RECYCLE_TIME
+  private unit m_lastStockedUnit = null
+  private unit m_lastRecycledUnit = null
+
+  // --------------------------------------------------------------------------
+  construct(player owner, int unitId, int capacity)
+
+    if (IsHeroUnitId(unitId))
+      error("UnitRecycler does not support hero units")
+
+    m_owner = owner
+    m_unitId = unitId
+    g_unitIdToUnitRecyclerMap.put(unitId, this)
+    m_units = new Vector<unit>(capacity)
+    m_isActiveMap = new HashMap<unit, bool>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    
+    // remove all units created by the recycler
+    let numberOfUnits = m_units.getCount()
+    for i = 0 to numberOfUnits - 1
+      m_units.getItem(i).remove()
+
+    destroy m_units
+    m_units = null
+
+    destroy m_isActiveMap
+    m_isActiveMap = null
+
+    g_unitIdToUnitRecyclerMap.remove(m_unitId)
+
+  // --------------------------------------------------------------------------
+  function getActiveCount() returns int
+    return m_numberOfActive
+
+  // --------------------------------------------------------------------------
+  function getInactiveCount() returns int
+    return m_units.getCount() - m_numberOfActive
+
+  // --------------------------------------------------------------------------
+  function getAutoRecycleDead() returns bool
+    return m_autoRecycleDead
+
+  // --------------------------------------------------------------------------
+  function setAutoRecycleDead(bool value)
+    m_autoRecycleDead = value
+
+  // --------------------------------------------------------------------------
+  function getDeathTime() returns real
+    return m_deathTime
+
+  // --------------------------------------------------------------------------
+  function setDeathTime(real value)
+    m_deathTime = value
+
+  // --------------------------------------------------------------------------
+  function getLastStockedUnit() returns unit
+    return m_lastStockedUnit
+
+  // --------------------------------------------------------------------------
+  function getLastRecycledUnit() returns unit
+    return m_lastRecycledUnit
+
+  // --------------------------------------------------------------------------
+  function doesUnitBelongToRecycler(unit _unit) returns bool
+    return m_isActiveMap.has(_unit)
+
+  // --------------------------------------------------------------------------
+  function isUnitActive(unit _unit) returns bool
+    return doesUnitBelongToRecycler(_unit) and m_isActiveMap.get(_unit)
+
+  // --------------------------------------------------------------------------
+  function isUnitInactive(unit _unit) returns bool
+    return doesUnitBelongToRecycler(_unit) and not m_isActiveMap.get(_unit)
+
+  // --------------------------------------------------------------------------
+  private function setUnitIsActive(unit _unit, bool active)
+
+    let isStocked = m_isActiveMap.has(_unit)
+    let wasActive = m_isActiveMap.get(_unit)
+
+    m_isActiveMap.put(_unit, active)
+
+    if (not isStocked and active)
+      m_numberOfActive++
+    else if (wasActive != active)
+      m_numberOfActive += active ? 1 : -1
+
+  // --------------------------------------------------------------------------
+  function stock(unit _unit) returns bool
+
+    if (_unit == null or _unit.isType(UNIT_TYPE_HERO) or not isUnitRecyclable(_unit))
+      return false
+
+    if (not _unit.isAlive() and not reviveUnit(_unit))
+      log("Unable to revive dead unit")
+      return false
+
+    _unit.setOwner(m_owner, true)
+    stockUnit(_unit)
+    fireUnitStockedTrigger(_unit)
+    return true
+
+  // --------------------------------------------------------------------------
+  function unstock(unit _unit)
+    if (not doesUnitBelongToRecycler(_unit))
+      error("Trying to unstock a unit that does not belong to this recycler's stock")
+      return
+
+    // This unit was active so update the number of active count
+    setUnitIsActive(_unit, false)
+
+    let index = m_units.indexOf(_unit)
+    if (index == -1)
+      error("Index out of range")
+      return
+
+    m_units.setItem(index, null)
+
+    g_unitToRecyclerMap.remove(_unit)
+    m_isActiveMap.remove(_unit)
+    
+    if (bj_lastCreatedUnit == _unit)
+      bj_lastCreatedUnit = null
+
+    if (m_lastRecycledUnit == _unit)
+      m_lastRecycledUnit = null
+
+    onActivated(_unit)
+
+    log("unstockUnit() : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+
+  // --------------------------------------------------------------------------
+  function getUnit(player owner, vec2 pos, angle angle) returns unit
+    var _unit = getNextAvailableUnit()
+
+    if (_unit == null)
+      _unit = createUnitInternal(owner, pos, angle)
+      stockUnit(_unit)
+    
+    bj_lastCreatedUnit = _unit
+    m_lastRecycledUnit = _unit
+
+    _unit.setOwner(owner, true)
+    _unit.setPos(pos)
+    _unit.setFacing(angle)
+    activateUnit(_unit)
+
+    log("getUnit() : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+
+    fireUnitRecycledTrigger(_unit)
+
+    return _unit
+
+  // --------------------------------------------------------------------------
+  private function stockUnit(unit _unit)
+
+    if (isUnitInactive(_unit))
+      log("stockUnit() : unit is already stocked and inactive! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      return
+
+    let isNewUnit = not doesUnitBelongToRecycler(_unit)
+    let isActiveUnit = isUnitActive(_unit)
+
+    setUnitIsActive(_unit, false)
+    onStocked(_unit)
+    
+    if (isActiveUnit)
+      log("stockUnit() : stocked active unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+
+    if (isNewUnit)
+      log("stockUnit() : stocked new unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+  
+  // --------------------------------------------------------------------------
+  private function activateUnit(unit _unit)
+
+    if (not doesUnitBelongToRecycler(_unit))
+      log("activateUnit() : unit is not stocked! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      return
+
+    if (isUnitActive(_unit))
+      log("activateUnit() : unit is already active! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      return
+
+    setUnitIsActive(_unit, true)
+    onActivated(_unit)
+    
+    log("activateUnit() : activated inactive unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+
+  // --------------------------------------------------------------------------
+  private function onStocked(unit _unit)
+    _unit.setHP(_unit.getMaxHP())
+    _unit.setMana(_unit.getMaxMana())
+    _unit.setScale(1.0)
+    _unit.setVertexColor(Colors.white)
+    _unit.setFlyHeight(_unit.getDefaultFlyHeight(), 0)
+    _unit.pause()
+    _unit.hide()
+    _unit.setPos(DEACTIVATED_POS)
+
+  // --------------------------------------------------------------------------
+  private function onActivated(unit _unit)
+    _unit.unpause()
+    _unit.show()
+
+  // --------------------------------------------------------------------------
+  private function getNextAvailableUnit() returns unit
+    // Early out since all units are active
+    if (m_numberOfActive == m_units.getCount())
+      return null
+    
+    // Maybe the last deactivated unit is still available?
+    if (m_lastDeactivatedIndex != -1)
+      let unitAtLastDeactivatedIndex = m_units.getItem(m_lastDeactivatedIndex)
+      if (isUnitInactive(unitAtLastDeactivatedIndex))
+        return unitAtLastDeactivatedIndex
+      m_lastDeactivatedIndex = -1
+
+    // Do a shitty O-N search for the first inactive unit
+    let numberOfUnits = m_units.getCount()
+    for i = 0 to numberOfUnits
+      let _unit = m_units.getItem(i)
+      if (isUnitInactive(_unit))
+        return _unit
+        
+    return null
+
+  // --------------------------------------------------------------------------
+  private function createUnitInternal(player owner, vec2 pos, angle facingAngle) returns unit
+    if (m_units.getCount() == MAX_CAPACITY)
+      error("[UnitRecycler(" + UnitId2String(m_unitId) + ")] has exceeded capacity!")
+      return null
+
+    let u = CreateUnit(owner, m_unitId, pos.x, pos.y, facingAngle.radians)
+    g_unitToRecyclerMap.put(u, this)
+
+    // Try to find an empty slot first
+    let unitCount = m_units.getCount()
+    var insertIndex = -1
+    for i = 0 to unitCount - 1
+      if (m_units.getItem(i) == null)
+        insertIndex = i
+        break
+
+    if (insertIndex != -1)
+      m_units.setItem(insertIndex, u)
+      log("createUnit() : insert {0} : {1}/{2}".format(insertIndex.toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
+    else
+      m_units.add(u)
+      log("createUnit() : add : {0}/{1}".format(m_units.getCount().toString(), m_units.getCapacity().toString()))
+
+    return u
+
+  // --------------------------------------------------------------------------
+  private function log(string message)
+    Log.debug("[UnitRecycler(" + UnitId2String(m_unitId) + ")] : " + message)
+
+  // --------------------------------------------------------------------------
+  private function fireUnitRecycledTrigger(unit _unit)
+    g_triggerUnitRecycler = this
+    g_lastRecycledUnit = _unit
+    g_onRecycledTrigger.execute()
+
+  // --------------------------------------------------------------------------
+  private function fireUnitStockedTrigger(unit _unit)
+    g_triggerUnitRecycler = this
+    g_lastStockedUnit = _unit
+    g_onStockedTrigger.execute()
+
+// ============================================================================
+public function createUnitRecycled(player owner, int unitId, vec2 pos, angle facing) returns unit
+  var recycler = getUnitRecycler(unitId)
+  if (recycler == null)
+    recycler = new UnitRecycler(UNIT_RECYCLER_OWNER, unitId, INITIAL_CAPACITY)
+  let u = recycler.getUnit(owner, pos, facing)
+  g_unitToRecyclerMap.put(u, recycler)
+  return u
+
+// ============================================================================
+public function unit.isStocked() returns bool
+  let recycler = this.getRecycler()
+  return recycler != null and recycler.doesUnitBelongToRecycler(this)
+
+// ============================================================================
+public function unit.getRecycler() returns UnitRecycler
+  return g_unitToRecyclerMap.get(this)
+
+// ============================================================================
+public function unit.stock()
+  let recycler = this.getRecycler()
+  if (recycler != null)
+    recycler.stock(this)
+  else
+    error("Trying to stock a unit that does not belong to a recycler")
+
+// ============================================================================
+public function getUnitRecycler(int unitId) returns UnitRecycler
+  return g_unitIdToUnitRecyclerMap.get(unitId)
+
+// ============================================================================
+function onUnitDeath()
+  let dyingUnit = GetDyingUnit()
+  let recycler = dyingUnit.getRecycler()
+  if (recycler == null)
+    return
+  if (not recycler.getAutoRecycleDead())
+    return
+  doAfter(recycler.getDeathTime(), () -> recycler.stock(dyingUnit))
+
+// ============================================================================
+function onUnitDeindexed()
+  let deindexingUnit = getIndexingUnit()
+  let recycler = deindexingUnit.getRecycler()
+  if (recycler == null)
+    return
+  recycler.unstock(deindexingUnit)
+
+// ============================================================================
+init
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)
+  // registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DECAY, function onUnitDecay)
+  onUnitDeindex(function onUnitDeindexed)

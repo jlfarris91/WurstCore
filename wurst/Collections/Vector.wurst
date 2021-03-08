@@ -1,0 +1,298 @@
+package Vector
+import FixedArray
+import ErrorHandling
+
+// ============================================================================
+public class Vector<T>
+  private FixedArray<T> m_array
+  private int m_count
+  private VectorIterator<T> m_staticIterator
+
+  // --------------------------------------------------------------------------
+  construct(int capacity)
+    m_array = FixedArray.createArray<T>(capacity)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_array != null)
+      destroy m_array
+      m_array = null
+
+    if (m_staticIterator != null)
+      destroy m_staticIterator
+      m_staticIterator = null
+
+  // --------------------------------------------------------------------------
+  function getCapacity() returns int
+    return m_array.getCapacity()
+
+  // --------------------------------------------------------------------------
+  function getCount() returns int
+    return m_count
+
+  // --------------------------------------------------------------------------
+  function getItem(int i) returns T
+    if (m_array == null)
+      error("Array is null")
+    return m_array.getItem(i)
+
+  // --------------------------------------------------------------------------
+  function setItem(int i, T _item)
+    m_array.setItem(i, _item)
+
+  // --------------------------------------------------------------------------
+  function add(T _item)
+    m_array = FixedArray.growArray(m_array, m_count + 1)
+    m_array.setItem(m_count, _item)
+    m_count++
+
+  // --------------------------------------------------------------------------
+  function insert(int index, T _item)
+    throwOutOfRangeError(index)
+    m_array = FixedArray.growArray(m_array, m_count + 1)
+    var mutableIndex = m_count - 1
+    while (mutableIndex > index and mutableIndex > 0)
+      m_array.setItem(mutableIndex, getItem(mutableIndex - 1))
+      mutableIndex--
+    m_count++
+    setItem(index, _item)
+
+  // --------------------------------------------------------------------------
+  function indexOf(T _item) returns int
+    for i = 0 to m_count - 1
+      if (getItem(i) == _item)
+        return i
+    return -1
+
+  // --------------------------------------------------------------------------
+  function remove(T _item) returns bool
+    let index = indexOf(_item)
+    if (index == -1)
+      return false
+    removeAt(index)
+    return true
+
+  // --------------------------------------------------------------------------
+  function removeAt(int index) returns T
+    throwOutOfRangeError(index)
+    var mutableIndex = index
+    let _item = getItem(index)
+    while (mutableIndex < m_count)
+      m_array.setItem(mutableIndex, getItem(mutableIndex + 1))
+      mutableIndex++
+    m_count--
+    return _item
+
+  // --------------------------------------------------------------------------
+  function resize(int size)
+    m_array = FixedArray.growArray(m_array, size)
+
+  // --------------------------------------------------------------------------
+  function clear()
+    for i = 0 to m_count - 1
+      m_array.setItem(i, null)
+    m_count = 0
+
+  // --------------------------------------------------------------------------
+  function staticItr() returns VectorIterator<T>
+    if (m_staticIterator == null)
+      m_staticIterator = new VectorIterator<T>(this, false)
+    m_staticIterator.reset()
+    return m_staticIterator
+
+  // --------------------------------------------------------------------------
+  function iterator() returns VectorIterator<T>
+    return new VectorIterator<T>(this, true)
+
+  // --------------------------------------------------------------------------
+  private function throwOutOfRangeError(int index)
+    if (index < 0 or index >= getCapacity())
+      error("Index out of range exception: " + index.toString())
+
+// ============================================================================
+class VectorIterator<T>
+  private Vector<T> m_vector
+  private int m_count
+  private int m_index
+  private bool m_destroyOnClose
+
+  // --------------------------------------------------------------------------
+  construct(Vector<T> vector, bool destroyOnClose)
+    m_vector = vector
+    m_count = m_vector.getCount()
+    m_destroyOnClose = destroyOnClose
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_count = m_vector.getCount()
+    m_index = 0
+
+  // --------------------------------------------------------------------------
+  function modify(T value)
+    if (m_index != -1)
+      m_vector.setItem(m_index, value)
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_index < m_count
+
+  // --------------------------------------------------------------------------
+  function next() returns T
+    let nextItem = m_vector.getItem(m_index)
+    m_index++
+    return nextItem
+
+  // --------------------------------------------------------------------------
+  function lookahead() returns T
+    T nextItem = null
+    if (hasNext())
+      nextItem = m_vector.getItem(m_index + 1)
+    return nextItem
+
+  // --------------------------------------------------------------------------
+  function close()
+    if (m_destroyOnClose)
+      destroy this
+
+// ============================================================================
+@test
+function testCreate()
+  new Vector<int>(8).getCapacity().assertEquals(8)
+  new Vector<int>(9).getCapacity().assertEquals(16)
+  new Vector<int>(16).getCapacity().assertEquals(16)
+  new Vector<int>(17).getCapacity().assertEquals(32)
+  new Vector<int>(32).getCapacity().assertEquals(32)
+  new Vector<int>(33).getCapacity().assertEquals(64)
+  new Vector<int>(64).getCapacity().assertEquals(64)
+  new Vector<int>(65).getCapacity().assertEquals(128)
+  new Vector<int>(128).getCapacity().assertEquals(128)
+  new Vector<int>(129).getCapacity().assertEquals(256)
+  new Vector<int>(256).getCapacity().assertEquals(256)
+  new Vector<int>(257).getCapacity().assertEquals(512)
+  new Vector<int>(512).getCapacity().assertEquals(512)
+  new Vector<int>(513).getCapacity().assertEquals(1024)
+  new Vector<int>(1024).getCapacity().assertEquals(1024)
+  new Vector<int>(1025).getCapacity().assertEquals(2048)
+  new Vector<int>(2048).getCapacity().assertEquals(2048)
+  new Vector<int>(2049).getCapacity().assertEquals(4096)
+  new Vector<int>(4096).getCapacity().assertEquals(4096)
+  new Vector<int>(4097).getCapacity().assertEquals(8192)
+  new Vector<int>(8192).getCapacity().assertEquals(8192)
+
+// ============================================================================
+@test
+function testAdd()
+  let vector = new Vector<int>(8)
+  vector.add(1)
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(1)
+
+// ============================================================================
+@test
+function testAdd_Grows()
+  let vector = new Vector<int>(8)
+  
+  // fill to capacity
+  for i = 0 to vector.getCapacity() - 1
+    vector.add(i)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(8)
+
+  // add one more to make it grow
+  vector.add(8)
+
+  vector.getCapacity().assertEquals(16)
+  vector.getCount().assertEquals(9)
+
+  let count = vector.getCount()
+  for i = 0 to count - 1
+    vector.getItem(i).assertEquals(i)
+
+// ============================================================================
+@test
+function testRemoveFirst()
+  let vector = new Vector<int>(8)
+  
+  // fill to capacity
+  for i = 0 to vector.getCapacity() - 1
+    vector.add(i)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(8)
+
+  // remove a single entry
+  vector.remove(0)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(7)
+
+  let count = vector.getCount()
+  for i = 0 to count - 1
+    vector.getItem(i).assertEquals(i + 1)
+
+// ============================================================================
+@test
+function testRemoveLast()
+  let vector = new Vector<int>(8)
+  
+  // fill to capacity
+  for i = 0 to vector.getCapacity() - 1
+    vector.add(i)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(8)
+
+  // remove a single entry
+  vector.remove(7)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(7)
+
+  let count = vector.getCount()
+  for i = 0 to count - 1
+    vector.getItem(i).assertEquals(i)
+
+// ============================================================================
+@test
+function testRemoveAt_First()
+  let vector = new Vector<int>(8)
+  
+  // fill to capacity
+  for i = 0 to vector.getCapacity() - 1
+    vector.add(i)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(8)
+
+  // remove a single entry
+  vector.removeAt(0)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(7)
+
+  let count = vector.getCount()
+  for i = 0 to count - 1
+    vector.getItem(i).assertEquals(i + 1)
+
+// ============================================================================
+@test
+function testRemoveAt_Last()
+  let vector = new Vector<int>(8)
+  
+  // fill to capacity
+  for i = 0 to vector.getCapacity() - 1
+    vector.add(i)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(8)
+
+  // remove a single entry
+  vector.removeAt(7)
+
+  vector.getCapacity().assertEquals(8)
+  vector.getCount().assertEquals(7)
+
+  let count = vector.getCount()
+  for i = 0 to count - 1
+    vector.getItem(i).assertEquals(i)

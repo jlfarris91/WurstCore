@@ -1,0 +1,64 @@
+package UnitReviver
+import AbilityObjEditing
+import Orders
+import ObjectIds
+import ObjectIdGenerator
+
+// ============================================================================
+// Based on Revive Unit by PurgeandFire https://www.hiveworkshop.com/threads/186696/
+// ============================================================================
+
+constant player PLAYER = DUMMY_PLAYER
+constant int RESURRECT_ABILITY_ID = compiletime(ABIL_ID_GEN.next())
+constant int DUMMY_UNIT_ID = compiletime(UNIT_ID_GEN.next())
+vec2 DUMMY_POS
+unit DUMMY_UNIT
+
+// ============================================================================
+@compiletime function createObjects()
+  new AbilityDefinitionPaladinResurrection(RESURRECT_ABILITY_ID)
+    ..setName("Dummy Resurrection")
+    ..setArtCaster("")
+    ..setArtTarget("")
+    ..setNumberofCorpsesRaised(1, 1)
+    ..setHeroAbility(false)
+    ..setAreaofEffect(1, 0)
+    ..setCastRange(1, 0)
+    ..setCooldown(1, 0)
+    ..setManaCost(1, 0)
+    ..setTargetsAllowed(1, "Air,Dead,Enemy,Friend,Ground,Neutral")
+
+  new UnitDefinition(DUMMY_UNIT_ID, 'ushd')
+    ..setName("Dummy")
+    ..setNormalAbilities(commaList(AbilityIds.locust, AbilityIds.invulnerable))
+    ..setAnimationCastBackswing(0)
+    ..setAnimationCastPoint(0)
+    ..setModelFile(".mdl")
+    ..setScalingValue(0.01)
+    ..setShadowImageUnit("None")
+    ..setMovementHeight(0)
+    ..setSpeedBase(0)
+    ..setMovementType(MovementType.Fly)
+    ..setCollisionSize(0)
+    ..setFoodCost(0)
+    ..setManaInitialAmount(100000)
+    ..setManaMaximum(100000)
+    ..setManaRegeneration(1000)
+
+// ============================================================================
+public function reviveUnit(unit _unit) returns bool
+  bool success
+  if (IsUnitType(_unit, UNIT_TYPE_HERO))
+    success = ReviveHero(_unit, GetUnitX(_unit), GetUnitY(_unit), false)
+  else
+    DUMMY_UNIT.setPos(_unit.getPos())
+    success = DUMMY_UNIT.issueImmediateOrderById(Orders.resurrection)
+    DUMMY_UNIT.setPos(DUMMY_POS)
+  return success
+
+// ============================================================================
+init
+  DUMMY_POS = vec2(GetRectMaxX(bj_mapInitialPlayableArea) - 1, GetRectMaxY(bj_mapInitialPlayableArea) - 1)
+  DUMMY_UNIT = CreateUnit(PLAYER, DUMMY_UNIT_ID, DUMMY_POS.x, DUMMY_POS.y, 0)
+  SetUnitPathing(DUMMY_UNIT, false)
+  UnitAddAbility(DUMMY_UNIT, RESURRECT_ABILITY_ID)
