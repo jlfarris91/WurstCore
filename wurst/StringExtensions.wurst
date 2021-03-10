@@ -30,6 +30,24 @@ public function string.padRight(int totalLength, string padStr) returns string
   return result
 
 // ============================================================================
+public function string.compare(string other) returns int
+  let thisLen = this.length()
+  let otherLen = other.length()
+  let maxLen = max(thisLen, otherLen)
+  for i = 0 to maxLen - 1
+    // Reached the end of this string
+    if (i >= thisLen)
+      return thisLen == otherLen ? 0 : -1
+    // Reched the end of the other string
+    if (i >= otherLen)
+      return thisLen == otherLen ? 0 : 1
+    let thisChar = this.charAt(i)
+    let otherChar = other.charAt(i)
+    if (thisChar != otherChar)
+      return thisChar.toCharsetInt() - otherChar.toCharsetInt()
+  return 0
+
+// ============================================================================
 @test function padLeft_LessThanDesiredLength_OneCharPad()
   // Arrange
   let initialStr = "HelloWorld"
