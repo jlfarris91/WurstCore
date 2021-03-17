@@ -1,5 +1,16 @@
 package Runnable
 import Events
+import IProgress
+import Reflection
+
+@configurable public constant bool g_enableLogging = true
+
+// ============================================================================
+public enum RunnableState
+  WAITING
+  RUNNING
+  PAUSED
+  COMPLETED
 
 // ============================================================================
 public interface IRunnable
@@ -11,47 +22,16 @@ public interface IRunnable
   function fail(string error)
   function complete()
   function reset()
+  function cancel()
+  function getStatusString() returns string
+  function getStateChangedEvent() returns Event1<IRunnable>
 
 // ============================================================================
-public function IRunnable.hasStarted() returns bool
-  return this.getState() != RunnableState.WAITING
-
-// ============================================================================
-public function IRunnable.isRunning() returns bool
-  return this.getState() == RunnableState.RUNNING
-
-// ============================================================================
-public function IRunnable.isPaused() returns bool
-  return this.getState() == RunnableState.PAUSED
-
-// ============================================================================
-public function IRunnable.isCompleted() returns bool
-  return this.getState() == RunnableState.COMPLETED
-
-// ============================================================================
-public function IRunnable.succeeded() returns bool
-  return this.isCompleted() and this.getError() == null
-
-// ============================================================================
-public function IRunnable.failed() returns bool
-  return this.isCompleted() and this.getError() != null
-
-// ============================================================================
-public function IRunnable.cancel()
-  this.fail("Canceled")
-
-// ============================================================================
-public enum RunnableState
-  WAITING
-  RUNNING
-  PAUSED
-  COMPLETED
-
-// ============================================================================
-public abstract class Runnable implements IRunnable
+public abstract class Runnable implements IRunnable, IProgress
   private RunnableState m_state
   private string m_error
-  private Event1<Runnable> m_stateChangedEvent
+  private Event1<IRunnable> m_stateChangedEvent
+  private Event1<IProgress> m_progressChangedEvent
   
   // --------------------------------------------------------------------------
   construct()
@@ -60,11 +40,16 @@ public abstract class Runnable implements IRunnable
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (not this.isCompleted())
-      this.cancel()
+    if (m_state != COMPLETED)
+      complete()
+
     if (m_stateChangedEvent != null)
       destroy m_stateChangedEvent
       m_stateChangedEvent = null
+
+    if (m_progressChangedEvent != null)
+      destroy m_progressChangedEvent
+      m_progressChangedEvent = null
 
   // --------------------------------------------------------------------------
   override function getState() returns RunnableState
@@ -75,20 +60,14 @@ public abstract class Runnable implements IRunnable
     return m_error
 
   // --------------------------------------------------------------------------
-  function getStateChangedEvent() returns Event1<Runnable>
-    if (m_stateChangedEvent == null)
-      m_stateChangedEvent = new Event1<Runnable>()
-    return m_stateChangedEvent
-
-  // --------------------------------------------------------------------------
   override function start()
     if (m_state == RunnableState.RUNNING)
       Log.debug("Attempted to start a runnable that was already running")
       return
 
-    resetInternal()
-
     m_state = RunnableState.RUNNING
+
+    resetInternal()
     onStarted()
     raiseStateChangedEvent()
 
@@ -119,10 +98,12 @@ public abstract class Runnable implements IRunnable
 
   // --------------------------------------------------------------------------
   override function complete()
-    if (m_state != RunnableState.COMPLETED)
-      m_state = RunnableState.COMPLETED
-      onCompleted()
-      raiseStateChangedEvent()
+    if (m_state == RunnableState.COMPLETED)
+      return
+
+    m_state = RunnableState.COMPLETED
+    onCompleted()
+    raiseStateChangedEvent()
 
   // --------------------------------------------------------------------------
   override function reset()
@@ -133,8 +114,65 @@ public abstract class Runnable implements IRunnable
       raiseStateChangedEvent()
 
   // --------------------------------------------------------------------------
-  private function resetInternal()
-    m_error = null
+  function hasStarted() returns bool
+    return getState() != RunnableState.WAITING
+
+  // --------------------------------------------------------------------------
+  function isRunning() returns bool
+    return getState() == RunnableState.RUNNING
+
+  // --------------------------------------------------------------------------
+  function isPaused() returns bool
+    return getState() == RunnableState.PAUSED
+
+  // --------------------------------------------------------------------------
+  function isCompleted() returns bool
+    return getState() == RunnableState.COMPLETED
+
+  // --------------------------------------------------------------------------
+  function succeeded() returns bool
+    return isCompleted() and this.getError() == null
+
+  // --------------------------------------------------------------------------
+  function failed() returns bool
+    return isCompleted() and this.getError() != null
+
+  // --------------------------------------------------------------------------
+  override function cancel()
+    fail("Canceled")
+
+  // --------------------------------------------------------------------------
+  override function getStateChangedEvent() returns Event1<IRunnable>
+    if (m_stateChangedEvent == null)
+      m_stateChangedEvent = new Event1<IRunnable>()
+    return m_stateChangedEvent
+
+  // --------------------------------------------------------------------------
+  override function getStatusString() returns string
+    switch (m_state)
+      case RunnableState.WAITING
+        return "Waiting"
+      case RunnableState.RUNNING
+        return "Running"
+      case RunnableState.PAUSED
+        return "Paused"
+      case RunnableState.COMPLETED
+        return m_error != null ? "Failed" : "Succeeded"
+
+  // --------------------------------------------------------------------------
+  override function getProgress() returns real
+    return 0.0
+
+  // --------------------------------------------------------------------------
+  override function getProgressChangedEvent() returns Event1<IProgress>
+    if (m_progressChangedEvent == null)
+      m_progressChangedEvent = new Event1<IProgress>()
+    return m_progressChangedEvent
+
+  // --------------------------------------------------------------------------
+  function raiseProgressChangedEvent()
+    if (m_progressChangedEvent != null)
+      m_progressChangedEvent.call((this castTo int) castTo IProgress)
 
   // --------------------------------------------------------------------------
   protected function onStarted()
@@ -153,18 +191,15 @@ public abstract class Runnable implements IRunnable
     skip
 
   // --------------------------------------------------------------------------
-  function getStatusString() returns string
-    switch (m_state)
-      case RunnableState.WAITING
-        return "Waiting"
-      case RunnableState.RUNNING
-        return "Running"
-      case RunnableState.PAUSED
-        return "Paused"
-      case RunnableState.COMPLETED
-        return m_error != null ? "Failed" : "Succeeded"
+  protected function raiseStateChangedEvent()
+    if (m_stateChangedEvent != null)
+      m_stateChangedEvent.call((this castTo int) castTo IRunnable)
 
   // --------------------------------------------------------------------------
-  private function raiseStateChangedEvent()
-    if (m_stateChangedEvent != null)
-      m_stateChangedEvent.call(this)
+  private function resetInternal()
+    m_error = null
+
+  // --------------------------------------------------------------------------
+  protected function log(string funcName, string message)
+    if (g_enableLogging)
+      Log.info(typeIdToTypeName(((this castTo int) castTo IRunnable).typeId), funcName, (this castTo int).toString(), message)

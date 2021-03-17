@@ -12,11 +12,11 @@ IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
 int array g_ignoreIndexingCounter
 
-@configurable public bool g_enableUnitMetadataDebugLogging = false
+@configurable public bool g_enableLogging = false
 
 // ============================================================================
 function logDebug(string message)
-  if (g_enableUnitMetadataDebugLogging)
+  if (g_enableLogging)
     Log.debug(message)
 
 // ============================================================================

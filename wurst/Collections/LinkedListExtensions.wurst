@@ -3,7 +3,6 @@ import LinkedList
 import ErrorHandling
 import ErrorIf
 import WeightedSet
-import Selector
 import Func
 
 // ============================================================================
@@ -44,10 +43,14 @@ public function LinkedList<T>.take<T>(int count) returns LinkedList<T>
   return newList
 
 // ============================================================================
-public function LinkedList<TElem>.toWeightedSet<TElem>(Selector<TElem, real> selector) returns WeightedSet<TElem>
+public function LinkedList<TElem>.toWeightedSet<TElem>(Func1<TElem, real> selector) returns WeightedSet<TElem>
   ErrorIf.argumentIsNull(selector, "selector")
   let output = new WeightedSet<TElem>()
-  this.forEach(elem -> output.add(elem, selector.select(elem)))
+  this.forEach(elem -> output.add(elem, selector.call(elem)))
+ 
+  if (selector.getDestroyAfterUse())
+    destroy selector
+  
   return output
 
 // ============================================================================
@@ -59,6 +62,10 @@ public function LinkedList<TElem>.select<TElem, TRet>(Func1<TElem, TRet> selecto
   let result = new LinkedList<TRet>
   for elem in this
     result.add(selector.call(elem))
+  
+  if (selector.getDestroyAfterUse())
+    destroy selector
+
   return result
 
 // ============================================================================
@@ -71,6 +78,10 @@ public function LinkedList<TElem>.selectMany<TElem, TRet>(Func1<TElem, LinkedLis
       for selectedElem in selectedElems
         result.add(selectedElem)
       destroy selectedElems
+  
+  if (selector.getDestroyAfterUse())
+    destroy selector
+
   return result
 
 // ============================================================================
@@ -82,6 +93,10 @@ public function LinkedList<TElem>.selectManyOwned<TElem, TRet>(Func1<TElem, Link
     if (selectedElems != null)
       for selectedElem in selectedElems
         result.add(selectedElem)
+  
+  if (selector.getDestroyAfterUse())
+    destroy selector
+
   return result
 
 // ============================================================================

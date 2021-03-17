@@ -2,23 +2,43 @@ package Func
 import LinkedList
 
 // ============================================================================
-public interface Func<TReturn>
-  function call() returns TReturn
+public abstract class Func<TReturn>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call() returns TReturn
 
 // ============================================================================
-public interface Func1<TArg, TReturn>
-  function call(TArg arg) returns TReturn
+public abstract class Func1<TArg, TReturn>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(TArg arg) returns TReturn
 
 // ============================================================================
-public interface Func2<TArg1, TArg2, TReturn>
-  function call(TArg1 arg1, TArg2 arg2) returns TReturn
+public abstract class Func2<TArg1, TArg2, TReturn>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(TArg1 arg1, TArg2 arg2) returns TReturn
 
 // ============================================================================
-public interface Func3<TArg1, TArg2, TArg3, TReturn>
-  function call(TArg1 arg1, TArg2 arg2, TArg3 arg3) returns TReturn
+public abstract class Func3<TArg1, TArg2, TArg3, TReturn>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(TArg1 arg1, TArg2 arg2, TArg3 arg3) returns TReturn
 
 // ============================================================================
-public class MulticastFunc<TReturn> implements Func<TReturn>
+public class MulticastFunc<TReturn> extends Func<TReturn>
   private LinkedList<Func<TReturn>> m_invocationList
 
   // --------------------------------------------------------------------------
@@ -53,7 +73,7 @@ public class MulticastFunc<TReturn> implements Func<TReturn>
     return result
 
 // ============================================================================
-public class MulticastFunc1<TArg, TReturn> implements Func1<TArg, TReturn>
+public class MulticastFunc1<TArg, TReturn> extends Func1<TArg, TReturn>
   private LinkedList<Func1<TArg, TReturn>> m_invocationList
 
   // --------------------------------------------------------------------------
@@ -88,7 +108,7 @@ public class MulticastFunc1<TArg, TReturn> implements Func1<TArg, TReturn>
     return result
 
 // ============================================================================
-public class MulticastFunc2<TArg1, TArg2, TReturn> implements Func2<TArg1, TArg2, TReturn>
+public class MulticastFunc2<TArg1, TArg2, TReturn> extends Func2<TArg1, TArg2, TReturn>
   private LinkedList<Func2<TArg1, TArg2, TReturn>> m_invocationList
 
   // --------------------------------------------------------------------------
@@ -123,7 +143,7 @@ public class MulticastFunc2<TArg1, TArg2, TReturn> implements Func2<TArg1, TArg2
     return result
 
 // ============================================================================
-public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> implements Func3<TArg1, TArg2, TArg3, TReturn>
+public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> extends Func3<TArg1, TArg2, TArg3, TReturn>
   private LinkedList<Func3<TArg1, TArg2, TArg3, TReturn>> m_invocationList
 
   // --------------------------------------------------------------------------
@@ -158,9 +178,19 @@ public class MulticastFunc3<TArg1, TArg2, TArg3, TReturn> implements Func3<TArg1
     return result
 
 // ============================================================================
-public interface FuncVec2
-  function call() returns vec2
+public abstract class FuncVec2
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call() returns vec2
 
 // ============================================================================
-public interface FuncVec3
-  function call() returns vec3
+public abstract class FuncVec3
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call() returns vec3

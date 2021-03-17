@@ -1,16 +1,14 @@
 package TimeOfDayProgress
 import Time
-import IProgress
-import Events
 import RealtimeUpdate
 import Math
+import Runnable
 
 public TimeOfDayProgress g_dayProgress
 public TimeOfDayProgress g_nightProgress
 
 // ============================================================================
-public class TimeOfDayProgress implements IProgress, IRealtimeListener
-  private Event1<IProgress> m_progressChangedEvent
+public class TimeOfDayProgress extends Runnable implements IRealtimeListener
   private time m_timeOfDayOnStart
   private timespan m_duration
   private time m_startTime
@@ -18,10 +16,6 @@ public class TimeOfDayProgress implements IProgress, IRealtimeListener
   // --------------------------------------------------------------------------
   ondestroy
     this.unregisterForRealtimeUpdate()
-
-    if (m_progressChangedEvent != null)
-      destroy m_progressChangedEvent
-      m_progressChangedEvent = null
 
   // --------------------------------------------------------------------------
   function getDuration() returns timespan
@@ -44,15 +38,19 @@ public class TimeOfDayProgress implements IProgress, IRealtimeListener
     return getGameTime() - m_startTime
 
   // --------------------------------------------------------------------------
-  function start()
+  override function onStarted()
+    super.onStarted()
+
     m_startTime = m_timeOfDayOnStart
     m_startTime = makeTime(getDay(), m_startTime.getHour(), m_startTime.getMinute())
-    
+
     raiseProgressChangedEvent()
     this.registerForRealtimeUpdate(RealtimeUpdatePriority.Slow)
 
   // --------------------------------------------------------------------------
-  function complete()
+  override function onCompleted()
+    super.onCompleted()
+
     raiseProgressChangedEvent()
     this.unregisterForRealtimeUpdate()
 
@@ -61,19 +59,10 @@ public class TimeOfDayProgress implements IProgress, IRealtimeListener
     return clamp01(getElapsed() / m_duration)
 
   // --------------------------------------------------------------------------
-  override function getProgressChangedEvent() returns Event1<IProgress>
-    if (m_progressChangedEvent == null)
-      m_progressChangedEvent = new Event1<IProgress>()
-    return m_progressChangedEvent
-
-  // --------------------------------------------------------------------------
   override function realtimeUpdate(real dt)
     raiseProgressChangedEvent()
-
-  // --------------------------------------------------------------------------
-  function raiseProgressChangedEvent()
-    if (m_progressChangedEvent != null)
-      m_progressChangedEvent.call(this)
+    if (getProgress() == 1.0)
+      complete()
 
 // ============================================================================
 function onDayStart()

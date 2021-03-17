@@ -13,9 +13,10 @@ import UnitIndexer
 // Based on Unit Recycler by AGD https://www.hiveworkshop.com/threads/snippet-unit-recycler.286701/
 // ============================================================================
 
+@configurable public bool g_enableLogging = false
 @configurable constant player UNIT_RECYCLER_OWNER = DUMMY_PLAYER
 @configurable constant int INITIAL_CAPACITY = 512
-@configurable constant real INITIAL_AUTO_RECYCLE_TIME = 4.0
+@configurable constant real INITIAL_AUTO_RECYCLE_TIME = 15.0
 
 constant int MAX_CAPACITY = 8192
 constant vec2 DEACTIVATED_POS = mapBounds.max
@@ -70,6 +71,9 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   construct(player owner, int unitId, int capacity)
+
+    if (UnitId2String(unitId) == null)
+      error("Invalid unit id : {0}".format(unitId.toString()))
 
     if (IsHeroUnitId(unitId))
       error("UnitRecycler does not support hero units")
@@ -195,7 +199,7 @@ public class UnitRecycler
 
     onActivated(_unit)
 
-    log("unstockUnit() : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+    log("unstockUnit() : {0} {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
 
   // --------------------------------------------------------------------------
   function getUnit(player owner, vec2 pos, angle angle) returns unit
@@ -213,7 +217,7 @@ public class UnitRecycler
     _unit.setFacing(angle)
     activateUnit(_unit)
 
-    log("getUnit() : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+    log("getUnit() : {0} {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
 
     fireUnitRecycledTrigger(_unit)
 
@@ -233,10 +237,10 @@ public class UnitRecycler
     onStocked(_unit)
     
     if (isActiveUnit)
-      log("stockUnit() : stocked active unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      log("stockUnit() : stocked active unit {0} : {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
 
     if (isNewUnit)
-      log("stockUnit() : stocked new unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      log("stockUnit() : stocked new unit {0} : {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
   
   // --------------------------------------------------------------------------
   private function activateUnit(unit _unit)
@@ -311,16 +315,17 @@ public class UnitRecycler
 
     if (insertIndex != -1)
       m_units.setItem(insertIndex, u)
-      log("createUnit() : insert {0} : {1}/{2}".format(insertIndex.toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
+      log("createUnit() : insert {0} : {1} {2}/{3}".format(insertIndex.toString(), u.getUserData().toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
     else
       m_units.add(u)
-      log("createUnit() : add : {0}/{1}".format(m_units.getCount().toString(), m_units.getCapacity().toString()))
+      log("createUnit() : add : {0} {1}/{2}".format(u.getUserData().toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
 
     return u
 
   // --------------------------------------------------------------------------
   private function log(string message)
-    Log.debug("[UnitRecycler(" + UnitId2String(m_unitId) + ")] : " + message)
+    if (g_enableLogging)
+      Log.debug("[UnitRecycler({0} : {1})] : {2}".format(m_unitId.toString(), UnitId2StringBJ(m_unitId), message))
 
   // --------------------------------------------------------------------------
   private function fireUnitRecycledTrigger(unit _unit)
@@ -385,5 +390,4 @@ function onUnitDeindexed()
 // ============================================================================
 init
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)
-  // registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DECAY, function onUnitDecay)
   onUnitDeindex(function onUnitDeindexed)

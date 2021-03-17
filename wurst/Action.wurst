@@ -1,17 +1,37 @@
 package Action
 
 // ============================================================================
-public interface Action
-  function call()
+public abstract class Action
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call()
 
 // ============================================================================
-public interface Action1<TArg>
-  function call(TArg arg)
+public abstract class Action1<TArg>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(TArg arg)
 
 // ============================================================================
-public interface Action2<TArg1, TArg2>
-  function call(TArg1 arg1, TArg2 arg2)
+public abstract class Action2<TArg1, TArg2>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(TArg1 arg1, TArg2 arg2)
 
 // ============================================================================
-public interface Action3<TArg1, TArg2, TArg3>
-  function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
+public abstract class Action3<TArg1, TArg2, TArg3>
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)

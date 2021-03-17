@@ -1,6 +1,6 @@
 package WeightedSet
 import ErrorHandling
-import initlater LinkedList
+import Vector
 
 // ============================================================================
 /** A set containing elements with associated weights */
@@ -104,7 +104,7 @@ public class WeightedSet<T>
 
   // --------------------------------------------------------------------------
   /** Returns N random elements from the set */
-  function getRandom(int count) returns LinkedList<T>
+  function getRandom(int count) returns Vector<T>
     let clone = new WeightedSet<T>(this)
     let output = clone.popRandom(count)
     destroy clone
@@ -130,11 +130,12 @@ public class WeightedSet<T>
 
   // --------------------------------------------------------------------------
   /** Removes and returns N random elements from the set */
-  function popRandom(int count) returns LinkedList<T>
-    let output = new LinkedList<T>()
+  function popRandom(int count) returns Vector<T>
+    let output = new Vector<T>(count)
     for i = 0 to count - 1
-      if (not isEmpty())
-        output.add(popRandom())
+      if (isEmpty())
+        break  
+      output.add(popRandom())
     return output
 
   // --------------------------------------------------------------------------
@@ -410,6 +411,60 @@ public class WeightedSetIterator<T>
   // assert
   assertTrue(elem == 1 or elem == 2 or elem == 3)
 
+@test public function getRandomCount_SourceHasMoreThanEnough()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+  weightedSet.add(4, 4.0)
+  weightedSet.add(5, 5.0)
+  weightedSet.add(6, 6.0)
+
+  // act
+  let elems = weightedSet.getRandom(3)
+  
+  // assert
+  elems.getCount().assertEquals(3)
+
+  for elem in elems
+    elem.assertGreaterThanOrEqual(1)
+    elem.assertLessThanOrEqual(6)
+
+@test public function getRandomCount_SourceHasExactlyEnough()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+
+  // act
+  let elems = weightedSet.getRandom(3)
+  
+  // assert
+  elems.getCount().assertEquals(3)
+
+  for elem in elems
+    elem.assertGreaterThanOrEqual(1)
+    elem.assertLessThanOrEqual(3)
+
+@test public function getRandomCount_SourceHasLessThanEnough()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+
+  // act
+  let elems = weightedSet.getRandom(100)
+  
+  // assert
+  elems.getCount().assertEquals(3)
+
+  for elem in elems
+    elem.assertGreaterThanOrEqual(1)
+    elem.assertLessThanOrEqual(3)
+
 @test public function getRandomStress()
   // arrange
   let weightedSet = new WeightedSet<int>()
@@ -438,4 +493,61 @@ public class WeightedSetIterator<T>
     let lastSize = weightedSet.size()
     let elem = weightedSet.popRandom()
     assertTrue(elem >= 1 and elem <= 5)
-    assertTrue(weightedSet.size() == lastSize - 1)  
+    assertTrue(weightedSet.size() == lastSize - 1)
+
+@test public function popRandomCount_SourceHasMoreThanEnough()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+  weightedSet.add(4, 4.0)
+  weightedSet.add(5, 5.0)
+  weightedSet.add(6, 6.0)
+
+  // act
+  let elems = weightedSet.popRandom(3)
+  
+  // assert
+  weightedSet.size().assertEquals(3)
+  elems.getCount().assertEquals(3)
+
+  for elem in elems
+    elem.assertGreaterThanOrEqual(1)
+    elem.assertLessThanOrEqual(6)
+
+@test public function popRandomCount_SourceHasExactlyEnough()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+
+  // act
+  let elems = weightedSet.popRandom(3)
+  
+  // assert
+  weightedSet.size().assertEquals(0)
+  elems.getCount().assertEquals(3)
+
+  for elem in elems
+    elem.assertGreaterThanOrEqual(1)
+    elem.assertLessThanOrEqual(3)
+
+@test public function popRandomCount_SourceHasLessThanEnough()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 1.0)
+  weightedSet.add(2, 2.0)
+  weightedSet.add(3, 3.0)
+
+  // act
+  let elems = weightedSet.popRandom(100)
+  
+  // assert
+  weightedSet.size().assertEquals(0)
+  elems.getCount().assertEquals(3)
+
+  for elem in elems
+    elem.assertGreaterThanOrEqual(1)
+    elem.assertLessThanOrEqual(3)

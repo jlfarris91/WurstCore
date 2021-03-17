@@ -83,7 +83,8 @@ public class Grid implements IGrid
     for r = 0 to _height - 1
       for c = 0 to _width - 1
         action.call(r, c)
-    destroy action
+    if (action.getDestroyAfterUse())
+      destroy action
 
   // --------------------------------------------------------------------------
   function getArea(vec2 worldPos, real range) returns span
