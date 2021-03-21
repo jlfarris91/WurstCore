@@ -249,6 +249,30 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   return newUnit
 
 // ============================================================================
+public function createMetadataForUnit(unit _unit)
+  let index = _unit.getIndex()
+
+  var metadata = g_unitMetadatas[index]
+  if (metadata != null)
+    error("Metadata already exists for unit {0}".format(_unit.getName()))
+    return
+
+  metadata = constructUnitMetadata(_unit)
+  g_unitMetadatas[index] = metadata
+
+  logDebug("[createMetadata] Created metadata for unit {0}".format(_unit.getName()))
+
+// ============================================================================
+public function destroyMetadataForUnit(unit _unit)
+  let metadata = _unit.getMetadata()
+  if (metadata != null)
+    destroy metadata
+    logDebug("[destroyMetadata] Destroyed metadata for unit {0}".format(_unit.getName()))
+
+  let index = _unit.getIndex()
+  g_unitMetadatas[index] = null
+
+// ============================================================================
 function onUnitKilled()
   let dyingUnit = GetDyingUnit()
   
@@ -264,33 +288,14 @@ function onUnitIndexed(unit indexingUnit)
   if (isIgnoringIndexing(indexingUnit.getOwner()))
     logDebug("[onUnitIndexed] Ignoring indexed unit {0}".format(indexingUnit.getName()))
     return
-
-  let index = indexingUnit.getIndex()
-  
-  var metadata = g_unitMetadatas[index]
-  if (metadata != null)
-    error("Metadata already exists for unit {0}".format(indexingUnit.getName()))
-    return
-
-  metadata = constructUnitMetadata(indexingUnit)
-  g_unitMetadatas[index] = metadata
-
-  logDebug("[onUnitIndexed] Created metadata for unit {0}".format(indexingUnit.getName()))
+  createMetadataForUnit(indexingUnit)
 
 // ============================================================================
 function onUnitDeindexed(unit indexingUnit)
   if (isIgnoringIndexing(indexingUnit.getOwner()))
     logDebug("[onUnitDeindexed] Ignoring deindexed unit {0}".format(indexingUnit.getName()))
     return
-
-  let index = indexingUnit.getIndex()
-  let metadata = indexingUnit.getMetadata()
-
-  if (metadata != null)
-    destroy metadata
-    logDebug("[onUnitDeindexed] Destroyed metadata for unit {0}".format(indexingUnit.getName()))
-
-  g_unitMetadatas[index] = null
+  destroyMetadataForUnit(indexingUnit)
 
 // ============================================================================
 public function startIgnoreIndexing(player p)
