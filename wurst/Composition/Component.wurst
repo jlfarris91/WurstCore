@@ -4,29 +4,29 @@ import IComposite
 
 // ============================================================================
 public abstract class Component implements IComponent
-  protected IComposite _owner
-  private bool _enabled
+  private IComposite m_owner
+  private bool m_enabled
 
   // --------------------------------------------------------------------------
   construct(IComposite owner)
-    _owner = owner
+    m_owner = owner
 
   // --------------------------------------------------------------------------
   override function getOwner() returns IComposite
-    return _owner
+    return m_owner
 
   // --------------------------------------------------------------------------
   override function setEnabled(bool enabled)
-    if (_enabled != enabled)
+    if (m_enabled != enabled)
       if (enabled)
         onEnabled()
       else
         onDisabled()
-      _enabled = enabled
+      m_enabled = enabled
 
   // --------------------------------------------------------------------------
   override function getEnabled() returns bool
-    return _enabled
+    return m_enabled
 
   // --------------------------------------------------------------------------
   function enable()
@@ -47,3 +47,7 @@ public abstract class Component implements IComponent
   // --------------------------------------------------------------------------
   protected function onDisabled()
     skip
+
+  // --------------------------------------------------------------------------
+  protected function removeThis()
+    m_owner.removeComponent(this)

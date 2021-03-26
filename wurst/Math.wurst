@@ -114,6 +114,10 @@ public function vec3.angleBetween(vec3 other) returns real
   return Acos(this.dot(other) / (thisLen * otherLen))
 
 // ============================================================================
+public function lerp(vec3 start, vec3 _end, real t) returns vec3
+  return vec3(lerp(start.x, _end.x, t), lerp(start.y, _end.y, t), lerp(start.z, _end.z, t))
+
+// ============================================================================
 public function vec3.normalized() returns vec3
   let l = this.length()
   if (l == 0.0)
