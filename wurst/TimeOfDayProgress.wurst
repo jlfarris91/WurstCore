@@ -12,6 +12,7 @@ public class TimeOfDayProgress extends Runnable implements IRealtimeListener
   private time m_timeOfDayOnStart
   private timespan m_duration
   private time m_startTime
+  private int m_specificDay = -1
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -38,11 +39,32 @@ public class TimeOfDayProgress extends Runnable implements IRealtimeListener
     return getGameTime() - m_startTime
 
   // --------------------------------------------------------------------------
+  function setSpecificDay(int day)
+    m_specificDay = day
+    if (isRunning())
+      restart()
+
+  // --------------------------------------------------------------------------
+  function getSpecificDay() returns int
+    return m_specificDay
+
+  // --------------------------------------------------------------------------
+  function getUsesSpecificDay() returns bool
+    return m_specificDay != -1
+
+  // --------------------------------------------------------------------------
+  function stopUsingSpecificDay()
+    m_specificDay = -1
+    if (isRunning())
+      restart()
+
+  // --------------------------------------------------------------------------
   override function onStarted()
     super.onStarted()
 
-    m_startTime = m_timeOfDayOnStart
-    m_startTime = makeTime(getDay(), m_startTime.getHour(), m_startTime.getMinute())
+    let day = m_specificDay == -1 ? getDay() : m_specificDay
+    m_startTime = m_timeOfDayOnStart    
+    m_startTime = makeTime(day, m_startTime.getHour(), m_startTime.getMinute())
 
     raiseProgressChangedEvent()
     this.registerForRealtimeUpdate(RealtimeUpdatePriority.Slow)

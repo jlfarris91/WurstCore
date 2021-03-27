@@ -3,7 +3,7 @@ import Events
 import IProgress
 import Reflection
 
-@configurable public constant bool g_enableLogging = true
+@configurable public constant bool g_enableLogging = false
 
 // ============================================================================
 public enum RunnableState
@@ -62,7 +62,7 @@ public abstract class Runnable implements IRunnable, IProgress
   // --------------------------------------------------------------------------
   override function start()
     if (m_state == RunnableState.RUNNING)
-      Log.debug("Attempted to start a runnable that was already running")
+      log("start", "Attempted to start a runnable that was already running")
       return
 
     m_state = RunnableState.RUNNING
@@ -74,7 +74,7 @@ public abstract class Runnable implements IRunnable, IProgress
   // --------------------------------------------------------------------------
   override function pause()
     if (m_state != RunnableState.RUNNING)
-      Log.debug("Attempted to pause a runnable that was not running")
+      log("pause", "Attempted to pause a runnable that was not running")
       return
 
     m_state = RunnableState.PAUSED
@@ -84,7 +84,7 @@ public abstract class Runnable implements IRunnable, IProgress
   // --------------------------------------------------------------------------
   override function resume()
     if (m_state != RunnableState.PAUSED)
-      Log.debug("Attempted to resume a runnable that was not paused")
+      log("resume", "Attempted to resume a runnable that was not paused")
       return
 
     m_state = RunnableState.RUNNING
@@ -140,6 +140,11 @@ public abstract class Runnable implements IRunnable, IProgress
   // --------------------------------------------------------------------------
   override function cancel()
     fail("Canceled")
+
+  // --------------------------------------------------------------------------
+  function restart()
+    cancel()
+    start()
 
   // --------------------------------------------------------------------------
   override function getStateChangedEvent() returns Event1<IRunnable>

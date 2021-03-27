@@ -165,17 +165,22 @@ public function Vector<T>.pop<T>() returns T
   return this.removeAt(count - 1)
 
 // ============================================================================
+public function Vector<T>.push<T>(T _item)
+  this.add(_item)
+
+// ============================================================================
 public function Vector<T>.peek<T>() returns T
   return this.getLast()
 
 // ============================================================================
 // Tries to fill a null slot in the vector or adds to the end otherwise.
-public function Vector<T>.emplaceAdd<T>(T _item)
+public function Vector<T>.emplaceAdd<T>(T _item) returns int
   for i = 0 to this.getCount() - 1
     if (this.getItem(i) == null)
       this.setItem(i, _item)
-      return
+      return i
   this.add(_item)
+  return this.getCount() - 1
 
 // ============================================================================
 // Removes an item from the vector by nulling it out. Does not affect the count.
@@ -185,6 +190,19 @@ public function Vector<T>.emplaceRemove<T>(T _item) returns bool
     return false
   this.setItem(index, null)
   return true
+
+// ============================================================================
+public function Vector<T>.copyTo<T>(Vector<T> other)
+  other.resize(this.getCapacity())
+  let thisCount = this.getCount()
+  let otherCount = other.getCount()
+  for i = 0 to max(thisCount - 1, otherCount - 1)
+    if (i >= thisCount)
+      break
+    if (i < otherCount)
+      other.setItem(i, this.getItem(i))
+    else
+      other.add(this.getItem(i))
 
 // ============================================================================
 public function Vector<T>.take<T>(int count) returns Vector<T>
