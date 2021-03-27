@@ -11,7 +11,6 @@ public interface IPlayerMetadata extends IComposite
   function getPlayer() returns player
   function getDisplayName() returns string
   function setDisplayName(string displayName)
-  function reset()
 
 // ============================================================================
 public class PlayerMetadata extends Composable implements IPlayerMetadata
@@ -23,11 +22,6 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   construct(player p)
     this.m_player = p
     this.setDisplayName(p.getName())
-    this.reset()
-
-  // --------------------------------------------------------------------------
-  override function reset()
-    skip
 
   // --------------------------------------------------------------------------
   override function getPlayer() returns player
@@ -79,10 +73,6 @@ public function player.setDisplayName(string displayName)
 // ============================================================================
 public function player.getDisplayNameColored() returns string
   return this.getDisplayName().colorize(this.getColor().toColor())
-
-// ============================================================================
-public function player.resetPlayerMetadata()
-  this.getMetadata().reset()
 
 // ============================================================================
 /**
