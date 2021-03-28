@@ -3,7 +3,7 @@ import Events
 import IProgress
 import Reflection
 
-@configurable public constant bool g_enableLogging = false
+@configurable public bool g_enableRunnableLogging = false
 
 // ============================================================================
 public enum RunnableState
@@ -206,5 +206,5 @@ public abstract class Runnable implements IRunnable, IProgress
 
   // --------------------------------------------------------------------------
   protected function log(string funcName, string message)
-    if (g_enableLogging)
-      Log.info(typeIdToTypeName(((this castTo int) castTo IRunnable).typeId), funcName, (this castTo int).toString(), message)
+    if (g_enableRunnableLogging)
+      Log.debug(typeIdToTypeName(((this castTo int) castTo IRunnable).typeId), funcName, (this castTo int).toString(), message)
