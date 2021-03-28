@@ -57,7 +57,7 @@ public class UnitMetadata implements IUnitMetadata
     // This unit was not indexed for whatever reason
     let newIndex = unitToAttachTo.getIndex()
     if (newIndex == 0)
-      error("Attempting to attach to a deindexed unit")
+      logDebug("Attempting to attach to a deindexed unit : " + unitToAttachTo.getName())
       return
 
     // The new unit was indexed so we should assign the metadata
