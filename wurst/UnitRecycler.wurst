@@ -273,6 +273,7 @@ public class UnitRecycler
   private function onActivated(unit _unit)
     _unit.unpause()
     _unit.show()
+    RemoveGuardPosition(_unit)
 
   // --------------------------------------------------------------------------
   private function getNextAvailableUnit() returns unit

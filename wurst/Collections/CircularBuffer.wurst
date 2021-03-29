@@ -1,0 +1,201 @@
+package CircularBuffer
+import Vector
+import ErrorHandling
+import Math
+
+// ============================================================================
+public class CircularBuffer<T>
+  protected Vector<T> m_items
+  protected int m_readIndex = 0
+  protected int m_writeIndex = 0
+  private int m_count = 0
+
+  // --------------------------------------------------------------------------
+  construct(int capacity)
+    m_items = new Vector<T>(capacity)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    clear()
+    destroy m_items
+    m_items = null
+
+  // --------------------------------------------------------------------------
+  function getCapacity() returns int
+    return m_items.getCapacity()
+
+  // --------------------------------------------------------------------------
+  function getCount() returns int
+    return m_count
+
+  // --------------------------------------------------------------------------
+  function isEmpty() returns bool
+    return m_count == 0
+
+  // --------------------------------------------------------------------------
+  function isFull() returns bool
+    return getCount() == getCapacity()
+
+  // --------------------------------------------------------------------------
+  function enqueue(T _item)
+    if (isFull())
+      error("Cannot enqueue to a full CircularBuffer")
+    m_items.setItem(m_writeIndex, _item)
+    incrementWriteIndex()
+    m_count++
+
+  // --------------------------------------------------------------------------
+  function dequeue() returns T
+    if (isEmpty())
+      error("Cannot dequeue from empty CircularBuffer")
+    let _item = m_items.getItem(m_readIndex)
+    incrementReadIndex()
+    m_count--
+    return _item
+
+  // --------------------------------------------------------------------------
+  function clear()
+    for i = 0 to getCapacity() - 1
+      m_items.setItem(i, null)
+    m_readIndex = 0
+    m_writeIndex = 0
+    m_count = 0
+
+  // --------------------------------------------------------------------------
+  function iterate() returns VectorIterator<T>
+    return m_items.iterator()
+
+  // --------------------------------------------------------------------------
+  private function incrementWriteIndex()
+    m_writeIndex = wrap(m_writeIndex + 1, 0, getCapacity() - 1)
+
+  // --------------------------------------------------------------------------
+  private function incrementReadIndex()
+    m_readIndex = wrap(m_readIndex + 1, 0, getCapacity() - 1)
+
+// ============================================================================
+public class CBIterator<T>
+  private Vector<T> m_vector
+  private int m_index = -1
+  private int m_readIndex
+  private int m_writeIndex
+  private bool m_destroyOnClose
+
+  // --------------------------------------------------------------------------
+  construct(Vector<T> vector, int readIndex, int writeIndex, bool destroyOnClose)
+    m_vector = vector
+    m_index = readIndex - 1
+    m_readIndex = readIndex
+    m_writeIndex = writeIndex
+    m_destroyOnClose = destroyOnClose
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_index = m_readIndex - 1
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_index != m_writeIndex
+
+  // --------------------------------------------------------------------------
+  function next() returns T
+    m_index = incrementIndex(m_index)
+    return m_vector.getItem(m_index)
+
+  // --------------------------------------------------------------------------
+  function lookahead() returns T
+    T nextItem = null
+    if (hasNext())
+      nextItem = m_vector.getItem(incrementIndex(m_index))
+    return nextItem
+
+  // --------------------------------------------------------------------------
+  function close()
+    if (m_destroyOnClose)
+      destroy this
+  
+  // --------------------------------------------------------------------------
+  private function incrementIndex(int index) returns int
+    return wrap(index + 1, 0, m_vector.getCapacity() - 1)
+
+// ============================================================================
+@test function test_enqueueOne_countIncreasesByOne()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(8)
+
+  // Act
+  cb.enqueue(123)
+
+  // Assert
+  cb.getCount().assertEquals(1)
+
+// ============================================================================
+@test function test_enqueueToFill_coundEqualsCapacity()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(8)
+
+  // Act
+  for i = 1 to 8
+    cb.enqueue(i)
+
+  // Assert
+  cb.getCount().assertEquals(8)
+  cb.isFull().assertTrue()
+
+// ============================================================================
+@test function test_dequeueOne_decreasesCountByOne()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(8)
+  
+  for i = 1 to 8
+    cb.enqueue(i)
+
+  // Act
+  cb.dequeue().assertEquals(1)
+
+  // Assert
+  cb.getCount().assertEquals(7)
+  cb.isEmpty().assertFalse()
+  cb.isFull().assertFalse()
+
+// ============================================================================
+@test function test_dequeueUntilEmpty()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(8)
+  
+  for i = 1 to 8
+    cb.enqueue(i)
+
+  // Act
+  cb.dequeue().assertEquals(1)
+  cb.dequeue().assertEquals(2)
+  cb.dequeue().assertEquals(3)
+  cb.dequeue().assertEquals(4)
+  cb.dequeue().assertEquals(5)
+  cb.dequeue().assertEquals(6)
+  cb.dequeue().assertEquals(7)
+  cb.dequeue().assertEquals(8)
+
+  // Assert
+  cb.getCount().assertEquals(0)
+  cb.isEmpty().assertTrue()
+
+// ============================================================================
+@test function test_clear()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(8)
+  
+  for i = 1 to 8
+    cb.enqueue(i)
+
+  // Act
+  cb.clear()
+
+  // Assert
+  cb.getCount().assertEquals(0)
+  cb.isEmpty().assertTrue()

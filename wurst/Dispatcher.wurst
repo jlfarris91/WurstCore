@@ -1,7 +1,8 @@
 package Dispatcher
 import Action
-import LinkedList
 import ClosureTimers
+import CircularBuffer
+import ErrorHandling
 
 public Dispatcher g_dispatcher
 
@@ -9,6 +10,7 @@ public Dispatcher g_dispatcher
 @configurable public constant real DISPATCHER_INTERVAL_LOW = 0.5
 @configurable public constant real DISPATCHER_INTERVAL_BACKGROUND = 1.0
 @configurable public constant int DISPATCHER_MAX_PROCESS = 100
+@configurable public constant int DISPATCHER_DEFAULT_BUFFER_CAPACITY = 512
 
 // ============================================================================
 public enum DispatchPriority
@@ -17,12 +19,79 @@ public enum DispatchPriority
   BACKGROUND  
 
 // ============================================================================
+public class GlobalDispatcher
+
+  // --------------------------------------------------------------------------
+  static function invoke(Action action, DispatchPriority priority)
+    if (g_dispatcher == null)
+      g_dispatcher = new Dispatcher()
+    g_dispatcher.invoke(action, priority)
+
+  // --------------------------------------------------------------------------
+  static function invokeAfter(real seconds, Action action, DispatchPriority priority)
+    if (g_dispatcher == null)
+      g_dispatcher = new Dispatcher()
+    g_dispatcher.invokeAfter(action, seconds, priority)
+
+// ============================================================================
 public class Dispatcher
-  private LinkedList<Action> array[3] m_dispatchQueue
+  private CircularBuffer<Action> array[3] m_dispatchQueue
+  private int array[3] m_maxProcessCount
+  private CallbackPeriodic m_callbackHigh
+  private CallbackPeriodic m_callbackLow
+  private CallbackPeriodic m_callbackBackground
+
+  // --------------------------------------------------------------------------
+  construct()
+    initialize(DISPATCHER_DEFAULT_BUFFER_CAPACITY, DISPATCHER_DEFAULT_BUFFER_CAPACITY, DISPATCHER_DEFAULT_BUFFER_CAPACITY)
+
+  // --------------------------------------------------------------------------
+  construct(int highBufferCapacity, int lowBufferCapacity, int backgroundBufferCapacity)
+    initialize(highBufferCapacity, lowBufferCapacity, backgroundBufferCapacity)
+
+  // --------------------------------------------------------------------------
+  private function initialize(int highBufferCapacity, int lowBufferCapacity, int backgroundBufferCapacity)
+    m_dispatchQueue[0] = new CircularBuffer<Action>(highBufferCapacity)
+    m_dispatchQueue[1] = new CircularBuffer<Action>(lowBufferCapacity)
+    m_dispatchQueue[2] = new CircularBuffer<Action>(backgroundBufferCapacity)
+
+    m_maxProcessCount[0] = DISPATCHER_MAX_PROCESS
+    m_maxProcessCount[1] = DISPATCHER_MAX_PROCESS
+    m_maxProcessCount[2] = DISPATCHER_MAX_PROCESS
+
+    m_callbackHigh = doPeriodically(DISPATCHER_INTERVAL_HIGH, (CallbackPeriodic cb) -> process(DispatchPriority.HIGH))
+    m_callbackLow = doPeriodically(DISPATCHER_INTERVAL_LOW, (CallbackPeriodic cb) -> process(DispatchPriority.LOW))
+    m_callbackBackground = doPeriodically(DISPATCHER_INTERVAL_BACKGROUND, (CallbackPeriodic cb) -> process(DispatchPriority.BACKGROUND))
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_callbackHigh != null)
+      destroy m_callbackHigh
+    if (m_callbackLow != null)
+      destroy m_callbackLow
+    if (m_callbackBackground != null)
+      destroy m_callbackBackground
+
+  // --------------------------------------------------------------------------
+  function getMaxExecutions(DispatchPriority priority) returns int
+    return m_maxProcessCount[priority castTo int]
+
+  // --------------------------------------------------------------------------
+  function setMaxExecutions(DispatchPriority priority, int value)
+    m_maxProcessCount[priority castTo int] = min(DISPATCHER_MAX_PROCESS, value)
+
+  // --------------------------------------------------------------------------
+  function setMaxExecutions(int value)
+    setMaxExecutions(DispatchPriority.HIGH, value)
+    setMaxExecutions(DispatchPriority.LOW, value)
+    setMaxExecutions(DispatchPriority.BACKGROUND, value)
 
   // --------------------------------------------------------------------------
   function invoke(Action action, DispatchPriority priority)
-    m_dispatchQueue[priority castTo int].add(action)
+    let queue = m_dispatchQueue[priority castTo int]
+    if (queue.isFull())
+      error("Dispatcher queue {0} is full".format((priority castTo int).toString()))
+    queue.enqueue(action)
 
   // --------------------------------------------------------------------------
   function invokeAfter(Action action, real seconds, DispatchPriority priority)
@@ -35,15 +104,12 @@ public class Dispatcher
     if (queue.isEmpty())
       return
 
-    var watchdog = 0
-    while (not queue.isEmpty() and watchdog < DISPATCHER_MAX_PROCESS)
+    let maxProcessCount = getMaxExecutions(priority)
+
+    var executionCount = 0
+    while (not queue.isEmpty() and executionCount < maxProcessCount)
       let action = queue.dequeue()
       action.call()
-      watchdog++
-
-// ============================================================================
-init
-  g_dispatcher = new Dispatcher()
-  doPeriodically(DISPATCHER_INTERVAL_HIGH, (CallbackPeriodic cb) -> g_dispatcher.process(DispatchPriority.HIGH))
-  doPeriodically(DISPATCHER_INTERVAL_LOW, (CallbackPeriodic cb) -> g_dispatcher.process(DispatchPriority.LOW))
-  doPeriodically(DISPATCHER_INTERVAL_BACKGROUND, (CallbackPeriodic cb) -> g_dispatcher.process(DispatchPriority.BACKGROUND))
+      executionCount++
+      if (action.getDestroyAfterUse())
+        destroy action
