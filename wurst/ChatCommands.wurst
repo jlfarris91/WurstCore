@@ -13,9 +13,9 @@ import DisplayTextToPlayer
 import StringComparison
 import ColorUtility
 
-constant string COMMAND_PREFIX = "-"
-constant string COMMAND_HELP_STR = "help"
-constant int COMMAND_HELP_PRIORITY = -999
+public constant string COMMAND_PREFIX = "-"
+public constant string COMMAND_HELP_STR = "help"
+public constant int COMMAND_HELP_PRIORITY = -999
 PriorityList<ChatCommandHandler> g_commandHandlers
 trigger g_chatCommandTrigger
 ChatCommand g_chatCommand
@@ -43,10 +43,12 @@ public class ChatCommandHandler implements IChatCommandHandler
   private string m_name
   private IterableMap<string, trigger> m_commandTriggerMap
   private IterableMap<string, ChatCommandDefinition> m_commandDefinitionMap
+  private quest m_quest
 
   // --------------------------------------------------------------------------
-  construct(string name)
+  construct(string name, quest _quest)
     m_name = name
+    m_quest = _quest
     m_commandTriggerMap = new IterableMap<string, trigger>()
     m_commandDefinitionMap = new IterableMap<string, ChatCommandDefinition>()
 
@@ -87,6 +89,25 @@ public class ChatCommandHandler implements IChatCommandHandler
   function registerCommandDefinition(ChatCommandDefinition commandDefinition, code handler)
     m_commandDefinitionMap.put(commandDefinition.getCommand(), commandDefinition)
     registerHandlerAction(commandDefinition.getCommand(), handler)
+
+  // --------------------------------------------------------------------------
+  function addQuestItems()
+    for key in m_commandDefinitionMap
+      addQuestItem(m_commandDefinitionMap.get(key))
+
+  // --------------------------------------------------------------------------
+  function addQuestItem(ChatCommandDefinition commandDefinition)
+    if (m_quest == null)
+      return
+
+    let commandQuestItem = QuestCreateItem(m_quest)
+    QuestItemSetDescription(commandQuestItem, commandDefinition.getHelpString())
+
+    let commandDescriptionQuestItem = QuestCreateItem(m_quest)
+    QuestItemSetDescription(commandDescriptionQuestItem, commandDefinition.getDescription())
+
+    // Spacer
+    QuestCreateItem(m_quest)
 
   // --------------------------------------------------------------------------
   function getCommandDefinition(string command) returns ChatCommandDefinition
@@ -206,7 +227,7 @@ public class ChatCommandDefinition
   function getHelpString() returns string
     let sb = new StringBuilder()
 
-    sb.append("-" + m_command)
+    sb.append(m_command.colorize(Colors.gold))
 
     for arg in m_arguments
       sb.append(" ")
@@ -578,7 +599,7 @@ function printDetailedHelp(player p, ChatCommandDefinition commandDef)
   destroy sb
 
 // ============================================================================
-function printHelp()
+public function printHelp()
 
   let chatCommand = getChatCommand()
   let chatPlayer = getChatCommandPlayer()
@@ -625,10 +646,3 @@ init
   g_chatCommandTrigger = CreateTrigger()
   g_chatCommandTrigger.registerAnyPlayerChatEvent(COMMAND_PREFIX, false)
   g_chatCommandTrigger.addAction(function parseChatCommand)
-
-  // A special chat command handler that prints helpful information about registered commands
-  let helpCommandHandler = new ChatCommandHandler("HELP")
-  helpCommandHandler.registerCommandDefinition(COMMAND_HELP_STR, function printHelp)
-    ..addStringArgument("COMMAND_NAME", true)
-
-  registerChatCommandHandler(helpCommandHandler, COMMAND_HELP_PRIORITY)
