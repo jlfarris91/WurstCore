@@ -4,6 +4,7 @@ import HashMap
 
 @configurable public constant real TIME_OF_DAY = 6.0
 @configurable public constant real TIME_OF_NIGHT = 18.0
+@configurable public constant real TIME_SECONDS_PER_DAY = 480.0
 
 public constant time DAY_TIME = makeTime(0, TIME_OF_DAY)
 public constant time NIGHT_TIME = makeTime(0, TIME_OF_NIGHT)
@@ -188,6 +189,19 @@ public function timespan.toString() returns string
 public function timespan.assertEquals(timespan expected)
   if this != expected
     testFail("Expected <" + expected.toString() + ">, Actual <" + this.toString() + ">")
+
+// ============================================================================
+public function timespan.toRealWorldSeconds() returns real
+  return this.getTotalDays() * (TIME_SECONDS_PER_DAY / GetTimeOfDayScale())
+
+// ============================================================================
+public function timespan.toRealWorldTimeString() returns string
+  let realWorldSecondsTotal = this.toRealWorldSeconds()
+  let realWorldMinutes = (realWorldSecondsTotal / 60.0).floor()
+  let realWorldMinutesStr = realWorldMinutes < 10 ? "0" + realWorldMinutes.toString() : realWorldMinutes.toString()
+  let realWorldSeconds = realWorldSecondsTotal.floor() mod 60
+  let realWorldSecondsStr = realWorldSeconds < 10 ? "0" + realWorldSeconds.toString() : realWorldSeconds.toString()
+  return "{0}:{1}".format(realWorldMinutesStr, realWorldSecondsStr)
 
 // ============================================================================
 public function getElapsedGameTime() returns timespan
