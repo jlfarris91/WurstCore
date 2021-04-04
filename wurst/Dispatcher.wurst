@@ -25,13 +25,13 @@ public class GlobalDispatcher
   static function invoke(Action action, DispatchPriority priority)
     if (g_dispatcher == null)
       g_dispatcher = new Dispatcher()
-    g_dispatcher.invoke(action, priority)
+    g_dispatcher.invoke(priority, action)
 
   // --------------------------------------------------------------------------
   static function invokeAfter(real seconds, Action action, DispatchPriority priority)
     if (g_dispatcher == null)
       g_dispatcher = new Dispatcher()
-    g_dispatcher.invokeAfter(action, seconds, priority)
+    g_dispatcher.invokeAfter(seconds, priority, action)
 
 // ============================================================================
 public class Dispatcher
@@ -87,16 +87,16 @@ public class Dispatcher
     setMaxExecutions(DispatchPriority.BACKGROUND, value)
 
   // --------------------------------------------------------------------------
-  function invoke(Action action, DispatchPriority priority)
+  function invoke(DispatchPriority priority, Action action)
     let queue = m_dispatchQueue[priority castTo int]
     if (queue.isFull())
       error("Dispatcher queue {0} is full".format((priority castTo int).toString()))
     queue.enqueue(action)
 
   // --------------------------------------------------------------------------
-  function invokeAfter(Action action, real seconds, DispatchPriority priority)
+  function invokeAfter(real seconds, DispatchPriority priority, Action action)
     doAfter(seconds) () ->
-      invoke(action, priority)
+      invoke(priority, action)
 
   // --------------------------------------------------------------------------
   protected function process(DispatchPriority priority)
