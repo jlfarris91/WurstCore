@@ -96,6 +96,14 @@ public class UnitMetadata implements IUnitMetadata
     skip
 
   // --------------------------------------------------------------------------
+  protected function onPreUnitChanged(unit _oldUnit, unit _newUnit)
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function onPostUnitChanged(unit _oldUnit, unit _newUnit)
+    skip
+
+  // --------------------------------------------------------------------------
   private function setUnit(unit u)
     let oldUnit = m_unit
     let newUnit = u
@@ -104,6 +112,8 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   private function changeUnit(unit oldUnit, unit newUnit)
+
+    onPreUnitChanged(oldUnit, newUnit)
 
     // Disable and then re-enable any components that were enabled and operated
     // under the context of the old unit
@@ -129,6 +139,8 @@ public class UnitMetadata implements IUnitMetadata
           unitComp.onUnitChanged(oldUnit, newUnit)
 
       destroy enabledComponents
+
+    onPostUnitChanged(oldUnit, newUnit)
 
   // --------------------------------------------------------------------------
   @inline
