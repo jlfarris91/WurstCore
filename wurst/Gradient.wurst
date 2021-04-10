@@ -14,14 +14,14 @@ public class GradientEntry<T>
     this.time = time
 
 // ============================================================================
-public class GradientList<T>
-  private LinkedList<GradientEntry<T>> m_entries
-  private Func3<T, T, real, T> m_sampleFunc
-  private T m_defaultValue
+public class GradientList<TValue, TReturn>
+  private LinkedList<GradientEntry<TValue>> m_entries
+  private Func3<TValue, TValue, real, TReturn> m_sampleFunc
+  private TReturn m_defaultValue
 
   // --------------------------------------------------------------------------
-  construct(Func3<T, T, real, T> sampleFunc, T defaultValue)
-    m_entries = new LinkedList<GradientEntry<T>>()
+  construct(TReturn defaultValue, Func3<TValue, TValue, real, TReturn> sampleFunc)
+    m_entries = new LinkedList<GradientEntry<TValue>>()
     m_sampleFunc = sampleFunc
     m_defaultValue = defaultValue
 
@@ -36,11 +36,11 @@ public class GradientList<T>
     m_sampleFunc = null
 
   // --------------------------------------------------------------------------
-  function addEntry(real time, T value)
-    m_entries.add(new GradientEntry<T>(value, time))
+  function addEntry(real time, TValue value)
+    m_entries.add(new GradientEntry<TValue>(value, time))
 
   // --------------------------------------------------------------------------
-  function getEntry(int index) returns GradientEntry<T>
+  function getEntry(int index) returns GradientEntry<TValue>
     return m_entries.get(index)
 
   // --------------------------------------------------------------------------
@@ -48,28 +48,36 @@ public class GradientList<T>
     return m_entries.size()
 
   // --------------------------------------------------------------------------
-  function sample(real time) returns T
+  function sample(real time) returns TReturn
+    return sample(time, m_defaultValue)
+
+  // --------------------------------------------------------------------------
+  function sample(real time, TReturn defaultValue) returns TReturn
+    return sample(time, defaultValue, m_sampleFunc)
+
+  // --------------------------------------------------------------------------
+  function sample(real time, TReturn defaultValue, Func3<TValue, TValue, real, TReturn> sampleFunc) returns TReturn
     if (m_entries.isEmpty())
-      return m_defaultValue
+      return defaultValue
 
     let firstEntry = m_entries.getFirst()
     if (firstEntry == null)
-      return m_defaultValue
-
-    if (m_entries.size() == 1)
-      return firstEntry.value
+      return defaultValue
 
     let clampedT = clamp01(time)
-    
+
     var firstTime = firstEntry.time
     var firstValue = firstEntry.value
 
     var secondTime = firstEntry.time
     var secondValue = firstEntry.value
 
+    if (m_entries.size() == 1)
+      return sampleFunc.call(firstValue, firstValue, clampedT)
+
     for entry in m_entries
       if (entry.time == clampedT)
-        return entry.value
+        return sampleFunc.call(entry.value, entry.value, clampedT)
       else if (entry.time < clampedT)
         firstTime = entry.time
         firstValue = entry.value
@@ -81,8 +89,7 @@ public class GradientList<T>
         break
     
     let normalizedSegmentT = parameterize(firstTime, secondTime, clampedT)
-    return m_sampleFunc.call(firstValue, secondValue, normalizedSegmentT)
-
+    return sampleFunc.call(firstValue, secondValue, normalizedSegmentT)
 
 // ============================================================================
 public class GradientColorEntry
@@ -173,7 +180,7 @@ public class GradientColorList
 // ============================================================================
 @test function sample()
 
-  let gradient = new GradientList<real>((real a, real b, real t) -> lerp(a, b, t), 0.0)
+  let gradient = new GradientList<real, real>(0.0, (real a, real b, real t) -> lerp(a, b, t))
   ..addEntry(0.0, 0.0)
   ..addEntry(1.0, 100.0)
 
