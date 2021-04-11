@@ -266,7 +266,7 @@ public function createMetadataForUnit(unit _unit)
 
   var metadata = g_unitMetadatas[index]
   if (metadata != null)
-    error("Metadata already exists for unit {0}".format(_unit.getName()))
+    logDebug("Metadata already exists for unit {0}".format(_unit.getName()))
     return
 
   metadata = constructUnitMetadata(_unit)
