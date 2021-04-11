@@ -86,6 +86,14 @@ public function rangeInt.parameterize01(int value) returns real
   return parameterize01(this.min, this.max, value)
 
 // ============================================================================
+public function rangeReal.op_mult(real factor) returns rangeReal
+  return rangeReal(this.min * factor, this.max * factor)
+
+// ============================================================================
+public function rangeInt.op_mult(real factor) returns rangeInt
+  return rangeInt((this.min * factor).floor(), (this.max * factor).floor())
+
+// ============================================================================
 public function lerp(rangeReal start, rangeReal _end, real t) returns rangeReal
   return rangeReal(lerp(start.min, _end.min, t), lerp(start.max, _end.max, t))  
 
