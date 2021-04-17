@@ -8,6 +8,7 @@ import RegisterEvents
 import ClosureTimers
 import ColorUtility
 import UnitIndexer
+import ObjectIds
 
 // ============================================================================
 // Based on Unit Recycler by AGD https://www.hiveworkshop.com/threads/snippet-unit-recycler.286701/
@@ -175,7 +176,7 @@ public class UnitRecycler
   // --------------------------------------------------------------------------
   function unstock(unit _unit)
     if (not doesUnitBelongToRecycler(_unit))
-      error("Trying to unstock a unit that does not belong to this recycler's stock")
+      Log.error("UnitRecycler", "unstock", m_unitId.toRawCode(), "Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
     // This unit was active so update the number of active count
@@ -183,7 +184,7 @@ public class UnitRecycler
 
     let index = m_units.indexOf(_unit)
     if (index == -1)
-      error("Index out of range")
+      Log.error("UnitRecycler", "unstock", m_unitId.toRawCode(), "Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
     m_units.setItem(index, null)
