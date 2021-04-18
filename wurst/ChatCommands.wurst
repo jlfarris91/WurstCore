@@ -12,6 +12,7 @@ import PriorityList
 import DisplayTextToPlayer
 import StringComparison
 import ColorUtility
+import Vector
 
 public constant string COMMAND_PREFIX = "-"
 public constant string COMMAND_HELP_STR = "help"
@@ -43,6 +44,7 @@ public class ChatCommandHandler implements IChatCommandHandler
   private string m_name
   private IterableMap<string, trigger> m_commandTriggerMap
   private IterableMap<string, ChatCommandDefinition> m_commandDefinitionMap
+  private IterableMap<string, string> m_aliasMap
   private quest m_quest
 
   // --------------------------------------------------------------------------
@@ -51,6 +53,7 @@ public class ChatCommandHandler implements IChatCommandHandler
     m_quest = _quest
     m_commandTriggerMap = new IterableMap<string, trigger>()
     m_commandDefinitionMap = new IterableMap<string, ChatCommandDefinition>()
+    m_aliasMap = new IterableMap<string, string>()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -67,6 +70,9 @@ public class ChatCommandHandler implements IChatCommandHandler
     destroy m_commandDefinitionMap
     m_commandDefinitionMap = null
 
+    destroy m_aliasMap
+    m_aliasMap = null
+
   // --------------------------------------------------------------------------
   function getName() returns string
     return m_name
@@ -81,7 +87,7 @@ public class ChatCommandHandler implements IChatCommandHandler
   
   // --------------------------------------------------------------------------
   function registerCommandDefinition(string command, code handler) returns ChatCommandDefinition
-    let commandDefinition = new ChatCommandDefinition(command)
+    let commandDefinition = new ChatCommandDefinition(command, this)
     registerCommandDefinition(commandDefinition, handler)
     return commandDefinition
   
@@ -89,6 +95,10 @@ public class ChatCommandHandler implements IChatCommandHandler
   function registerCommandDefinition(ChatCommandDefinition commandDefinition, code handler)
     m_commandDefinitionMap.put(commandDefinition.getCommand(), commandDefinition)
     registerHandlerAction(commandDefinition.getCommand(), handler)
+
+  // --------------------------------------------------------------------------
+  function registerCommandAlias(string command, string alias)
+    m_aliasMap.put(alias, command)
 
   // --------------------------------------------------------------------------
   function addQuestItems()
@@ -106,12 +116,25 @@ public class ChatCommandHandler implements IChatCommandHandler
     let commandDescriptionQuestItem = QuestCreateItem(m_quest)
     QuestItemSetDescription(commandDescriptionQuestItem, commandDefinition.getDescription())
 
+    let aliases = commandDefinition.getAliases()
+    if (aliases != null)
+      let aliasesSB = new StringBuilder()
+      aliasesSB.append("Aliases:")
+      for alias in aliases
+        aliasesSB.append(" " + alias.colorize(Colors.gold))
+      let commandAliasesQuestItem = QuestCreateItem(m_quest)
+      QuestItemSetDescription(commandAliasesQuestItem, aliasesSB.toStringAndDestroy())
+
     // Spacer
     QuestCreateItem(m_quest)
 
   // --------------------------------------------------------------------------
   function getCommandDefinition(string command) returns ChatCommandDefinition
-    return m_commandDefinitionMap.get(command)
+    if (m_commandDefinitionMap.has(command))
+      return m_commandDefinitionMap.get(command)
+    if (m_aliasMap.has(command))
+      return getCommandDefinition(m_aliasMap.get(command))
+    return null
 
   // --------------------------------------------------------------------------
   function registerHandlerAction(string command, code action)
@@ -170,12 +193,15 @@ public class ChatCommandDefinition
   private LinkedList<ChatCommandArgument> m_arguments
   private bool m_doesHandleCommand
   private string m_description
+  private Vector<string> m_aliases
+  private ChatCommandHandler m_handler
 
   // --------------------------------------------------------------------------
-  construct(string command)
+  construct(string command, ChatCommandHandler handler)
     m_command = command
     m_arguments = new LinkedList<ChatCommandArgument>()
     m_doesHandleCommand = true
+    m_handler = handler
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -222,6 +248,17 @@ public class ChatCommandDefinition
   // --------------------------------------------------------------------------
   function setDescription(string description)
     m_description = description
+
+  // --------------------------------------------------------------------------
+  function addAlias(string alias)
+    if (m_aliases == null)
+      m_aliases = new Vector<string>()
+    m_aliases.add(alias)
+    m_handler.registerCommandAlias(getCommand(), alias)
+
+  // --------------------------------------------------------------------------
+  function getAliases() returns Vector<string>
+    return m_aliases
 
   // --------------------------------------------------------------------------
   function getHelpString() returns string
