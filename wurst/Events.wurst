@@ -1,5 +1,4 @@
 package Events
-import ErrorIf
 import public Action
 import ErrorHandling
 import Vector
@@ -29,7 +28,9 @@ public class Event
 
   // --------------------------------------------------------------------------
   function register(EventCallback callback) returns EventCallback
-    ErrorIf.argumentIsNull(callback, "callback")
+    if (callback == null)
+      argumentNullError("callback")
+
     if (callback.m_event != null)
       error("Attempting to double register a callback")
     callback.m_event = this
@@ -40,7 +41,9 @@ public class Event
 
   // --------------------------------------------------------------------------
   function unregister(EventCallback callback)
-    ErrorIf.argumentIsNull(callback, "callback")
+    if (callback == null)
+      argumentNullError("callback")
+
     if (callback.m_event == null or callback.m_index == -1)
       error("Attempting to double unregister a callback")
     if (callback.m_event != this)
@@ -101,7 +104,8 @@ public class Event1<TArg1>
 
   // --------------------------------------------------------------------------
   function register(Event1Callback<TArg1> callback) returns Event1Callback<TArg1>
-    ErrorIf.argumentIsNull(callback, "callback")
+    if (callback == null)
+      argumentNullError("callback")
     if (callback.m_event != null)
       error("Attempting to double register a callback")
     callback.m_event = this
@@ -112,7 +116,8 @@ public class Event1<TArg1>
 
   // --------------------------------------------------------------------------
   function unregister(Event1Callback<TArg1> callback)
-    ErrorIf.argumentIsNull(callback, "callback")
+    if (callback == null)
+      argumentNullError("callback")
     if (callback.m_event == null or callback.m_index == -1)
       error("Attempting to double unregister a callback")
     if (callback.m_event != this)
@@ -173,7 +178,8 @@ public class Event2<TArg1, TArg2>
 
   // --------------------------------------------------------------------------
   function register(Event2Callback<TArg1, TArg2> callback) returns Event2Callback<TArg1, TArg2>
-    ErrorIf.argumentIsNull(callback, "callback")
+    if (callback == null)
+      argumentNullError("callback")
     if (callback.m_event != null)
       error("Attempting to double register a callback")
     callback.m_event = this
@@ -184,7 +190,8 @@ public class Event2<TArg1, TArg2>
 
   // --------------------------------------------------------------------------
   function unregister(Event2Callback<TArg1, TArg2> callback)
-    ErrorIf.argumentIsNull(callback, "callback")
+    if (callback == null)
+      argumentNullError("callback")
     if (callback.m_event == null or callback.m_index == -1)
       error("Attempting to double unregister a callback")
     if (callback.m_event != this)

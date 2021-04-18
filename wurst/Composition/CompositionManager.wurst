@@ -5,8 +5,8 @@ import IComponent
 import IComposite
 import Component
 import public Type
-import ErrorIf
 import ClosureTimers
+import ErrorHandling
 
 // ============================================================================
 public class CompositionManager implements IComposite
@@ -37,7 +37,9 @@ public class CompositionManager implements IComposite
   // --------------------------------------------------------------------------
   @inline
   override function addComponent(IComponent component) returns IComponent
-    ErrorIf.argumentIsNull(component, "component")
+    if (component == null)
+      argumentNullError("component")
+
     _components.add(component)
     _typeToComponentMap.put(component.typeId, component)
     (component castTo Component).initialize()
@@ -47,7 +49,9 @@ public class CompositionManager implements IComposite
   // --------------------------------------------------------------------------
   @inline
   override function removeComponent(IComponent component) returns bool
-    ErrorIf.argumentIsNull(component, "component")
+    if (component == null)
+      argumentNullError("component")
+
     if (not _components.remove(component))
       return false    
     component.setEnabled(false)

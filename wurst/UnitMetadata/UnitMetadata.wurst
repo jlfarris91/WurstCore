@@ -2,7 +2,6 @@ package UnitMetadata
 import public Composition
 import LinkedList
 import ErrorHandling
-import ErrorIf
 import ClosureEvents
 import initlater UnitComponent
 import UnitExtensions
@@ -49,7 +48,8 @@ public class UnitMetadata implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   override function attach(unit unitToAttachTo)
-    ErrorIf.argumentIsNull(unitToAttachTo, "unitToAttachTo")
+    if (unitToAttachTo == null)
+      argumentNullError("unitToAttachTo")
 
     if (unitToAttachTo == m_unit)
       return
@@ -181,17 +181,21 @@ public function unit.getMetadataRequired() returns IUnitMetadata
 
 // ============================================================================
 public function registerUnitMetadataFactory(IUnitMetadataFactory factory)
-  ErrorIf.argumentIsNull(factory, "factory")
+  if (factory == null)
+    argumentNullError("factory")
   g_unitMetadataFactories.addAt(factory, 0)
 
 // ============================================================================
 public function unregisterUnitMetadataFactory(IUnitMetadataFactory factory)
-  ErrorIf.argumentIsNull(factory, "factory")
+  if (factory == null)
+    argumentNullError("factory")
   g_unitMetadataFactories.remove(factory)
 
 // ============================================================================
 public function constructUnitMetadata(unit u) returns IUnitMetadata
-  ErrorIf.argumentIsNull(u, "u")
+  if (u == null)
+    argumentNullError("u")
+
   IUnitMetadata metadata = null
   for factory in g_unitMetadataFactories
     let uu = factory.createUnit(u)
@@ -214,7 +218,8 @@ public function createUnitTLS(player owner, integer unitId, vec2 pos, real face)
 
 // ============================================================================
 public function createUnitTLS(IUnitMetadata metadata, player owner, integer unitId, real x, real y, real face) returns unit
-  ErrorIf.argumentIsNull(metadata, "metadata")
+  if (metadata == null)
+    argumentNullError("metadata")
 
   let oldUnit = metadata.getUnit()
   metadata.detach()
@@ -235,7 +240,8 @@ public function createUnitTLS(IUnitMetadata metadata, player owner, integer unit
 
 // ============================================================================
 public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
-  ErrorIf.argumentIsNull(whichUnit, "whichUnit")
+  if (whichUnit == null)
+    argumentNullError("whichUnit")
 
   let oldUnitName = whichUnit.getName()
   let existingMetadata = whichUnit.getMetadata()

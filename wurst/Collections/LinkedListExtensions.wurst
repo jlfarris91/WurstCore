@@ -1,7 +1,6 @@
 package LinkedListExtensions
 import LinkedList
 import ErrorHandling
-import ErrorIf
 import WeightedSet
 import Func
 
@@ -44,7 +43,9 @@ public function LinkedList<T>.take<T>(int count) returns LinkedList<T>
 
 // ============================================================================
 public function LinkedList<TElem>.toWeightedSet<TElem>(Func1<TElem, real> selector) returns WeightedSet<TElem>
-  ErrorIf.argumentIsNull(selector, "selector")
+  if (selector == null)
+    argumentNullError("selector")
+  
   let output = new WeightedSet<TElem>()
   this.forEach(elem -> output.add(elem, selector.call(elem)))
  

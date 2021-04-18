@@ -40,6 +40,7 @@ public class Dispatcher
   private CallbackPeriodic m_callbackHigh
   private CallbackPeriodic m_callbackLow
   private CallbackPeriodic m_callbackBackground
+  string m_id
 
   // --------------------------------------------------------------------------
   construct()
@@ -113,3 +114,6 @@ public class Dispatcher
       executionCount++
       if (action.getDestroyAfterUse())
         destroy action
+    
+    if (executionCount > 0)
+      Log.debug("Dispatcher", "process", m_id, "[Priority {0}] Processed {1} actions ({2}/{3})".format((priority castTo int).toString(), executionCount.toString(), queue.getCount().toString(), queue.getCapacity().toString()))

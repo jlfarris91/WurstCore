@@ -8,7 +8,6 @@ import RegisterEvents
 import ClosureTimers
 import ColorUtility
 import UnitIndexer
-import ObjectIds
 
 // ============================================================================
 // Based on Unit Recycler by AGD https://www.hiveworkshop.com/threads/snippet-unit-recycler.286701/
@@ -22,10 +21,10 @@ import ObjectIds
 constant int MAX_CAPACITY = 8192
 constant vec2 DEACTIVATED_POS = mapBounds.max
 
-trigger g_onRecycledTrigger
+trigger g_onRecycledTrigger = CreateTrigger()
 unit g_lastRecycledUnit
 
-trigger g_onStockedTrigger
+trigger g_onStockedTrigger = CreateTrigger()
 unit g_lastStockedUnit
 
 UnitRecycler g_triggerUnitRecycler
@@ -62,6 +61,7 @@ public class UnitRecycler
   private player m_owner
   private Vector<unit> m_units
   private HashMap<unit, bool> m_isActiveMap
+  private HashMap<unit, int> m_generationMap
   private int m_unitId
   private int m_numberOfActive
   private int m_lastDeactivatedIndex = -1
@@ -84,6 +84,7 @@ public class UnitRecycler
     g_unitIdToUnitRecyclerMap.put(unitId, this)
     m_units = new Vector<unit>(capacity)
     m_isActiveMap = new HashMap<unit, bool>()
+    m_generationMap = new HashMap<unit, int>()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -100,6 +101,10 @@ public class UnitRecycler
     m_isActiveMap = null
 
     g_unitIdToUnitRecyclerMap.remove(m_unitId)
+
+  // --------------------------------------------------------------------------
+  function getUnitId() returns int
+    return m_unitId
 
   // --------------------------------------------------------------------------
   function getActiveCount() returns int
@@ -138,6 +143,10 @@ public class UnitRecycler
     return m_isActiveMap.has(_unit)
 
   // --------------------------------------------------------------------------
+  function getGeneration(unit _unit) returns int
+    return m_generationMap.has(_unit) ? m_generationMap.get(_unit) : -1
+
+  // --------------------------------------------------------------------------
   function isUnitActive(unit _unit) returns bool
     return doesUnitBelongToRecycler(_unit) and m_isActiveMap.get(_unit)
 
@@ -160,12 +169,16 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   function stock(unit _unit) returns bool
+    if (_unit == null)
+      argumentNullError("_unit")
+      return false
 
-    if (_unit == null or _unit.isType(UNIT_TYPE_HERO) or not isUnitRecyclable(_unit))
+    if (_unit.isType(UNIT_TYPE_HERO) or not isUnitRecyclable(_unit))
+      logError("stock", "Unit type {0} is not recyclable".format(UnitId2String(_unit.getTypeId())))
       return false
 
     if (not _unit.isAlive() and not reviveUnit(_unit))
-      log("Unable to revive dead unit")
+      logError("stock", "Unable to revive dead unit " + UnitId2String(_unit.getTypeId()))
       return false
 
     _unit.setOwner(m_owner, true)
@@ -176,7 +189,7 @@ public class UnitRecycler
   // --------------------------------------------------------------------------
   function unstock(unit _unit)
     if (not doesUnitBelongToRecycler(_unit))
-      Log.error("UnitRecycler", "unstock", m_unitId.toRawCode(), "Trying to unstock a unit that does not belong to this recycler's stock")
+      logError("unstock", "Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
     // This unit was active so update the number of active count
@@ -184,13 +197,14 @@ public class UnitRecycler
 
     let index = m_units.indexOf(_unit)
     if (index == -1)
-      Log.error("UnitRecycler", "unstock", m_unitId.toRawCode(), "Trying to unstock a unit that does not belong to this recycler's stock")
+      logError("unstock", "Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
     m_units.setItem(index, null)
 
     g_unitToRecyclerMap.remove(_unit)
     m_isActiveMap.remove(_unit)
+    m_generationMap.remove(_unit)
     
     if (bj_lastCreatedUnit == _unit)
       bj_lastCreatedUnit = null
@@ -200,7 +214,7 @@ public class UnitRecycler
 
     onActivated(_unit)
 
-    log("unstockUnit() : {0} {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
+    log("unstockUnit", "{0} {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
 
   // --------------------------------------------------------------------------
   function getUnit(player owner, vec2 pos, angle angle) returns unit
@@ -218,7 +232,7 @@ public class UnitRecycler
     _unit.setFacing(angle)
     activateUnit(_unit)
 
-    log("getUnit() : {0} {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
+    log("getUnit", "{0} {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
 
     fireUnitRecycledTrigger(_unit)
 
@@ -228,7 +242,7 @@ public class UnitRecycler
   private function stockUnit(unit _unit)
 
     if (isUnitInactive(_unit))
-      log("stockUnit() : unit is already stocked and inactive! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      logError("stockUnit", "unit is already stocked and inactive! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
       return
 
     let isNewUnit = not doesUnitBelongToRecycler(_unit)
@@ -238,26 +252,26 @@ public class UnitRecycler
     onStocked(_unit)
     
     if (isActiveUnit)
-      log("stockUnit() : stocked active unit {0} : {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
+      log("stockUnit", "stocked active unit {0} : {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
 
     if (isNewUnit)
-      log("stockUnit() : stocked new unit {0} : {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
+      log("stockUnit", "stocked new unit {0} : {1}/{2}".format(_unit.getUserData().toString(), m_numberOfActive.toString(), m_units.getCount().toString()))
   
   // --------------------------------------------------------------------------
   private function activateUnit(unit _unit)
 
     if (not doesUnitBelongToRecycler(_unit))
-      log("activateUnit() : unit is not stocked! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      logError("activateUnit", "unit is not stocked! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
       return
 
     if (isUnitActive(_unit))
-      log("activateUnit() : unit is already active! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+      logError("activateUnit", "unit is already active! : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
       return
 
     setUnitIsActive(_unit, true)
     onActivated(_unit)
     
-    log("activateUnit() : activated inactive unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
+    log("activateUnit", "activated inactive unit : {0}/{1}".format(m_numberOfActive.toString(), m_units.getCount().toString()))
 
   // --------------------------------------------------------------------------
   private function onStocked(unit _unit)
@@ -275,6 +289,12 @@ public class UnitRecycler
     _unit.unpause()
     _unit.show()
     RemoveGuardPosition(_unit)
+
+    var generation = 0
+    if (m_generationMap.has(_unit))
+      generation = m_generationMap.get(_unit)
+    m_generationMap.put(_unit, generation + 1)
+    
 
   // --------------------------------------------------------------------------
   private function getNextAvailableUnit() returns unit
@@ -301,7 +321,7 @@ public class UnitRecycler
   // --------------------------------------------------------------------------
   private function createUnitInternal(player owner, vec2 pos, angle facingAngle) returns unit
     if (m_units.getCount() == MAX_CAPACITY)
-      error("[UnitRecycler(" + UnitId2String(m_unitId) + ")] has exceeded capacity!")
+      logError("createUnitInternal", "exceeded capacity!")
       return null
 
     let u = CreateUnit(owner, m_unitId, pos.x, pos.y, facingAngle.radians)
@@ -317,29 +337,34 @@ public class UnitRecycler
 
     if (insertIndex != -1)
       m_units.setItem(insertIndex, u)
-      log("createUnit() : insert {0} : {1} {2}/{3}".format(insertIndex.toString(), u.getUserData().toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
+      log("createUnitInternal", "insert {0} : {1} {2}/{3}".format(insertIndex.toString(), u.getUserData().toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
     else
       m_units.add(u)
-      log("createUnit() : add : {0} {1}/{2}".format(u.getUserData().toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
+      log("createUnitInternal", "add : {0} {1}/{2}".format(u.getUserData().toString(), m_units.getCount().toString(), m_units.getCapacity().toString()))
 
     return u
 
   // --------------------------------------------------------------------------
-  private function log(string message)
+  private function log(string methodName, string message)
     if (g_enableLogging)
-      Log.debug("[UnitRecycler({0} : {1})] : {2}".format(m_unitId.toString(), UnitId2StringBJ(m_unitId), message))
+      Log.debug("UnitRecycler", methodName, UnitId2StringBJ(m_unitId), message)
+
+  // --------------------------------------------------------------------------
+  private function logError(string methodName, string message)
+    if (g_enableLogging)
+      Log.error("UnitRecycler", methodName, UnitId2StringBJ(m_unitId), message)
 
   // --------------------------------------------------------------------------
   private function fireUnitRecycledTrigger(unit _unit)
     g_triggerUnitRecycler = this
     g_lastRecycledUnit = _unit
-    g_onRecycledTrigger.execute()
+    g_onRecycledTrigger.evaluate()
 
   // --------------------------------------------------------------------------
   private function fireUnitStockedTrigger(unit _unit)
     g_triggerUnitRecycler = this
     g_lastStockedUnit = _unit
-    g_onStockedTrigger.execute()
+    g_onStockedTrigger.evaluate()
 
 // ============================================================================
 public function createUnitRecycled(player owner, int unitId, vec2 pos, angle facing) returns unit
