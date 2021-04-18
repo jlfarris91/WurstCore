@@ -13,20 +13,12 @@ public function arc.getNormal() returns vec2
 
 // ============================================================================
 public function arc.overlaps(circle circle) returns bool
-  //Log.info("==========")  
   let a = this.center.toVec3()
   let b = circle.center.toVec3()
   let d = this.getNormal().toVec3()
   let ab = b - a
   let abLen = ab.length()
   let distanceRange = this.distanceRange
-
-  //Log.info("a: " + a.toString())
-  //Log.info("b: " + b.toString())
-  //Log.info("d: " + d.toString())
-  //Log.info("ab: " + ab.toString())
-  //Log.info("abLen: " + abLen.toString())
-  //Log.info("distanceRange: " + distanceRange.toString())
 
   // Early out if not within the distance range of the arc
   if (not abLen.inRange(distanceRange.grow(circle.radius)))
@@ -40,15 +32,6 @@ public function arc.overlaps(circle circle) returns bool
   let abAngle = ab.normalized().angleBetween(d)
   let abArcHalfLen = (abAngle * abProjLen).abs()
   let abArcHalfLenMinusRadius = abArcHalfLen - circle.radius
-
-  //Log.info("bProj: " + bProj.toString())
-  //Log.info("abProj: " + abProj.toString())
-  //Log.info("abProjLen: " + abProjLen.toString())
-  //Log.info("areaHalfAngle: " + areaHalfAngle.toDegrees().toString())
-  //Log.info("areaArcHalfLength: " + areaArcHalfLength.toString())
-  //Log.info("abAngle: " + abAngle.toDegrees().toString())
-  //Log.info("abArcHalfLen: " + abArcHalfLen.toString())
-  //Log.info("abArcHalfLenMinusRadius: " + abArcHalfLenMinusRadius.toString())
 
   return abArcHalfLenMinusRadius <= areaArcHalfLength
 

@@ -142,12 +142,12 @@ public class GradientColorList
   // --------------------------------------------------------------------------
   function sample(real time) returns colorA
     if (m_entries.isEmpty())
-      Log.info("no entries")
+      Log.error("Gradient", "sample", (this castTo int).toString(), "no entries")
       return m_defaultValue
 
     let firstEntry = m_entries.getFirst()
     if (firstEntry == null)
-      Log.info("entry is null")
+      Log.error("Gradient", "sample", (this castTo int).toString(), "entry is null")
       return m_defaultValue
 
     if (m_entries.size() == 1)
