@@ -259,7 +259,7 @@ public class WeightedSetIterator<T>
 
   // --------------------------------------------------------------------------
   function hasNext() returns bool
-    return this.current != null and this.current.next != null
+    return this.current != null and (not this.hasMovedOnce or this.current.next != null)
   
   // --------------------------------------------------------------------------
   function next() returns T
@@ -377,6 +377,19 @@ public class WeightedSetIterator<T>
   for elem in weightedSet
     assertTrue(elem == i)
     i++
+  i.assertEquals(4)
+
+@test public function iteratorOnlyOneItem()
+  // arrange
+  let weightedSet = new WeightedSet<int>()
+  weightedSet.add(1, 0.0)
+
+  // act + assert
+  var i = 1
+  for elem in weightedSet
+    assertTrue(elem == i)
+    i++
+  i.assertEquals(2)
 
 @test public function get()
   // arrange

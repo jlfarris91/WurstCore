@@ -2,6 +2,8 @@ package UnitExtensions
 import GroupUtils
 import Range
 import Dice
+import ClosureTimers
+import GameConstants
 
 // ============================================================================
 public function unit.isStructure() returns bool
@@ -111,3 +113,37 @@ public function unit.setDamageRange(int weaponIndex, rangeInt range)
   this.setBaseDamage(dice.base, weaponIndex)
   this.setDiceNumber(dice.numberOfDice, weaponIndex)
   this.setDiceSides(dice.sidesPerDie, weaponIndex)
+
+// ============================================================================
+public function unit.fadeOut()
+  this.fadeOut(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, color(255,255,255))
+
+// ============================================================================
+public function unit.fadeOut(color vertexColor)
+  this.fadeOut(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, vertexColor)
+
+// ============================================================================
+public function unit.fadeOut(real duration, color vertexColor)
+  this.fadeOut(UNIT_FADE_INTERVAL, duration, vertexColor)
+
+// ============================================================================
+public function unit.fadeOut(real interval, real duration, color vertexColor)
+  doPeriodicallyTimed(interval, duration) (CallbackCounted cb) ->
+    this.setVertexColor(vertexColor.withAlpha(255).mix(vertexColor.withAlpha(0), cb.getPercentage()))
+
+// ============================================================================
+public function unit.fadeIn()
+  this.fadeIn(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, color(255,255,255))
+
+// ============================================================================
+public function unit.fadeIn(color vertexColor)
+  this.fadeIn(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, vertexColor)
+
+// ============================================================================
+public function unit.fadeIn(real duration, color vertexColor)
+  this.fadeIn(UNIT_FADE_INTERVAL, duration, vertexColor)
+
+// ============================================================================
+public function unit.fadeIn(real interval, real duration, color vertexColor)
+  doPeriodicallyTimed(interval, duration) (CallbackCounted cb) ->
+    this.setVertexColor(vertexColor.withAlpha(0).mix(vertexColor.withAlpha(255), cb.getPercentage()))

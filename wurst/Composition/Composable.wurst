@@ -16,9 +16,14 @@ public abstract class Composable implements IComposite
   // --------------------------------------------------------------------------
   @inline
   override function addComponent(IComponent component) returns IComponent
+    return addComponent(component, true)
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function addComponent(IComponent component, bool startEnabled) returns IComponent
     if (_compositionManager == null)
       _compositionManager = new CompositionManager()
-    return _compositionManager.addComponent(component)
+    return _compositionManager.addComponent(component, startEnabled)
    
   // --------------------------------------------------------------------------
   @inline

@@ -51,6 +51,11 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   @inline
   override function addComponent(IComponent component) returns IComponent
     return super.addComponent(component)
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function addComponent(IComponent component, bool startEnabled) returns IComponent
+    return super.addComponent(component, startEnabled)
    
   // --------------------------------------------------------------------------
   @inline

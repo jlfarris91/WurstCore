@@ -2,14 +2,13 @@ package CompositionManager
 import LinkedList
 import HashMap
 import IComponent
-import IComposite
 import Component
 import public Type
 import ClosureTimers
 import ErrorHandling
 
 // ============================================================================
-public class CompositionManager implements IComposite
+public class CompositionManager
   protected LinkedList<IComponent> _components
   protected HashMap<int, IComponent> _typeToComponentMap
 
@@ -35,20 +34,18 @@ public class CompositionManager implements IComposite
     _typeToComponentMap = null
 
   // --------------------------------------------------------------------------
-  @inline
-  override function addComponent(IComponent component) returns IComponent
+  function addComponent(IComponent component, bool startEnabled) returns IComponent
     if (component == null)
       argumentNullError("component")
 
     _components.add(component)
     _typeToComponentMap.put(component.typeId, component)
     (component castTo Component).initialize()
-    component.setEnabled(true)
+    component.setEnabled(startEnabled)
     return component
 
   // --------------------------------------------------------------------------
-  @inline
-  override function removeComponent(IComponent component) returns bool
+  function removeComponent(IComponent component) returns bool
     if (component == null)
       argumentNullError("component")
 
@@ -60,8 +57,7 @@ public class CompositionManager implements IComposite
     return true
 
   // --------------------------------------------------------------------------
-  @inline
-  override function getComponent(typeInfo componentType) returns IComponent
+  function getComponent(typeInfo componentType) returns IComponent
     return _typeToComponentMap.get(componentType.id)
 
   // --------------------------------------------------------------------------

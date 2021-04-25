@@ -145,9 +145,14 @@ public class UnitMetadata implements IUnitMetadata
   // --------------------------------------------------------------------------
   @inline
   override function addComponent(IComponent component) returns IComponent
+    return addComponent(component, true)
+
+  // --------------------------------------------------------------------------
+  @inline
+  override function addComponent(IComponent component, bool startEnabled) returns IComponent
     if (m_compositionManager == null)
       m_compositionManager = new CompositionManager()
-    return m_compositionManager.addComponent(component)
+    return m_compositionManager.addComponent(component, startEnabled)
 
   // --------------------------------------------------------------------------
   @inline
@@ -246,6 +251,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   let oldUnitName = whichUnit.getName()
   let existingMetadata = whichUnit.getMetadata()
   let owningPlayer = whichUnit.getOwner()
+  let wasSelected = whichUnit.isSelectedByOwner()
 
   if (existingMetadata != null)
     existingMetadata.detach()
@@ -261,6 +267,9 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   if (existingMetadata != null)
     stopIgnoreIndexing(owningPlayer)
     existingMetadata.attach(newUnit)
+
+  if (wasSelected)
+    SelectUnitAddForPlayer(newUnit, newUnit.getOwner())
 
   logDebug("[replaceUnitTLS] Reattached metadata from unit " + oldUnitName + " to unit " + newUnit.getName())
     

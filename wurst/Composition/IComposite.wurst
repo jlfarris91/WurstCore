@@ -6,6 +6,7 @@ import Type
 public interface IComposite
   function getComponent(typeInfo componentType) returns IComponent
   function addComponent(IComponent component) returns IComponent
+  function addComponent(IComponent component, bool startEnabled) returns IComponent
   function removeComponent(IComponent component) returns bool
 
 // ============================================================================
