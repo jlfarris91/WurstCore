@@ -37,3 +37,9 @@ public function unit.countTotalItemCharges(int itemTypeId) returns int
     if (_item.getTypeId() == itemTypeId)
       charges += _item.getCharges()
   return charges
+
+// ============================================================================
+public function unit.resetLevelAndXp()
+  this.setLevel(1, false)
+  this.addXp(5 - this.getXp(), false)
+  this.removeLevels(1)

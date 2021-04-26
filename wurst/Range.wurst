@@ -70,6 +70,14 @@ public function rangeInt.toString() returns string
   return "{0}-{1}".format(this.min.toString(), this.max.toString())
 
 // ============================================================================
+public function rangeReal.floor() returns rangeInt
+  return rangeInt(this.min.floor(), this.max.floor())
+
+// ============================================================================
+public function rangeInt.toReal() returns rangeReal
+  return rangeReal(this.min.toReal(), this.max.toReal())
+
+// ============================================================================
 public function rangeReal.parameterize(real value) returns real
   return parameterize(this.min, this.max, value)
 
@@ -94,12 +102,44 @@ public function rangeInt.op_mult(real factor) returns rangeInt
   return rangeInt((this.min * factor).floor(), (this.max * factor).floor())
 
 // ============================================================================
+public function rangeReal.op_divReal(real factor) returns rangeReal
+  return rangeReal(this.min / factor, this.max / factor)
+
+// ============================================================================
+public function rangeInt.op_divReal(real factor) returns rangeInt
+  return rangeInt((this.min / factor).floor(), (this.max / factor).floor())
+
+// ============================================================================
+public function rangeInt.op_plus(int value) returns rangeInt
+  return rangeInt(this.min + value, this.max + value)
+
+// ============================================================================
+public function rangeInt.op_minus(int value) returns rangeInt
+  return rangeInt(this.min - value, this.max - value)
+
+// ============================================================================
 public function lerp(rangeReal start, rangeReal _end, real t) returns rangeReal
   return rangeReal(lerp(start.min, _end.min, t), lerp(start.max, _end.max, t))  
 
 // ============================================================================
 public function lerp(rangeInt start, rangeInt _end, real t) returns rangeInt
   return rangeInt(lerpInt(start.min, _end.min, t), lerpInt(start.max, _end.max, t))
+
+// ============================================================================
+public function rangeReal.toApproxDPSString() returns string
+  return "{0} - {1} dps".format(I2S(R2I(this.min)), I2S(R2I(this.max)))
+
+// ============================================================================
+public function rangeReal.getDamageRangeString() returns string
+  return "{0} - {1}".format(I2S(R2I(this.min)), I2S(R2I(this.max)))
+
+// ============================================================================
+public function rangeInt.getApproxDPSString() returns string
+  return "{0} - {1} dps".format(I2S(this.min), I2S(this.max))
+
+// ============================================================================
+public function rangeInt.toDamageRangeString() returns string
+  return "{0} - {1}".format(I2S(this.min), I2S(this.max))
 
 // ============================================================================
 public interface RangeRealFunc<T>
