@@ -245,6 +245,10 @@ public function createUnitTLS(IUnitMetadata metadata, player owner, integer unit
 
 // ============================================================================
 public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
+  return replaceUnitTLS(whichUnit, newUnitId, unitStateMethod, true)
+
+// ============================================================================
+public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitStateMethod, bool persistXp) returns unit
   if (whichUnit == null)
     argumentNullError("whichUnit")
 
@@ -259,7 +263,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   else
     logDebug("[replaceUnitTLS] Replacing unit " + whichUnit.getName() + " with no attached metadata")
 
-  let newUnit = replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod)
+  let newUnit = replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod, persistXp)
 
   if (newUnit.hasMetadata())
     error("Unit should not have metadata yet")

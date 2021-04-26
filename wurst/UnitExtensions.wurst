@@ -30,6 +30,10 @@ public function unit.dropItemById(int itemId, vec2 pos) returns item
 
 // ============================================================================
 public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
+  return replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod, true)
+
+// ============================================================================
+public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer unitStateMethod, bool persistXp) returns unit
   let oldUnit = whichUnit
 
   // If we have bogus data, don't attempt the replace.
@@ -80,7 +84,7 @@ public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer u
   SetResourceAmount(newUnit, GetResourceAmount(oldUnit))
 
   // If both the old and new units are heroes, handle their hero info.
-  if (IsUnitType(oldUnit, UNIT_TYPE_HERO) and IsUnitType(newUnit, UNIT_TYPE_HERO))
+  if (persistXp and IsUnitType(oldUnit, UNIT_TYPE_HERO) and IsUnitType(newUnit, UNIT_TYPE_HERO))
     SetHeroXP(newUnit, GetHeroXP(oldUnit), false)
 
   // This is the fix - copy items when the unit has an inventory size
