@@ -132,7 +132,7 @@ public class TooltipBuilder
       else
         for j = 0 to itemValueCount - 1
           sb.appendLine()
-          sb.append(itm.getValue(j).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
+          sb.append("- " + itm.getValue(j).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
 
       index++
     //}
