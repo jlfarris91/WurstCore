@@ -69,11 +69,14 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
 
 // ============================================================================
 public function player.getDisplayName() returns string
-  return this.getMetadata().getDisplayName()
+  let metadata = this.getMetadata()
+  return metadata != null ? metadata.getDisplayName() : this.getName()
 
 // ============================================================================
 public function player.setDisplayName(string displayName)
-  this.getMetadata().setDisplayName(displayName)
+  let metadata = this.getMetadata()
+  if (metadata != null)
+    metadata.setDisplayName(displayName)
 
 // ============================================================================
 public function player.getDisplayNameColored() returns string
