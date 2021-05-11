@@ -23,6 +23,12 @@ ChatCommand g_chatCommand
 player g_chatCommandPlayer
 ChatCommandHandler g_chatCommandHandler
 
+CommandContext g_currentContext
+LinkedList<CommandContext> g_contextStack = new LinkedList<CommandContext>()
+
+CommandContext g_globalContext
+LinkedList<CommandContext> g_globalContextStack = new LinkedList<CommandContext>()
+
 // ============================================================================
 public function getChatCommand() returns ChatCommand
   return g_chatCommand
@@ -36,8 +42,156 @@ public function getChatCommandPlayer() returns player
   return g_chatCommandPlayer
 
 // ============================================================================
+public function getChatCommandContext() returns CommandContext
+  return g_contextStack.peek()
+
+// ============================================================================
+public function pushChatCommandContext(CommandContext context) returns CommandContext
+  g_contextStack.push(context)
+  return context
+
+// ============================================================================
+public function popChatCommandContext() returns CommandContext
+  return g_contextStack.pop()
+
+// ============================================================================
+public function getGlobalChatCommandContext() returns CommandContext
+  return g_globalContextStack.peek()
+
+// ============================================================================
+public function pushGlobalChatCommandContext(CommandContext context) returns CommandContext
+  g_globalContextStack.push(context)
+  return context
+
+// ============================================================================
+public function popGlobalChatCommandContext() returns CommandContext
+  return g_globalContextStack.pop()
+
+// ============================================================================
 public interface IChatCommandHandler
   function handleChatCommand(player p, string command, LinkedList<string> commandArgs) returns bool
+
+// ============================================================================
+public tuple chatCommand(string command, LinkedList<string> args)
+
+// ============================================================================
+public function chatCommand.toString() returns string
+  return "-{0} {1}".format(this.command, this.args.joinBy(" "))
+
+// ============================================================================
+public class CommandContext
+  private string m_command
+  private LinkedList<string> m_args
+  private IterableMap<string, Union> m_variables = new IterableMap<string, Union>()
+
+  // --------------------------------------------------------------------------
+  construct(chatCommand cmd)
+    m_command = cmd.command
+    m_args = cmd.args.copy()
+
+  // --------------------------------------------------------------------------
+  construct(CommandContext other)
+    m_command = other.m_command
+    m_args = other.m_args.copy()
+
+    for key in other.m_variables
+      m_variables.put(key, other.m_variables.get(key).clone())
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_args
+    m_args = null
+
+    for key in m_variables
+      destroy m_variables.get(key)
+    destroy m_variables
+    m_variables = null
+  
+  // --------------------------------------------------------------------------
+  function getCommand() returns chatCommand
+    return chatCommand(m_command, m_args)
+
+  // --------------------------------------------------------------------------
+  function clone() returns CommandContext
+    return new CommandContext(this)
+
+  // --------------------------------------------------------------------------
+  function setBool(string id, bool value)
+    getOrCreateVariable(id).setBool(value)
+
+  // --------------------------------------------------------------------------
+  function setReal(string id, real value)
+    getOrCreateVariable(id).setReal(value)
+
+  // --------------------------------------------------------------------------
+  function setInt(string id, int value)
+    getOrCreateVariable(id).setInt(value)
+
+  // --------------------------------------------------------------------------
+  function setString(string id, string value)
+    getOrCreateVariable(id).setString(value)
+  
+  // --------------------------------------------------------------------------
+  function getVariable(string id) returns Union
+    return m_variables.get(id)
+
+  // --------------------------------------------------------------------------
+  function getBool(string id, bool defaultValue) returns bool
+    let variable = getVariable(id)
+    return variable == null ? variable.getBool() : defaultValue
+
+  // --------------------------------------------------------------------------
+  function getReal(string id, real defaultValue) returns real
+    let variable = getVariable(id)
+    return variable == null ? variable.getReal() : defaultValue
+
+  // --------------------------------------------------------------------------
+  function getInt(string id, int defaultValue) returns int
+    let variable = getVariable(id)
+    return variable == null ? variable.getInt() : defaultValue
+
+  // --------------------------------------------------------------------------
+  function getString(string id, string defaultValue) returns string
+    let variable = getVariable(id)
+    return variable == null ? variable.getString() : defaultValue
+  
+  // --------------------------------------------------------------------------
+  private function getOrCreateVariable(string id) returns Union
+    var union = getVariable(id)
+    if (union == null)
+      union = new Union()
+      m_variables.put(id, union)
+    return union
+
+// ============================================================================
+public function CommandContext.getUnit(string id) returns unit
+  return unitFromIndex(this.getInt(id, -1))
+
+// ============================================================================
+public function CommandContext.setUnit(string id, unit _unit)
+  this.setInt(id, unitToIndex(_unit))
+
+// ============================================================================
+public function CommandContext.getUnits(string id) returns LinkedList<unit>
+  let unitCount = this.getInt("__{0}\\UNITCOUNT".format(id), -1)
+  if (unitCount == -1)
+    return null
+  let units = new LinkedList<unit>()
+  for i = 0 to unitCount - 1
+    let unitHandleId = this.getInt("__{0}\\UNIT{1}".format(id, i.toString()), -1)
+    if (unitHandleId != -1)
+      let u = unitFromIndex(unitHandleId)
+      if (u != null)
+        units.add(u)
+  return units
+
+// ============================================================================
+public function CommandContext.setUnits(string id, LinkedList<unit> units)
+  this.setInt("__{0}\\UNITCOUNT".format(id), units.size())
+  var i = 0
+  for _unit in units
+    this.setInt("__{0}\\UNIT{1}".format(id, i.toString()), unitToIndex(_unit))
+    i++
 
 // ============================================================================
 public class ChatCommandHandler implements IChatCommandHandler
@@ -527,6 +681,11 @@ public class ChatCommand
     m_argumentValues = null
 
   // --------------------------------------------------------------------------
+  function getArgumentName(int index) returns string
+    let arg = m_definition.getArgument(index)
+    return arg != null ? arg.getName() : null
+
+  // --------------------------------------------------------------------------
   function getArgument(int index) returns Union
     let arg = m_definition.getArgument(index)
     return arg != null ? getArgument(arg) : null
@@ -544,30 +703,63 @@ public function registerChatCommandHandler(ChatCommandHandler handler, int prior
   g_commandHandlers.add(handler, priority)
 
 // ============================================================================
-function parseChatCommand()
-  let p = GetTriggerPlayer()
+public function parseChatCommand(string commandString) returns chatCommand
 
-  var commandLine = GetEventPlayerChatString()
-  commandLine = commandLine.substring(1, commandLine.length())
+  var commandLine = commandString
+
+  if (commandLine.startsWith("-"))
+    commandLine = commandLine.substring(1, commandLine.length())
 
   let commandArgs = commandLine.split(" ")
   if (commandArgs.isEmpty())
     destroy commandArgs
-    return
+    return chatCommand(null, null)
 
+  // The command is always the first arg
   let command = commandArgs.getFirst()
   commandArgs.removeAt(0)
 
+  return chatCommand(command, commandArgs)
+
+// ============================================================================
+public function executeChatCommand(player sender, chatCommand command) returns bool
+
+  if (command.command == null)
+    error("Argument command.command cannot be null")
+
+  if (command.args == null)
+    error("Argument command.commandArgs cannot be null")
+
+  let context = new CommandContext(command)
+  pushChatCommandContext(context)
+
   var handled = false
   for chatCommandHandler in g_commandHandlers
-    handled = chatCommandHandler.handleChatCommand(p, command, commandArgs)
+    handled = chatCommandHandler.handleChatCommand(sender, command.command, command.args)
     if (handled)
       break
 
-  if (not handled)
-    printPartialMatchingCommands(command, p)
+  popChatCommandContext()
+  destroy context
 
-  destroy commandArgs
+  if (not handled)
+    return false
+
+  return true
+
+// ============================================================================
+function parsePlayerChatString()
+  let p = GetTriggerPlayer()
+  let commandLine = GetEventPlayerChatString()
+  
+  let cmd = parseChatCommand(commandLine)
+  if (cmd.command == null)
+    return
+
+  if (not executeChatCommand(p, cmd))
+    printPartialMatchingCommands(cmd.command, p)
+
+  destroy cmd.args
 
 // ============================================================================
 class ChatCommandDefinitionComparator implements Comparator<ChatCommandDefinition>
@@ -682,4 +874,4 @@ init
 
   g_chatCommandTrigger = CreateTrigger()
   g_chatCommandTrigger.registerAnyPlayerChatEvent(COMMAND_PREFIX, false)
-  g_chatCommandTrigger.addAction(function parseChatCommand)
+  g_chatCommandTrigger.addAction(function parsePlayerChatString)
