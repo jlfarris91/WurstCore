@@ -8,6 +8,7 @@ import RegisterEvents
 import ClosureTimers
 import ColorUtility
 import UnitIndexer
+import Suspend
 
 // ============================================================================
 // Based on Unit Recycler by AGD https://www.hiveworkshop.com/threads/snippet-unit-recycler.286701/
@@ -280,13 +281,13 @@ public class UnitRecycler
     _unit.setScale(1.0)
     _unit.setVertexColor(Colors.white)
     _unit.setFlyHeight(_unit.getDefaultFlyHeight(), 0)
-    _unit.pause()
+    _unit.suspend()
     _unit.hide()
     _unit.setPos(DEACTIVATED_POS)
 
   // --------------------------------------------------------------------------
   private function onActivated(unit _unit)
-    _unit.unpause()
+    _unit.unsuspend()
     _unit.show()
     RemoveGuardPosition(_unit)
 

@@ -1,0 +1,33 @@
+package Suspend
+import AbilityObjEditing
+import Orders
+
+// https://www.hiveworkshop.com/threads/snippet-suspendunit.266681/
+
+constant int PAUSE = 'paus'
+constant int DEFEND = OrderIds.defend
+
+// ============================================================================
+@compiletime function createAbility()
+  new AbilityDefinitionIllidanChannel(PAUSE)
+    ..setName("Suspend")
+    ..setBaseOrderID(1, "defend")
+    ..setArtCaster("")
+    ..setHeroAbility(false)
+    ..setLevels(1)
+    ..setFollowThroughTime(1, 10000)
+    ..setAnimationNames("stand")
+    ..setArtEffect("")
+
+// ============================================================================
+public function unit.suspend()
+  this.addAbility(PAUSE)
+  this.issueImmediateOrderById(DEFEND)
+
+// ============================================================================
+public function unit.unsuspend()
+  this.removeAbility(PAUSE)
+
+// ============================================================================
+public function unit.isSuspended() returns bool
+  return this.getAbilityLevel(PAUSE) > 0
