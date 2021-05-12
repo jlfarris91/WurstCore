@@ -300,7 +300,7 @@ public class ChatCommandHandler implements IChatCommandHandler
 
   // --------------------------------------------------------------------------
   function getCommandHandler(string command) returns trigger
-    let def = m_commandDefinitionMap.get(command)
+    let def = getCommandDefinition(command)
     if (def == null)
       error("No command definition registered for command '{0}'".format(command))
       return null
