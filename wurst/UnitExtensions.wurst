@@ -29,6 +29,14 @@ public function unit.dropItemById(int itemId, vec2 pos) returns item
   return itm
 
 // ============================================================================
+public function unit.resetLevelAndXP()
+  var watchdog = 0
+  while (this.getLevel() > 1 and this.getXp() > 0 and watchdog < 10)
+    watchdog++
+    UnitStripHeroLevel(this, this.getLevel())
+    AddHeroXP(this, -this.getXp(), false)
+
+// ============================================================================
 public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
   return replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod, true)
 
