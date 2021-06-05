@@ -1,0 +1,8 @@
+package FramehandleExtensions
+
+// ============================================================================
+public function framehandle.clearFocus()
+  this.setFocus(false)
+  let enabled = this.isEnabled()
+  this.setEnabled(not enabled)
+  this.setEnabled(enabled)
