@@ -22,13 +22,13 @@ public enum DispatchPriority
 public class GlobalDispatcher
 
   // --------------------------------------------------------------------------
-  static function invoke(Action action, DispatchPriority priority)
+  static function invoke(DispatchPriority priority, Action action)
     if (g_dispatcher == null)
       g_dispatcher = new Dispatcher()
     g_dispatcher.invoke(priority, action)
 
   // --------------------------------------------------------------------------
-  static function invokeAfter(real seconds, Action action, DispatchPriority priority)
+  static function invokeAfter(real seconds, DispatchPriority priority, Action action)
     if (g_dispatcher == null)
       g_dispatcher = new Dispatcher()
     g_dispatcher.invokeAfter(seconds, priority, action)
