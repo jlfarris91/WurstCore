@@ -1,0 +1,59 @@
+package Loaded
+import RegisterEvents
+import HashMap
+
+HashMap<unit, unit> g_loadedUnits = new HashMap<unit, unit>()
+trigger g_unitUnloadedTrigger = CreateTrigger()
+unit g_unloadedUnit
+
+// ============================================================================
+/** Register a callback for the event of a unit being unloaded.
+    Use getUnloadedUnit() to get the unloaded unit.
+    Note: isUnitLoaded() will return true for the unloaded unit.
+*/
+public function registerUnitUnloadedEvent(code callback)
+  g_unitUnloadedTrigger.addCondition(Condition(callback))
+
+// ============================================================================
+/** Gets the unit being unloaded for the unit unloaded event */
+public function getUnloadedUnit() returns unit
+  return g_unloadedUnit
+
+// ============================================================================
+/** Gets a value indicating whether the given unit is being held by another */
+public function isUnitLoaded(unit _unit) returns bool
+  return g_loadedUnits.has(_unit)
+
+// ============================================================================
+/** Gets the unit that is holding the loaded unit */
+public function getHoldingUnit(unit loadedUnit) returns unit
+  return g_loadedUnits.get(loadedUnit)
+
+// ============================================================================
+function raiseUnitUnloadedEvent(unit _unit)
+  Log.info("Unit " + _unit.getName() + " unloaded from unit " + getHoldingUnit(_unit).getName())
+  g_unloadedUnit = _unit
+  g_unitUnloadedTrigger.evaluate()
+  g_unloadedUnit = null
+
+// ============================================================================
+function onUnitLoaded()
+  let loadedUnit = GetLoadedUnit()
+  let loadingUnit = GetTriggerUnit()
+  g_loadedUnits.put(loadedUnit, loadingUnit)
+  Log.info("Unit " + loadedUnit.getName() + " loaded into unit " + loadingUnit.getName())
+
+// ============================================================================
+function onUnitEnterMap()
+  let enteringUnit = GetEnteringUnit()
+  if (g_loadedUnits.has(enteringUnit))
+    raiseUnitUnloadedEvent(enteringUnit)
+    g_loadedUnits.remove(enteringUnit)
+
+// ============================================================================
+init
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_LOADED, function onUnitLoaded)
+  
+  let enterMapTrigger = CreateTrigger()
+  enterMapTrigger.addCondition(Condition(function onUnitEnterMap))
+  TriggerRegisterEnterRectSimple(enterMapTrigger, GetEntireMapRect())
