@@ -17,6 +17,7 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   private player m_player
   private string m_displayName
   private bool m_leftGame
+  private bool m_lostGame
 
   // --------------------------------------------------------------------------
   construct(player p)
@@ -46,6 +47,14 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   // --------------------------------------------------------------------------
   function setHasLeftGame(bool value)
     m_leftGame = value
+
+  // --------------------------------------------------------------------------
+  function getHasLostGame() returns bool
+    return m_lostGame
+
+  // --------------------------------------------------------------------------
+  function setHasLostGame(bool value)
+    m_lostGame = value
 
   // --------------------------------------------------------------------------
   @inline
