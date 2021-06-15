@@ -1,8 +1,8 @@
 package Grid
-import ErrorIf
 import Bounds
 import Action
 import Math
+import ErrorHandling
 
 int INVALID_INDEX = -1
 
@@ -72,8 +72,10 @@ public class Grid implements IGrid
 
   // --------------------------------------------------------------------------
   override function getCellBounds(cell cell) returns bounds
-    ErrorIf.argumentIsOutOfBounds(cell.row, 0, _height - 1, "cell.row")
-    ErrorIf.argumentIsOutOfBounds(cell.column, 0, _width - 1, "cell.column")
+    if (cell.row < 0 or cell.row >= _height)
+      error("Argument out of range: cell.row")
+    if (cell.column < 0 or cell.column >= _width)
+      error("Argument out of range: cell.column")
     let min = _bounds.min + vec2(_cellSize.x * cell.column, _cellSize.y * cell.row)
     let max = min + _cellSize
     return bounds(min, max)
@@ -106,8 +108,10 @@ public class Grid implements IGrid
 
 // ============================================================================
 public function cell.toIndex(int width, int height) returns int
-  ErrorIf.argumentIsOutOfBounds(this.row, 0, height - 1, "row")
-  ErrorIf.argumentIsOutOfBounds(this.column, 0, width - 1, "column")
+  if (this.row < 0 or this.row >= height)
+    error("Argument out of range: row")
+  if (this.column < 0 or this.column >= width)
+    error("Argument out of range: column")
   return this.row * width + this.column
 
 // ============================================================================
@@ -116,7 +120,8 @@ public function cell.toString() returns string
 
 // ============================================================================
 public function cell(int index, int width, int height) returns cell
-  ErrorIf.argumentIsOutOfBounds(index, 0, (width * height) - 1, "index")
+  if (index < 0 or index >= width*height)
+    error("Argument out of range: index")
   return cell(index mod width, index div height)
 
 // ============================================================================
