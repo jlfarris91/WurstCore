@@ -139,6 +139,10 @@ public function unit.fadeOut(real duration, color vertexColor)
   this.fadeOut(UNIT_FADE_INTERVAL, duration, vertexColor)
 
 // ============================================================================
+public function unit.fadeOut(real interval, real duration)
+  this.fadeOut(interval, duration, color(255,255,255))
+
+// ============================================================================
 public function unit.fadeOut(real interval, real duration, color vertexColor)
   doPeriodicallyTimed(interval, duration) (CallbackCounted cb) ->
     this.setVertexColor(vertexColor.withAlpha(255).mix(vertexColor.withAlpha(0), cb.getPercentage()))
@@ -154,6 +158,10 @@ public function unit.fadeIn(color vertexColor)
 // ============================================================================
 public function unit.fadeIn(real duration, color vertexColor)
   this.fadeIn(UNIT_FADE_INTERVAL, duration, vertexColor)
+
+// ============================================================================
+public function unit.fadeIn(real interval, real duration)
+  this.fadeIn(interval, duration, color(255,255,255))
 
 // ============================================================================
 public function unit.fadeIn(real interval, real duration, color vertexColor)
