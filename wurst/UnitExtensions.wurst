@@ -167,3 +167,8 @@ public function unit.fadeIn(real interval, real duration)
 public function unit.fadeIn(real interval, real duration, color vertexColor)
   doPeriodicallyTimed(interval, duration) (CallbackCounted cb) ->
     this.setVertexColor(vertexColor.withAlpha(0).mix(vertexColor.withAlpha(255), cb.getPercentage()))
+
+// ============================================================================
+public function unit.fade(real interval, real duration, colorA startColor, colorA endColor) returns CallbackCounted
+  return doPeriodicallyTimed(interval, duration) (CallbackCounted cb) ->
+    this.setVertexColor(startColor.mix(endColor, cb.getPercentage()))
