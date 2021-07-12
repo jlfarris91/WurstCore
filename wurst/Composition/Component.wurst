@@ -37,10 +37,6 @@ public abstract class Component implements IComponent
     setEnabled(false)
 
   // --------------------------------------------------------------------------
-  function initialize()
-    skip
-
-  // --------------------------------------------------------------------------
   protected function onEnabled()
     skip
 

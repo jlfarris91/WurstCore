@@ -2,7 +2,6 @@ package CompositionManager
 import LinkedList
 import HashMap
 import IComponent
-import Component
 import public Type
 import ClosureTimers
 import ErrorHandling
@@ -40,7 +39,6 @@ public class CompositionManager
 
     _components.add(component)
     _typeToComponentMap.put(component.typeId, component)
-    (component castTo Component).initialize()
     component.setEnabled(startEnabled)
     return component
 
