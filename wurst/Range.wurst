@@ -118,6 +118,14 @@ public function rangeInt.op_minus(int value) returns rangeInt
   return rangeInt(this.min - value, this.max - value)
 
 // ============================================================================
+public function rangeReal.lerp(real t) returns real
+  return lerp(this.min, this.max, t)
+
+// ============================================================================
+public function rangeInt.lerp(real t) returns real
+  return lerp(this.min.toReal(), this.max.toReal(), t)
+
+// ============================================================================
 public function lerp(rangeReal start, rangeReal _end, real t) returns rangeReal
   return rangeReal(lerp(start.min, _end.min, t), lerp(start.max, _end.max, t))  
 

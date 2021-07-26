@@ -58,8 +58,8 @@ public function passesChanceCheck(real chance01) returns bool
   return passesChanceCheck(chance01, GetRandomReal(0, 1))
 
 // ============================================================================
-public function passesChanceCheck(real chance01, real value01) returns bool
-  return value01 < chance01
+public function passesChanceCheck(real chance, real value) returns bool
+  return value < chance
 
 // ============================================================================
 public function moveTowards(real current, real target, real maxSpeed) returns real
