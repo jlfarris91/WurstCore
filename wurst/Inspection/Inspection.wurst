@@ -1,4 +1,0 @@
-package Inspection
-import public InspectionInterfaces
-import public UnitDescriptor
-import public PropertyDescriptors
