@@ -3,7 +3,9 @@ import GroupUtils
 import Range
 import Dice
 import ClosureTimers
-import GameConstants
+
+@configurable public constant real UNIT_FADE_INTERVAL = 0.1
+@configurable public constant real UNIT_FADE_DURATION = 3.0
 
 // ============================================================================
 public function unit.isStructure() returns bool

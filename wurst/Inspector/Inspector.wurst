@@ -348,12 +348,6 @@ public class Inspector
     doPeriodically(0.1) (CallbackPeriodic cb) ->
       Inspector.refresh()
 
-    onKeyRelease(_player, OSKEY_APPS) () ->
-      if (Inspector.getIsVisible())
-        Inspector.hide()
-      else
-        Inspector.show()
-
 // ============================================================================
 function onSelectionChanged()
   if (GetTriggerPlayer() == g_HostPlayer)
@@ -361,6 +355,10 @@ function onSelectionChanged()
 
 // ============================================================================
 init
+
+  if (not loadTOCFile("Inspector.toc"))
+    Log.warn("Failed to load Inspector.toc")
+
   nullTimer(() -> Inspector.initialize())
   
   let playerSelectionChangedTrigger = CreateTrigger()
