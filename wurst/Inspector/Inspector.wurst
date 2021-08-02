@@ -4,7 +4,8 @@ import LinkedList
 import ClosureFrames
 import Union
 import ClosureTimers
-import ClosureKeyPresses
+import Frame
+import StackPanelLayout
 
 InspectorFrame g_inspectorFrame
 
@@ -78,7 +79,14 @@ public class IntEditor extends PropertyEditor
   override function initialize()
     super.initialize()
     
-    m_editBox = getFrame("IntEditorEditBox")
+    m_editBox = createFrame(
+      "GLUEEDITBOX",
+      "IntEditorTextBox",
+      GAME_UI,
+      "EscMenuEditBoxTemplate", 0)
+    ..setText("<MISSING>")
+    ..setAllPoints(getFrameHandle())
+    ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 
   // --------------------------------------------------------------------------
@@ -173,8 +181,10 @@ public class InspectorEditorRow extends InspectorRow
 
     if (m_editor != null)
       m_editor.getFrameHandle()
+      ..clearAllPoints()
       ..setAllPoints(m_propertyEditorFrame)
-      ..setParent(getFrameHandle())
+      ..setParent(m_propertyEditorFrame)
+      ..show()
 
 // ============================================================================
 public class InspectorCategoryRow extends InspectorRow
@@ -197,10 +207,24 @@ public class InspectorCategoryRow extends InspectorRow
 public class InspectorFrame extends Frame
   private LinkedList<int> m_contexts
   private LinkedList<InspectorRow> m_rows = new LinkedList<InspectorRow>()
+  private framehandle m_rowsContainer
+  private framehandle m_titleFrame
+  private framehandle m_rowsContainerScrollBar
+  private constant int m_fixedRowCount = 15
 
   // --------------------------------------------------------------------------
   construct()
     super("InspectorTemplate", GAME_UI)
+
+  // --------------------------------------------------------------------------
+  override function initialize()
+    super.initialize()
+
+    m_rowsContainer = getFrame("InspectorRowsContainer")
+    m_rowsContainerScrollBar = getFrame("InspectorRowsContainerScrollBar")
+    
+    m_titleFrame = getFrame("InspectorTitle")
+    ..setText("Inspector")
 
   // --------------------------------------------------------------------------
   function setContexts(LinkedList<unit> contexts)
@@ -250,16 +274,39 @@ public class InspectorFrame extends Frame
     for desc in propertyDescriptors
       addEditorRow(desc)
 
+    let layout = new StackPanelLayout()
+    layout.setOrientation(LayoutOrientation.DOWN)
+    layout.setMargin(vec2(0.01, 0.01))
+    layout.layoutBegin()
+
+    for row in m_rows
+      layout.layoutNextFrame(row.getFrameHandle(), m_rowsContainer)
+
+    destroy layout
+
     refresh()
 
   // --------------------------------------------------------------------------
   private function addEditorRow(IPropertyDescriptor propertyDescriptor) returns InspectorEditorRow
+
+    if (m_rows.size() == 15)
+      return null
+
     let editor = buildEditor(propertyDescriptor)
-    ..initialize()
-    ..setContexts(m_contexts)
+    if (editor != null)
+      editor.initialize()
+      editor.setContexts(m_contexts)
+      editor.setPropertyDescriptor(propertyDescriptor)
+      editor.show()
+
     let row = new InspectorEditorRow(propertyDescriptor, editor)
     ..initialize()
-    ..setParent(getFrameHandle())
+    ..setParent(m_rowsContainer)
+    ..show()
+
+    row.getFrameHandle().setWidth(0.1)
+    row.getFrameHandle().setHeight(0.02)
+
     m_rows.add(row)
     return row
 
@@ -267,7 +314,7 @@ public class InspectorFrame extends Frame
   // private function addCategoryRow(string category) returns InspectorCategoryRow
   //   let row = new InspectorCategoryRow(category)
   //   ..initialize()
-  //   ..setParent(getFrameHandle())
+  //   ..setParent(m_listBoxFrame)
   //   m_rows.add(row)
   //   return row
 
@@ -329,7 +376,7 @@ public class Inspector
     g_inspectorFrame.hide()
 
   // --------------------------------------------------------------------------
-  protected static function initialize(player _player)
+  static function initialize(player _player)
     if (g_inspectorFrame != null)
       return
     
@@ -340,7 +387,7 @@ public class Inspector
 
     let frame = g_inspectorFrame.getFrameHandle()
     frame.setAbsPoint(FRAMEPOINT_TOPRIGHT, 0.8, 0.54)
-    frame.setSize(0.2, 0.34)
+    frame.setSize(0.25, 0.34)
 
     doPeriodically(1.0) (CallbackPeriodic cb) ->
       Inspector.rebuild()
@@ -349,19 +396,7 @@ public class Inspector
       Inspector.refresh()
 
 // ============================================================================
-function onSelectionChanged()
-  if (GetTriggerPlayer() == g_HostPlayer)
-    Inspector.setContexts(g_HostPlayer.getSelectedUnits())
-
-// ============================================================================
 init
 
   if (not loadTOCFile("Inspector.toc"))
     Log.warn("Failed to load Inspector.toc")
-
-  nullTimer(() -> Inspector.initialize())
-  
-  let playerSelectionChangedTrigger = CreateTrigger()
-  playerSelectionChangedTrigger.addCondition(Condition(function onSelectionChanged))
-  TriggerRegisterPlayerUnitEvent(playerSelectionChangedTrigger, g_HostPlayer, EVENT_PLAYER_UNIT_SELECTED, null)
-  TriggerRegisterPlayerUnitEvent(playerSelectionChangedTrigger, g_HostPlayer, EVENT_PLAYER_UNIT_DESELECTED, null)

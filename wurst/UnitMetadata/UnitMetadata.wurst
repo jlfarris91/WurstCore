@@ -173,10 +173,11 @@ public class UnitMetadata implements IUnitMetadata
   
   // --------------------------------------------------------------------------
   override function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)
-    for comp in m_compositionManager
-      let objectDescriptor = (comp castTo int) castTo IObjectDescriptor
-      if (objectDescriptor != null)
-        objectDescriptor.getPropertyDescriptors(context, propertyDescriptors)
+    if (m_compositionManager != null)
+      for comp in m_compositionManager
+        let objectDescriptor = (comp castTo int) castTo IObjectDescriptor
+        if (objectDescriptor != null)
+          objectDescriptor.getPropertyDescriptors(context, propertyDescriptors)
 
 // ============================================================================
 public function unit.hasMetadata() returns bool

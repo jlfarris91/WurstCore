@@ -47,7 +47,7 @@ public class UnitRealFieldPropertyDescriptor extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   construct(string name, unitrealfield field)
-    super(name, "int")
+    super(name, "real")
     m_field = field
 
   // --------------------------------------------------------------------------
@@ -79,7 +79,7 @@ public class UnitBoolFieldPropertyDescriptor extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   construct(string name, unitbooleanfield field)
-    super(name, "int")
+    super(name, "bool")
     m_field = field
 
   // --------------------------------------------------------------------------
@@ -111,7 +111,7 @@ public class UnitStringFieldPropertyDescriptor extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   construct(string name, unitstringfield field)
-    super(name, "int")
+    super(name, "string")
     m_field = field
 
   // --------------------------------------------------------------------------
@@ -162,7 +162,7 @@ public class UnitObjectDescriptor implements IObjectDescriptor
     propertyDescriptors.add(m_name)
 
     if (contextUnit.isHero())
-      propertyDescriptors.add(m_name)
+      propertyDescriptors.add(m_properName)
       propertyDescriptors.add(m_xp)
       propertyDescriptors.add(m_level)
 
@@ -170,6 +170,9 @@ public class UnitObjectDescriptor implements IObjectDescriptor
     propertyDescriptors.add(m_maxHp)
     propertyDescriptors.add(m_mana)
     propertyDescriptors.add(m_maxMana)
+
+    for descriptor in s_descriptors
+      propertyDescriptors.add(descriptor)
 
     let metadata = contextUnit.getMetadata()
     if (metadata != null)

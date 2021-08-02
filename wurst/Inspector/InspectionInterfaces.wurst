@@ -34,6 +34,10 @@ public class PropertyDescriptorCollection
   function iterator() returns HLIterator<IPropertyDescriptor>
     return m_descriptors.iterator()
 
+  // --------------------------------------------------------------------------
+  function size() returns int
+    return m_descriptors.size()
+
 // ============================================================================
 public interface IObjectDescriptor
   function getId() returns string
