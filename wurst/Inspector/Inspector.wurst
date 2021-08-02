@@ -1,140 +1,12 @@
 package Inspector
 import Inspection
 import LinkedList
-import ClosureFrames
-import Union
 import ClosureTimers
 import Frame
 import StackPanelLayout
+import PropertyEditors
 
 InspectorFrame g_inspectorFrame
-
-// ============================================================================
-public abstract class PropertyEditor extends Frame
-  private LinkedList<int> m_contexts
-  private IPropertyDescriptor m_propertyDescriptor
-  private bool m_isIndeterminate
-
-  // --------------------------------------------------------------------------
-  construct(string name, framehandle owner)
-    super(name, owner)
-
-  // --------------------------------------------------------------------------
-  construct(framehandle frame)
-    super(frame)
-
-  // --------------------------------------------------------------------------
-  function getPropertyDescriptor() returns IPropertyDescriptor
-    return m_propertyDescriptor
-
-  // --------------------------------------------------------------------------
-  function setPropertyDescriptor(IPropertyDescriptor propertyDescriptor)
-    m_propertyDescriptor = propertyDescriptor
-
-  // --------------------------------------------------------------------------
-  function setContexts(LinkedList<int> contexts)
-    m_contexts = contexts
-
-  // --------------------------------------------------------------------------
-  function getContexts() returns LinkedList<int>
-    return m_contexts
-
-  // --------------------------------------------------------------------------
-  function refresh()
-    skip
-
-  // --------------------------------------------------------------------------
-  function canGetValue(int context, Union value) returns bool
-    return m_propertyDescriptor.canGetValue(context, value)
-
-  // --------------------------------------------------------------------------
-  function getValue(int context, Union value) returns bool
-    return m_propertyDescriptor.getValue(context, value)
-
-  // --------------------------------------------------------------------------
-  function canSetValue(int context, Union value) returns bool
-    return m_propertyDescriptor.canSetValue(context, value)
-
-  // --------------------------------------------------------------------------
-  function setValue(int context, Union value) returns bool
-    return m_propertyDescriptor.setValue(context, value)
-
-  // --------------------------------------------------------------------------
-  function getIsIndeterminate() returns bool
-    return m_isIndeterminate
-
-  // --------------------------------------------------------------------------
-  protected function setIsIndeterminate(bool value)
-    m_isIndeterminate = value
-
-// ============================================================================
-public class IntEditor extends PropertyEditor
-  private framehandle m_editBox
-
-  // --------------------------------------------------------------------------
-  construct()
-    super("IntEditorTemplate", GAME_UI)
-
-  // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
-    
-    m_editBox = createFrame(
-      "GLUEEDITBOX",
-      "IntEditorTextBox",
-      GAME_UI,
-      "EscMenuEditBoxTemplate", 0)
-    ..setText("<MISSING>")
-    ..setAllPoints(getFrameHandle())
-    ..show()
-    m_editBox.onEditboxEnter(() -> onEditboxEnter())
-
-  // --------------------------------------------------------------------------
-  override function refresh()
-    let union = new Union()
-
-    var firstValue = 0
-    var firstValueReceived = false
-    var allValuesMatch = true
-
-    let contexts = getContexts()    
-    if (contexts != null)
-      for context in contexts
-        if (canGetValue(context, union) and getValue(context, union))
-          if (not firstValueReceived)
-            firstValue = union.getInt()
-            firstValueReceived = true
-          else
-            if (firstValue != union.getInt())
-              allValuesMatch = false
-              break
-
-    setIsIndeterminate(not allValuesMatch)
-
-    if (getIsIndeterminate())
-      m_editBox.setText("<Multiple>")
-    else
-      m_editBox.setText(union.getInt().toString())
-      
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function onEditboxEnter()
-
-    let contexts = getContexts()
-    if (contexts != null)
-      return
-
-    let intVal = m_editBox.getText().toInt()
-    let union = Union.fromInt(intVal)
-    
-    for context in contexts
-      if (canGetValue(context, union))
-        setValue(context, union)
-
-    destroy union
-
-    refresh()
 
 // ============================================================================
 public abstract class InspectorRow extends Frame
@@ -210,7 +82,6 @@ public class InspectorFrame extends Frame
   private framehandle m_rowsContainer
   private framehandle m_titleFrame
   private framehandle m_rowsContainerScrollBar
-  private constant int m_fixedRowCount = 15
 
   // --------------------------------------------------------------------------
   construct()
@@ -305,7 +176,7 @@ public class InspectorFrame extends Frame
     ..show()
 
     row.getFrameHandle().setWidth(0.1)
-    row.getFrameHandle().setHeight(0.02)
+    row.getFrameHandle().setHeight(0.022)
 
     m_rows.add(row)
     return row
@@ -323,6 +194,10 @@ public class InspectorFrame extends Frame
     switch (propertyDescriptor.getEditorType())
       case "int"
         return new IntEditor()
+      case "real"
+        return new RealEditor()
+      case "string"
+        return new StringEditor()
     return null
 
 // ============================================================================

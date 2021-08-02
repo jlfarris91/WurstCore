@@ -6,19 +6,40 @@ IncludeFile "UI\FrameDef\Glue\battlenettemplates.fdf",
 IncludeFile "UI\FrameDef\UI\QuestDialog.fdf",
 
 // ============================================================================
-Frame "LISTBOX" "InspectorTemplate" {
+Frame "FRAME" "InspectorTemplate" {
   UseActiveContext,
-  Width 0.1
+  Width 0.1,
   Height 0.2,
-  ListBoxBorder 0.01,
 
-  ControlBackdrop "InspectorBackdrop",
   Frame "BACKDROP" "InspectorBackdrop" INHERITS "BattleNetControlBackdropTemplate" {
+    UseActiveContext,
+    SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, 0.0,
+    SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.02,
   }
 
-  ListBoxScrollBar "InspectorScrollBar",
-  Frame "SCROLLBAR" "InspectorScrollBar" INHERITS WITHCHILDREN "BattleNetScrollBarTemplate" {
+  Frame "TEXT" "InspectorTitle" INHERITS "BattleNetLabelTextTemplate" {
+    UseActiveContext,
+    FrameFont "MasterFont", 0.013,"",
+    FontJustificationH JUSTIFYCENTER,
+
+    SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, 0.0,
+    SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.02,
   }
+
+  Frame "FRAME" "InspectorRowsContainer" {
+    UseActiveContext,
+    SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, -0.02,
+    SetPoint BOTTOMRIGHT, "InspectorTemplate", BOTTOMRIGHT, 0.0, 0.0,
+
+    Frame "BACKDROP" "InspectorRowsContainerBackdrop" INHERITS "BattleNetControlBackdropTemplate" {
+      UseActiveContext,
+      SetAllPoints,
+    }
+  }
+
+  // Frame "SCROLLBAR" "InspectorRowsContainerScrollBar" INHERITS WITHCHILDREN "BattleNetScrollBarTemplate" {
+  //   SetPoint TOPRIGHT, "InspectorRowsContainer", TOPRIGHT, 0.005, 0,
+  // }
 }
 
 // ============================================================================
@@ -29,15 +50,33 @@ Frame "FRAME" "InspectorRowTemplate" {
   Frame "TEXT" "InspectorRowText" INHERITS "EscMenuLabelTextTemplate" {
     UseActiveContext,
     SetPoint LEFT, "InspectorRowTemplate", LEFT, 0.0, 0.0,
-    SetPoint RIGHT, "InspectorRowTemplate", CENTER, 0.0, 0.0,
+    SetPoint RIGHT, "InspectorRowTemplate", CENTER, -0.001, 0.0,
+    // SetPoint TOPLEFT, "InspectorRowTemplate", TOPLEFT, 0.0, 0.0,
+    // SetPoint BOTTOMRIGHT, "InspectorRowTemplate", BOTTOMRIGHT, 0.0, 0.0,
     FrameFont "MasterFont", 0.012,"",
-    FontJustificationH JUSTIFYRIGHT,
+    FontJustificationH JUSTIFYLEFT,
   }
 
-  Frame "BACKDROP" "InspectorEditorFrame" {
-    SetPoint LEFT, "InspectorRowTemplate", CENTER, 0.0, 0.0,
-    SetPoint RIGHT, "InspectorRowTemplate", RIGHT, 0.0, 0.0,
+  Frame "FRAME" "InspectorEditorFrame" {
+    UseActiveContext,
+    // SetPoint LEFT, "InspectorRowTemplate", CENTER, 0.0, 0.0,
+    // SetPoint RIGHT, "InspectorRowTemplate", RIGHT, 0.0, 0.0,
+    SetPoint TOPLEFT, "InspectorRowTemplate", TOP, 0.001, 0.0,
+    SetPoint BOTTOMRIGHT, "InspectorRowTemplate", BOTTOMRIGHT, 0.0, 0.0,
   }
+
+  // Frame "BACKDROP" "InspectorEditorFrame" {
+  //   SetPoint TOPLEFT, "InspectorRowTemplate", TOP, 0.0, 0.0,
+  //   SetPoint BOTTOMRIGHT, "InspectorRowTemplate", BOTTOMRIGHT, 0.0, 0.0,
+  //   DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
+  //   BackdropTileBackground, //Tile mode enabled
+  //   BackdropBackground  "ToolTipBackground", //BackgroundFile
+  //   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  //   BackdropCornerSize  0.008, //higher numbers make the corners bigger.
+  //   BackdropBackgroundInsets 0.0022 0.0022 0.0022 0.0022, //makes the background smaller, from the outside.
+  //   BackdropEdgeFile  "ToolTipBorder", //the border File
+  //   BackdropBlendAll,
+  // }
 }
 
 // ============================================================================
@@ -64,9 +103,51 @@ Frame "FRAME" "InspectorCategoryRowTemplate" {
 Frame "FRAME" "IntEditorTemplate" {
   UseActiveContext,
   Height 0.03,
+}
 
-  Frame "GLUEEDITBOX" "IntEditorTextBox" {
-    SetPoint TOPLEFT, "IntEditorTemplate", TOPLEFT, 0.0, 0.0,
-    SetPoint BOTTOMRIGHT, "IntEditorTemplate", BOTTOMRIGHT, 0.0, 0.0,
+// ============================================================================
+Frame "FRAME" "RealEditorTemplate" {
+  UseActiveContext,
+  Height 0.03,
+}
+
+// ============================================================================
+Frame "FRAME" "StringEditorTemplate" {
+  UseActiveContext,
+  Height 0.03,
+}
+
+// --- EDITBOX -----------------------------------------------------------------------
+
+Frame "TEXT" "InspectorEditBoxTextTemplate" {
+  DecorateFileNames,
+  FrameFont "MasterFont", 0.01, "",
+  FontColor 1.0 1.0 1.0,
+  FontFlags "FIXEDSIZE",
+}
+
+Frame "BACKDROP" "InspectorEditBoxBackdropTemplate" {
+  DecorateFileNames,
+  BackdropTileBackground,
+  BackdropBackground  "EscMenuEditBoxBackground",
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.0125,
+  BackdropBackgroundSize  0.256,
+  BackdropBackgroundInsets 0.005 0.005 0.005 0.005,
+  BackdropEdgeFile  "EscMenuEditBoxBorder",
+  BackdropBlendAll,
+}
+
+Frame "EDITBOX" "InspectorEditBoxTemplate" {
+  Height 0.04,
+  EditBorderSize 0.005,
+  EditCursorColor 1.0 1.0 1.0,
+
+  ControlBackdrop "InspectorEditBoxBackdrop",
+  Frame "BACKDROP" "InspectorEditBoxBackdrop" INHERITS "InspectorEditBoxBackdropTemplate" {
+  }
+
+  EditTextFrame "InspectorEditBoxBoxText",
+  Frame "TEXT" "InspectorEditBoxBoxText" INHERITS "InspectorEditBoxTextTemplate" {
   }
 }

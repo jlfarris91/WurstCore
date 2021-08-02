@@ -1,0 +1,273 @@
+package PropertyEditors
+import Frame
+import LinkedList
+import InspectionInterfaces
+import Union
+import ClosureFrames
+
+
+
+// ============================================================================
+public abstract class PropertyEditor extends Frame
+  private LinkedList<int> m_contexts
+  private IPropertyDescriptor m_propertyDescriptor
+  private bool m_isIndeterminate
+
+  // --------------------------------------------------------------------------
+  construct(string name, framehandle owner)
+    super(name, owner)
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    super(frame)
+
+  // --------------------------------------------------------------------------
+  function getPropertyDescriptor() returns IPropertyDescriptor
+    return m_propertyDescriptor
+
+  // --------------------------------------------------------------------------
+  function setPropertyDescriptor(IPropertyDescriptor propertyDescriptor)
+    m_propertyDescriptor = propertyDescriptor
+
+  // --------------------------------------------------------------------------
+  function setContexts(LinkedList<int> contexts)
+    m_contexts = contexts
+
+  // --------------------------------------------------------------------------
+  function getContexts() returns LinkedList<int>
+    return m_contexts
+
+  // --------------------------------------------------------------------------
+  function refresh()
+    skip
+
+  // --------------------------------------------------------------------------
+  function canGetValue(int context, Union value) returns bool
+    return m_propertyDescriptor.canGetValue(context, value)
+
+  // --------------------------------------------------------------------------
+  function getValue(int context, Union value) returns bool
+    return m_propertyDescriptor.getValue(context, value)
+
+  // --------------------------------------------------------------------------
+  function canSetValue(int context, Union value) returns bool
+    return m_propertyDescriptor.canSetValue(context, value)
+
+  // --------------------------------------------------------------------------
+  function setValue(int context, Union value) returns bool
+    return m_propertyDescriptor.setValue(context, value)
+
+  // --------------------------------------------------------------------------
+  function getIsIndeterminate() returns bool
+    return m_isIndeterminate
+
+  // --------------------------------------------------------------------------
+  protected function setIsIndeterminate(bool value)
+    m_isIndeterminate = value
+
+// ============================================================================
+public class IntEditor extends PropertyEditor
+  private framehandle m_editBox
+
+  // --------------------------------------------------------------------------
+  construct()
+    super("IntEditorTemplate", GAME_UI)
+
+  // --------------------------------------------------------------------------
+  override function initialize()
+    super.initialize()
+    
+    m_editBox = createFrame(
+      "GLUEEDITBOX",
+      "IntEditorTextBox",
+      GAME_UI,
+      "InspectorEditBoxTemplate", 0)
+    ..setText("<MISSING>")
+    ..setLevel(999)
+    ..setAllPoints(getFrameHandle())
+    ..show()
+    m_editBox.onEditboxEnter(() -> onEditboxEnter())
+
+  // --------------------------------------------------------------------------
+  override function refresh()
+    let union = new Union()
+
+    var firstValue = 0
+    var firstValueReceived = false
+    var allValuesMatch = true
+
+    let contexts = getContexts()    
+    if (contexts != null)
+      for context in contexts
+        if (canGetValue(context, union) and getValue(context, union))
+          if (not firstValueReceived)
+            firstValue = union.getInt()
+            firstValueReceived = true
+          else
+            if (firstValue != union.getInt())
+              allValuesMatch = false
+              break
+
+    setIsIndeterminate(not allValuesMatch)
+
+    let newText = getIsIndeterminate() ? "<Multiple>" : union.getInt().toString()
+    if (m_editBox.getText() != newText)
+      m_editBox.setText(newText)
+      
+    destroy union
+
+  // --------------------------------------------------------------------------
+  function onEditboxEnter()
+
+    let contexts = getContexts()
+    if (contexts != null)
+      return
+
+    let intVal = m_editBox.getText().toInt()
+    let union = Union.fromInt(intVal)
+    
+    for context in contexts
+      if (canGetValue(context, union))
+        setValue(context, union)
+
+    destroy union
+
+    refresh()
+
+// ============================================================================
+public class StringEditor extends PropertyEditor
+  private framehandle m_editBox
+
+  // --------------------------------------------------------------------------
+  construct()
+    super("StringEditorTemplate", GAME_UI)
+
+  // --------------------------------------------------------------------------
+  override function initialize()
+    super.initialize()
+    
+    m_editBox = createFrame(
+      "GLUEEDITBOX",
+      "StringEditorTextBox",
+      GAME_UI,
+      "InspectorEditBoxTemplate", 0)
+    ..setText("<MISSING>")
+    ..setLevel(999)
+    ..setAllPoints(getFrameHandle())
+    ..show()
+    m_editBox.onEditboxEnter(() -> onEditboxEnter())
+
+  // --------------------------------------------------------------------------
+  override function refresh()
+    let union = new Union()
+
+    var firstValue = ""
+    var firstValueReceived = false
+    var allValuesMatch = true
+
+    let contexts = getContexts()    
+    if (contexts != null)
+      for context in contexts
+        if (canGetValue(context, union) and getValue(context, union))
+          if (not firstValueReceived)
+            firstValue = union.getString()
+            firstValueReceived = true
+          else
+            if (firstValue != union.getString())
+              allValuesMatch = false
+              break
+
+    setIsIndeterminate(not allValuesMatch)
+
+    let newText = getIsIndeterminate() ? "<Multiple>" : union.getString()
+    if (m_editBox.getText() != newText)
+      m_editBox.setText(newText)
+      
+    destroy union
+
+  // --------------------------------------------------------------------------
+  function onEditboxEnter()
+
+    let contexts = getContexts()
+    if (contexts != null)
+      return
+
+    let stringVal = m_editBox.getText()
+    let union = Union.fromString(stringVal)
+    
+    for context in contexts
+      if (canGetValue(context, union))
+        setValue(context, union)
+
+    destroy union
+
+    refresh()
+
+// ============================================================================
+public class RealEditor extends PropertyEditor
+  private framehandle m_editBox
+
+  // --------------------------------------------------------------------------
+  construct()
+    super("RealEditorTemplate", GAME_UI)
+
+  // --------------------------------------------------------------------------
+  override function initialize()
+    super.initialize()
+    
+    m_editBox = createFrame(
+      "GLUEEDITBOX",
+      "RealEditorTextBox",
+      GAME_UI,
+      "InspectorEditBoxTemplate", 0)
+    ..setText("<MISSING>")
+    ..setLevel(999)
+    ..setAllPoints(getFrameHandle())
+    ..show()
+    m_editBox.onEditboxEnter(() -> onEditboxEnter())
+
+  // --------------------------------------------------------------------------
+  override function refresh()
+    let union = new Union()
+
+    var firstValue = 0.0
+    var firstValueReceived = false
+    var allValuesMatch = true
+
+    let contexts = getContexts()    
+    if (contexts != null)
+      for context in contexts
+        if (canGetValue(context, union) and getValue(context, union))
+          if (not firstValueReceived)
+            firstValue = union.getReal()
+            firstValueReceived = true
+          else
+            if (firstValue != union.getReal())
+              allValuesMatch = false
+              break
+
+    setIsIndeterminate(not allValuesMatch)
+
+    let newText = getIsIndeterminate() ? "<Multiple>" : union.getReal().toString()
+    if (m_editBox.getText() != newText)
+      m_editBox.setText(newText)
+      
+    destroy union
+
+  // --------------------------------------------------------------------------
+  function onEditboxEnter()
+
+    let contexts = getContexts()
+    if (contexts != null)
+      return
+
+    let realVal = m_editBox.getText().toReal()
+    let union = Union.fromReal(realVal)
+    
+    for context in contexts
+      if (canGetValue(context, union))
+        setValue(context, union)
+
+    destroy union
+
+    refresh()
