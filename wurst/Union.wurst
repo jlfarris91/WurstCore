@@ -36,9 +36,12 @@ public class Union
     return m_value
 
   // --------------------------------------------------------------------------
-  function setString(string value)
+  function setString(string value) returns bool
+    if (m_type == UnionType.String and m_value == value)
+      return false
     m_type = UnionType.String
     m_value = value
+    return true
 
   // --------------------------------------------------------------------------
   function getReal() returns real
@@ -47,9 +50,13 @@ public class Union
     return m_value.toReal()
 
   // --------------------------------------------------------------------------
-  function setReal(real value)
+  function setReal(real value) returns bool
+    let newValueStr = value.toString()
+    if (m_type == UnionType.Real and m_value == newValueStr)
+      return false
     m_type = UnionType.Real
-    m_value = value.toString()
+    m_value = newValueStr
+    return true
     
   // --------------------------------------------------------------------------
   function getInt() returns int
@@ -58,9 +65,13 @@ public class Union
     return m_value.toInt()
 
   // --------------------------------------------------------------------------
-  function setInt(int value)
+  function setInt(int value) returns bool
+    let newValueStr = value.toString()
+    if (m_type == UnionType.Int and m_value == newValueStr)
+      return false
     m_type = UnionType.Int
-    m_value = value.toString()
+    m_value = newValueStr
+    return true
     
   // --------------------------------------------------------------------------
   function getBool() returns bool
@@ -69,14 +80,22 @@ public class Union
     return m_value.toBool()
 
   // --------------------------------------------------------------------------
-  function setBool(bool value)
+  function setBool(bool value) returns bool
+    let newValueStr = value.toString()
+    if (m_type == UnionType.Bool and m_value == newValueStr) 
+      return false
     m_type = UnionType.Bool
-    m_value = value.toString()
+    m_value = newValueStr
+    return true
 
   // --------------------------------------------------------------------------
-  function setRawCode(int id)
+  function setRawCode(int id) returns bool
+    let newValueStr = id.toString()
+    if (m_type == UnionType.FourCC and m_value == newValueStr)
+      return false
     m_type = UnionType.FourCC
     m_value = id.toRawCode()
+    return true
 
   // --------------------------------------------------------------------------
   function getRawCode() returns int
@@ -85,11 +104,14 @@ public class Union
     return m_value.fromRawCode()    
 
   // --------------------------------------------------------------------------
-  function setFourCC(string fourCC)
+  function setFourCC(string fourCC) returns bool
+    if (m_type == UnionType.FourCC and m_value == fourCC)
+      return false
     if (fourCC.length() != 4)
       error("FourCC value must be 4 characters long")
     m_type = UnionType.FourCC
     m_value = fourCC
+    return true
 
   // --------------------------------------------------------------------------
   function getFourCC() returns string

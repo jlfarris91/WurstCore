@@ -6,6 +6,7 @@ import ClosureEvents
 import initlater UnitComponent
 import UnitExtensions
 import UnitIndexer
+import Inspection
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
@@ -19,7 +20,7 @@ function logDebug(string message)
     Log.debug(message)
 
 // ============================================================================
-public interface IUnitMetadata extends IComposite
+public interface IUnitMetadata extends IComposite, IObjectDescriptor
   function getUnit() returns unit
   function attach(unit u)
   function detach()
@@ -165,6 +166,17 @@ public class UnitMetadata implements IUnitMetadata
   @inline
   override function getComponent(typeInfo componentType) returns IComponent
     return m_compositionManager != null ? m_compositionManager.getComponent(componentType) : null
+  
+  // --------------------------------------------------------------------------
+  override function getId() returns string
+    return "UnitMetadata"
+  
+  // --------------------------------------------------------------------------
+  override function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)
+    for comp in m_compositionManager
+      let objectDescriptor = (comp castTo int) castTo IObjectDescriptor
+      if (objectDescriptor != null)
+        objectDescriptor.getPropertyDescriptors(context, propertyDescriptors)
 
 // ============================================================================
 public function unit.hasMetadata() returns bool

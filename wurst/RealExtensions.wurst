@@ -1,0 +1,5 @@
+package RealExtensions
+
+// ============================================================================
+public function real.toPercentageString01() returns string
+  return (this * 100.0).toInt().toString() + "%"

@@ -30,6 +30,10 @@ CommandContext g_globalContext
 LinkedList<CommandContext> g_globalContextStack = new LinkedList<CommandContext>()
 
 // ============================================================================
+@configurable public function chatCommandPrintToPlayer(player printTo, string msg)
+  displayMessageToPlayer(printTo, msg)
+
+// ============================================================================
 public function getChatCommand() returns ChatCommand
   return g_chatCommand
 
@@ -762,12 +766,12 @@ function parsePlayerChatString()
   destroy cmd.args
 
 // ============================================================================
-class ChatCommandDefinitionComparator implements Comparator<ChatCommandDefinition>
+public class ChatCommandDefinitionComparator implements Comparator<ChatCommandDefinition>
   override function compare(ChatCommandDefinition def1, ChatCommandDefinition def2) returns int
     return stringCompare(def1.getCommand(), def2.getCommand())
 
 // ============================================================================
-function getPartialMatchingCommands(string partialCommandName) returns LinkedList<ChatCommandDefinition>
+public function getPartialMatchingCommands(string partialCommandName) returns LinkedList<ChatCommandDefinition>
   let matchingCommandDefs = new LinkedList<ChatCommandDefinition>()
   for commandHandler in g_commandHandlers
     let commandDefs = commandHandler.getCommandDefinitions()
@@ -778,7 +782,7 @@ function getPartialMatchingCommands(string partialCommandName) returns LinkedLis
   return matchingCommandDefs
 
 // ============================================================================
-function printPartialMatchingCommands(string command, player p)
+public function printPartialMatchingCommands(string command, player p)
   let matchingCommandDefs = getPartialMatchingCommands(command)
     
   let comparator = new ChatCommandDefinitionComparator()
@@ -786,7 +790,7 @@ function printPartialMatchingCommands(string command, player p)
   destroy comparator
   
   for commandDef in matchingCommandDefs
-    displayMessageToPlayer(p, commandDef.getHelpString())
+    chatCommandPrintToPlayer(p, commandDef.getHelpString())
 
   destroy matchingCommandDefs
 
@@ -796,7 +800,7 @@ function printDetailedHelp(player p, ChatCommandDefinition commandDef)
   
   let commandDefDesc = commandDef.getDescription()
   if (commandDefDesc != null)
-    displayMessageToPlayer(p, commandDefDesc)
+    chatCommandPrintToPlayer(p, commandDefDesc)
   
   for i = 0 to commandDef.getArgumentCount()
     sb.reset()
@@ -823,7 +827,7 @@ function printDetailedHelp(player p, ChatCommandDefinition commandDef)
       else
         sb.append("<No Description>")
 
-    displayMessageToPlayer(p, sb.toString())
+    chatCommandPrintToPlayer(p, sb.toString())
   
   destroy sb
 
@@ -859,7 +863,7 @@ public function printHelp()
   destroy comparator
 
   for commandDef in matchingCommandDefs
-    displayMessageToPlayer(chatPlayer, commandDef.getHelpString())
+    chatCommandPrintToPlayer(chatPlayer, commandDef.getHelpString())
 
   // Print detailed info if the user wants help with a specific command
   if (matchingCommandDefs.size() == 1)

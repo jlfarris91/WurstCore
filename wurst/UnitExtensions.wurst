@@ -37,6 +37,11 @@ public function unit.resetLevelAndXP()
     AddHeroXP(this, -this.getXp(), false)
 
 // ============================================================================
+public function unit.resetLevelAndSetXP(int xp, bool showEyeCandy)
+  this.resetLevelAndXP()
+  this.addXp(xp, showEyeCandy)
+
+// ============================================================================
 public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
   return replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod, true)
 
