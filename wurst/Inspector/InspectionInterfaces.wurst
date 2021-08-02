@@ -1,0 +1,40 @@
+package InspectionInterfaces
+import Union
+import HashList
+
+// ============================================================================
+public interface IPropertyDescriptor
+  function getName() returns string
+
+  function canGetValue(int context, Union value) returns bool
+  function getValue(int context, Union value) returns bool
+  
+  function canSetValue(int context, Union value) returns bool
+  function setValue(int context, Union value) returns bool
+
+  function getEditorType() returns string
+  
+  function getCategory() returns string
+  function setCategory(string category)
+
+// ============================================================================
+public class PropertyDescriptorCollection
+  private HashList<IPropertyDescriptor> m_descriptors = new HashList<IPropertyDescriptor>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_descriptors
+    m_descriptors = null
+
+  // --------------------------------------------------------------------------
+  function add(IPropertyDescriptor propertyDescriptor)
+    m_descriptors.add(propertyDescriptor)
+
+  // --------------------------------------------------------------------------
+  function iterator() returns HLIterator<IPropertyDescriptor>
+    return m_descriptors.iterator()
+
+// ============================================================================
+public interface IObjectDescriptor
+  function getId() returns string
+  function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)

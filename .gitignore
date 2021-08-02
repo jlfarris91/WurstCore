@@ -5,5 +5,4 @@ wurst.dependencies
 objectEditingOutput/
 /archive
 .vscode/
-imports/
 *.j
