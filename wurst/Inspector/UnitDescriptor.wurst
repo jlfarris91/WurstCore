@@ -204,15 +204,16 @@ function registerUnitFieldPropertyDescriptor(unitstringfield field, string name)
 
 // ============================================================================
 init
-  UnitObjectDescriptor.m_name = new StringPropertyDescriptor<unit>("Name", u -> u.getName())
-  UnitObjectDescriptor.m_hp = new RealPropertyDescriptor<unit>("HP", u -> u.getHP(), (u, hp) -> u.setHP(hp))
-  UnitObjectDescriptor.m_maxHp = new IntPropertyDescriptor<unit>("Max HP", u -> u.getIntMaxHP(), (u, hp) -> u.setMaxHP(hp))
-  UnitObjectDescriptor.m_mana = new RealPropertyDescriptor<unit>("Mana", u -> u.getMana(), (u, mana) -> u.setMana(mana))
-  UnitObjectDescriptor.m_maxMana = new IntPropertyDescriptor<unit>("Max Mana", u -> u.getIntMaxMana(), (u, mana) -> u.setMaxMana(mana))
+
+  UnitObjectDescriptor.m_name = new StringPropertyDescriptor<unit>("Name", u -> u.getName())..setContextResolver(UnitContextResolver.staticInstance)
+  UnitObjectDescriptor.m_hp = new RealPropertyDescriptor<unit>("HP", u -> u.getHP(), (u, hp) -> u.setHP(hp))..setContextResolver(UnitContextResolver.staticInstance)
+  UnitObjectDescriptor.m_maxHp = new IntPropertyDescriptor<unit>("Max HP", u -> u.getIntMaxHP(), (u, hp) -> u.setMaxHP(hp))..setContextResolver(UnitContextResolver.staticInstance)
+  UnitObjectDescriptor.m_mana = new RealPropertyDescriptor<unit>("Mana", u -> u.getMana(), (u, mana) -> u.setMana(mana))..setContextResolver(UnitContextResolver.staticInstance)
+  UnitObjectDescriptor.m_maxMana = new IntPropertyDescriptor<unit>("Max Mana", u -> u.getIntMaxMana(), (u, mana) -> u.setMaxMana(mana))..setContextResolver(UnitContextResolver.staticInstance)
   
-  UnitObjectDescriptor.m_properName = new StringPropertyDescriptor<unit>("Proper Name", u -> u.getProperName())..setCategory("Hero")
-  UnitObjectDescriptor.m_xp = new IntPropertyDescriptor<unit>("XP", u -> u.getXp(), (u, xp) -> u.resetLevelAndSetXP(xp, true))..setCategory("Hero")
-  UnitObjectDescriptor.m_level = new IntPropertyDescriptor<unit>("Level", u -> u.getLevel(), (u, lvl) -> u.setLevel(lvl, true))..setCategory("Hero")
+  UnitObjectDescriptor.m_properName = new StringPropertyDescriptor<unit>("Proper Name", u -> u.getProperName())..setCategory("Hero")..setContextResolver(UnitContextResolver.staticInstance)
+  UnitObjectDescriptor.m_xp = new IntPropertyDescriptor<unit>("XP", u -> u.getXp(), (u, xp) -> u.resetLevelAndSetXP(xp, true))..setCategory("Hero")..setContextResolver(UnitContextResolver.staticInstance)
+  UnitObjectDescriptor.m_level = new IntPropertyDescriptor<unit>("Level", u -> u.getLevel(), (u, lvl) -> u.setLevel(lvl, true))..setCategory("Hero")..setContextResolver(UnitContextResolver.staticInstance)
   
   registerUnitFieldPropertyDescriptor(UNIT_IF_DEFENSE_TYPE, "DEFENSE_TYPE")
   registerUnitFieldPropertyDescriptor(UNIT_IF_ARMOR_TYPE, "ARMOR_TYPE")

@@ -19,12 +19,11 @@ public interface IPropertyDescriptor
 
 // ============================================================================
 public class PropertyDescriptorCollection
-  private HashList<IPropertyDescriptor> m_descriptors = new HashList<IPropertyDescriptor>()
+  private HashList<IPropertyDescriptor> m_descriptors
 
   // --------------------------------------------------------------------------
-  ondestroy
-    destroy m_descriptors
-    m_descriptors = null
+  construct(HashList<IPropertyDescriptor> descriptors)
+    m_descriptors = descriptors
 
   // --------------------------------------------------------------------------
   function add(IPropertyDescriptor propertyDescriptor)

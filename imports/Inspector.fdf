@@ -14,7 +14,7 @@ Frame "FRAME" "InspectorTemplate" {
   Frame "BACKDROP" "InspectorBackdrop" INHERITS "BattleNetControlBackdropTemplate" {
     UseActiveContext,
     SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, 0.0,
-    SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.02,
+    SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.03,
   }
 
   Frame "TEXT" "InspectorTitle" INHERITS "BattleNetLabelTextTemplate" {
@@ -23,12 +23,12 @@ Frame "FRAME" "InspectorTemplate" {
     FontJustificationH JUSTIFYCENTER,
 
     SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, 0.0,
-    SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.02,
+    SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.03,
   }
 
   Frame "FRAME" "InspectorRowsContainer" {
     UseActiveContext,
-    SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, -0.02,
+    SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, -0.03,
     SetPoint BOTTOMRIGHT, "InspectorTemplate", BOTTOMRIGHT, 0.0, 0.0,
 
     Frame "BACKDROP" "InspectorRowsContainerBackdrop" INHERITS "BattleNetControlBackdropTemplate" {

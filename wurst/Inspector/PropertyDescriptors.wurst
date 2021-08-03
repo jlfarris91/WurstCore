@@ -6,6 +6,19 @@ import InspectionInterfaces
 import Range
 
 // ============================================================================
+public interface ContextResolver<T>
+  function fromContext(int context) returns T
+  function toContext(T context) returns int
+
+// ============================================================================
+public class UnitContextResolver implements ContextResolver<unit>
+  static UnitContextResolver staticInstance = new UnitContextResolver()
+  override function fromContext(int context) returns unit
+    return unitFromIndex(context)
+  override function toContext(unit context) returns int
+    return unitToIndex(context)
+
+// ============================================================================
 public abstract class PropertyDescriptor implements IPropertyDescriptor
   private string m_name
   private string m_category
@@ -46,11 +59,11 @@ public abstract class PropertyDescriptor implements IPropertyDescriptor
   // --------------------------------------------------------------------------
   abstract override function setValue(int context, Union value) returns bool
 
-
 // ============================================================================
 public class StringPropertyDescriptor<T> extends PropertyDescriptor
   private Func1<T, string> m_getter
   private Action2<T, string> m_setter
+  private ContextResolver<T> m_contextResolver
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, string> getter)
@@ -80,6 +93,18 @@ public class StringPropertyDescriptor<T> extends PropertyDescriptor
       destroy m_setter
       m_setter = null
 
+    if (m_contextResolver != null)
+      destroy m_contextResolver
+      m_contextResolver = null
+
+  // --------------------------------------------------------------------------
+  function setContextResolver(ContextResolver<T> contextResolver)
+    m_contextResolver = contextResolver
+
+  // --------------------------------------------------------------------------
+  function resolveContext(int context) returns T
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
     return m_getter != null
@@ -104,6 +129,7 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
   private Func1<T, int> m_getter
   private Action2<T, int> m_setter
   private rangeInt m_range
+  private ContextResolver<T> m_contextResolver
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, int> getter)
@@ -132,6 +158,18 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
     if (m_setter != null)
       destroy m_setter
       m_setter = null
+
+    if (m_contextResolver != null)
+      destroy m_contextResolver
+      m_contextResolver = null
+
+  // --------------------------------------------------------------------------
+  function setContextResolver(ContextResolver<T> contextResolver)
+    m_contextResolver = contextResolver
+
+  // --------------------------------------------------------------------------
+  function resolveContext(int context) returns T
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
@@ -165,6 +203,7 @@ public class RealPropertyDescriptor<T> extends PropertyDescriptor
   private Func1<T, real> m_getter
   private Action2<T, real> m_setter
   private rangeReal m_range
+  private ContextResolver<T> m_contextResolver
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, real> getter)
@@ -194,13 +233,25 @@ public class RealPropertyDescriptor<T> extends PropertyDescriptor
       destroy m_setter
       m_setter = null
 
+    if (m_contextResolver != null)
+      destroy m_contextResolver
+      m_contextResolver = null
+
+  // --------------------------------------------------------------------------
+  function setContextResolver(ContextResolver<T> contextResolver)
+    m_contextResolver = contextResolver
+
+  // --------------------------------------------------------------------------
+  function resolveContext(int context) returns T
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
     return m_getter != null
 
   // --------------------------------------------------------------------------
   override function getValue(int context, Union value) returns bool
-    return value.setReal(m_getter.call(context castTo T))
+    return value.setReal(m_getter.call(resolveContext(context)))
 
   // --------------------------------------------------------------------------
   override function canSetValue(int context, Union value) returns bool
@@ -209,7 +260,7 @@ public class RealPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   override function setValue(int context, Union value) returns bool
     if (m_setter != null)
-      m_setter.call(context castTo T, value.getReal())
+      m_setter.call(resolveContext(context), value.getReal())
       return true
     return false
 
@@ -225,6 +276,7 @@ public class RealPropertyDescriptor<T> extends PropertyDescriptor
 public class BoolPropertyDescriptor<T> extends PropertyDescriptor
   private Func1<T, bool> m_getter
   private Action2<T, bool> m_setter
+  private ContextResolver<T> m_contextResolver
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, bool> getter)
@@ -254,6 +306,18 @@ public class BoolPropertyDescriptor<T> extends PropertyDescriptor
       destroy m_setter
       m_setter = null
 
+    if (m_contextResolver != null)
+      destroy m_contextResolver
+      m_contextResolver = null
+
+  // --------------------------------------------------------------------------
+  function setContextResolver(ContextResolver<T> contextResolver)
+    m_contextResolver = contextResolver
+
+  // --------------------------------------------------------------------------
+  function resolveContext(int context) returns T
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
     return m_getter != null
@@ -277,6 +341,7 @@ public class BoolPropertyDescriptor<T> extends PropertyDescriptor
 public class UnitPropertyDescriptor<T> extends PropertyDescriptor
   private Func1<T, unit> m_getter
   private Action2<T, unit> m_setter
+  private ContextResolver<T> m_contextResolver
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, unit> getter)
@@ -305,6 +370,18 @@ public class UnitPropertyDescriptor<T> extends PropertyDescriptor
     if (m_setter != null)
       destroy m_setter
       m_setter = null
+
+    if (m_contextResolver != null)
+      destroy m_contextResolver
+      m_contextResolver = null
+
+  // --------------------------------------------------------------------------
+  function setContextResolver(ContextResolver<T> contextResolver)
+    m_contextResolver = contextResolver
+
+  // --------------------------------------------------------------------------
+  function resolveContext(int context) returns T
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool

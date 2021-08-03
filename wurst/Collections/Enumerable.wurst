@@ -1,0 +1,122 @@
+package Enumerable
+import Func
+import initlater LinkedList
+import initlater HashList
+import initlater Vector
+import Action
+
+public interface IEnumerator<T>
+  function hasNext() returns bool
+  function next() returns T
+
+public interface IEnumerable<T>
+  function iterator() returns IEnumerator<T>
+
+public function IEnumerable<T>.forEach<T>(Action1<T> action)
+  let enumerator = this.iterator()
+  while (enumerator.hasNext())
+    action.call(enumerator.next())
+  destroy enumerator
+
+public function LinkedList<T>.enumerate<T>(bool owns) returns IEnumerable<T>
+  return new LinkedListEnumerable<T>(this, owns)
+
+public function HashList<T>.enumerate<T>(bool owns) returns IEnumerable<T>
+  return new HashListEnumerable<T>(this, owns)
+
+public function Vector<T>.enumerate<T>(bool owns) returns IEnumerable<T>
+  return new VectorEnumerable<T>(this, owns)
+
+public class LinkedListEnumerable<T> implements IEnumerable<T>
+  private LinkedList<T> m_source
+  private bool m_owns
+  construct (LinkedList<T> source, bool owns)
+    m_source = source
+    m_owns = owns
+  ondestroy
+    if (m_owns)
+      destroy m_source
+  override function iterator() returns IEnumerator<T>
+    return new LinkedListEnumerator<T>(m_source.iterator(), m_owns)
+  
+public class LinkedListEnumerator<T> implements IEnumerator<T>
+  private LLIterator<T> m_iterator
+  private bool m_owns
+  construct(LLIterator<T> iterator, bool owns)
+    m_iterator = iterator
+    m_owns = owns
+  ondestroy
+    if (m_owns)
+      destroy m_iterator
+  override function hasNext() returns bool
+    return m_iterator.hasNext()
+  override function next() returns T
+    return m_iterator.next()
+
+public class HashListEnumerable<T> implements IEnumerable<T>
+  private HashList<T> m_source
+  private bool m_owns
+  construct (HashList<T> source, bool owns)
+    m_source = source
+    m_owns = owns
+  ondestroy
+    if (m_owns)
+      destroy m_source
+  override function iterator() returns IEnumerator<T>
+    return new HashListEnumerator<T>(m_source.iterator(), m_owns)
+
+public class HashListEnumerator<T> implements IEnumerator<T>
+  private HLIterator<T> m_iterator
+  private bool m_owns
+  construct(HLIterator<T> iterator, bool owns)
+    m_iterator = iterator
+    m_owns = owns
+  ondestroy
+    if (m_owns)
+      destroy m_iterator
+  override function hasNext() returns bool
+    return m_iterator.hasNext()
+  override function next() returns T
+    return m_iterator.next()
+
+public class VectorEnumerable<T> implements IEnumerable<T>
+  private Vector<T> m_source
+  private bool m_owns
+  construct (Vector<T> source, bool owns)
+    m_source = source
+    m_owns = owns
+  ondestroy
+    if (m_owns)
+      destroy m_source
+  override function iterator() returns IEnumerator<T>
+    return new VectorEnumerator<T>(m_source.iterator(), m_owns)
+
+public class VectorEnumerator<T> implements IEnumerator<T>
+  private VectorIterator<T> m_iterator
+  private bool m_owns
+  construct(VectorIterator<T> iterator, bool owns)
+    m_iterator = iterator
+    m_owns = owns
+  ondestroy
+    if (m_owns)
+      destroy m_iterator
+  override function hasNext() returns bool
+    return m_iterator.hasNext()
+  override function next() returns T
+    return m_iterator.next()
+
+public class RangeEnumerator<T> implements IEnumerator<T>
+  private Func1<int, T> m_iterator
+  private int m_curr
+  private int m_end
+  construct(Func1<int, T> iterator, int startIndex, int endIndex)
+    m_iterator = iterator
+    m_curr = startIndex
+    m_end = endIndex
+  ondestroy
+    destroy m_iterator
+  override function hasNext() returns bool
+    return m_curr < m_end
+  override function next() returns T
+    m_curr++
+    return m_iterator.call(m_curr)
