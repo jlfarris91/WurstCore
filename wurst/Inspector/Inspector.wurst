@@ -261,7 +261,7 @@ public class InspectorFrame extends Frame
     m_windowRange.min = max(min(m_windowRange.min, descriptorsCount - m_numRows), 0)
     m_windowRange.max = m_windowRange.min + m_numRows
 
-    Log.info("Inspector", "updateWindow", "", "windowRange = " + m_windowRange.min.toString() + ", " + m_windowRange.max.toString() + " -> " + m_windowRange.getLength().toString())
+    // Log.info("Inspector", "updateWindow", "", "windowRange = " + m_windowRange.min.toString() + ", " + m_windowRange.max.toString() + " -> " + m_windowRange.getLength().toString())
 
     for i = 0 to m_windowRange.getLength() - 1
       let descIdx = m_windowRange.min + i
@@ -272,7 +272,7 @@ public class InspectorFrame extends Frame
         m_descriptorWindow.setItem(i, descriptor)
       else
         m_descriptorWindow.add(descriptor)
-      Log.info("Inspector", "updateWindow", "", "window[{0}] -> {1} = {2}".format(i.toString(), descIdx.toString(), descriptor.getName()))
+      // Log.info("Inspector", "updateWindow", "", "window[{0}] -> {1} = {2}".format(i.toString(), descIdx.toString(), descriptor.getName()))
 
   // --------------------------------------------------------------------------
   private function updateRows()

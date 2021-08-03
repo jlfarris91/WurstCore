@@ -65,7 +65,14 @@ public abstract class PropertyEditor extends Frame
 
   // --------------------------------------------------------------------------
   protected function setDescriptorValue(int context, Union value) returns bool
-    return m_descriptor != null and m_descriptor.setValue(context, value)
+    if (m_descriptor == null)
+      return false
+    Log.info("PropertyEditor", "setDescriptorValue", "", "setting descriptor value + " + value.getString() + " for context " + context.toString())
+    if (m_descriptor.setValue(context, value))
+      Log.info("PropertyEditor", "setDescriptorValue", "", "successfully set descriptor value " + value.getString() +" for context " + context.toString())
+      return true
+    Log.info("PropertyEditor", "setDescriptorValue", "", "failed to set descriptor value + " + value.getString() + " for context " + context.toString())
+    return false
 
   // --------------------------------------------------------------------------
   function getIsIndeterminate() returns bool
@@ -148,11 +155,11 @@ public class IntEditor extends PropertyEditor
       "IntEditorTextBox",
       GAME_UI,
       "InspectorEditBoxTemplate", 0)
+    ..onEditboxEnter(() -> onEditboxEnter())
     ..setText("<MISSING>")
     ..setLevel(999)
     ..setAllPoints(getFrameHandle())
     ..show()
-    m_editBox.onEditboxEnter(() -> onEditboxEnter())
 
   // --------------------------------------------------------------------------
   function getTargetValue() returns int
@@ -163,6 +170,7 @@ public class IntEditor extends PropertyEditor
     if (m_value == value)
       return
 
+    Log.info("IntEditor", "updateSourceValue", "", "value = " + value.toString())
     m_value = value
 
     let contexts = getContexts()
@@ -177,6 +185,7 @@ public class IntEditor extends PropertyEditor
   // --------------------------------------------------------------------------
   function updateTargetValue(int value)
     if (m_value != value)
+      Log.info("IntEditor", "updateTargetValue", "", "value = " + value.toString())
       m_value = value
       updateEditBoxText()
 
@@ -202,11 +211,12 @@ public class IntEditor extends PropertyEditor
 
     setIsIndeterminate(not allValuesMatch)
     updateTargetValue(union.getInt())
-      
+
     destroy union
 
   // --------------------------------------------------------------------------
   function onEditboxEnter()
+    Log.info("IntEditor", "onEditboxEnter", "", "value " + m_editBox.getText().toInt().toString())
     updateSourceValue(m_editBox.getText().toInt())
     updateEditBoxText()
 
@@ -218,6 +228,7 @@ public class IntEditor extends PropertyEditor
   // --------------------------------------------------------------------------
   function updateEditBoxText()
     m_editBox.setText(getIsIndeterminate() ? "<Multiple>" : m_value.toString())
+    Log.info("edit box -> " + m_editBox.getText())
 
 // ============================================================================
 public class StringEditor extends PropertyEditor

@@ -103,7 +103,7 @@ public class StringPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   function resolveContext(int context) returns T
-    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (resolveContext(context))
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
@@ -111,7 +111,7 @@ public class StringPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   override function getValue(int context, Union value) returns bool
-    return value.setString(m_getter.call(context castTo T))
+    return value.setString(m_getter.call(resolveContext(context)))
 
   // --------------------------------------------------------------------------
   override function canSetValue(int context, Union value) returns bool
@@ -120,7 +120,7 @@ public class StringPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   override function setValue(int context, Union value) returns bool
     if (m_setter != null)
-      m_setter.call(context castTo T, value.getString())
+      m_setter.call(resolveContext(context), value.getString())
       return true
     return false
 
@@ -169,7 +169,7 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   function resolveContext(int context) returns T
-    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (resolveContext(context))
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
@@ -177,7 +177,7 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   override function getValue(int context, Union value) returns bool
-    return value.setInt(m_getter.call(context castTo T))
+    return value.setInt(m_getter.call(resolveContext(context)))
 
   // --------------------------------------------------------------------------
   override function canSetValue(int context, Union value) returns bool
@@ -186,7 +186,8 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   override function setValue(int context, Union value) returns bool
     if (m_setter != null)
-      m_setter.call(context castTo T, value.getInt())
+      Log.info("IntPropertyDescriptor", "setValue", "", "value + " + value.getInt().toString() + " for context " + context.toString())
+      m_setter.call(resolveContext(context), value.getInt())
       return true
     return false
 
@@ -243,7 +244,7 @@ public class RealPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   function resolveContext(int context) returns T
-    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (resolveContext(context))
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
@@ -316,7 +317,7 @@ public class BoolPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   function resolveContext(int context) returns T
-    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (resolveContext(context))
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
@@ -324,7 +325,7 @@ public class BoolPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   override function getValue(int context, Union value) returns bool
-    return value.setBool(m_getter.call(context castTo T))
+    return value.setBool(m_getter.call(resolveContext(context)))
 
   // --------------------------------------------------------------------------
   override function canSetValue(int context, Union value) returns bool
@@ -333,7 +334,7 @@ public class BoolPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   override function setValue(int context, Union value) returns bool
     if (m_setter != null)
-      m_setter.call(context castTo T, value.getBool())
+      m_setter.call(resolveContext(context), value.getBool())
       return true
     return false
 
@@ -381,7 +382,7 @@ public class UnitPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   function resolveContext(int context) returns T
-    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (context castTo T)
+    return m_contextResolver != null ? m_contextResolver.fromContext(context) : (resolveContext(context))
 
   // --------------------------------------------------------------------------
   override function canGetValue(int context, Union value) returns bool
@@ -389,7 +390,7 @@ public class UnitPropertyDescriptor<T> extends PropertyDescriptor
 
   // --------------------------------------------------------------------------
   override function getValue(int context, Union value) returns bool
-    return value.setInt(unitToIndex(m_getter.call(context castTo T)))
+    return value.setInt(unitToIndex(m_getter.call(resolveContext(context))))
 
   // --------------------------------------------------------------------------
   override function canSetValue(int context, Union value) returns bool
@@ -398,6 +399,6 @@ public class UnitPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   override function setValue(int context, Union value) returns bool
     if (m_setter != null)
-      m_setter.call(context castTo T, unitFromIndex(value.getInt()))
+      m_setter.call(resolveContext(context), unitFromIndex(value.getInt()))
       return true
     return false
