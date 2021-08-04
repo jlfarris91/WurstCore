@@ -9,14 +9,12 @@ import Vector
 import Range
 import HashList
 import HashMap
+import DockPanelLayout
+import Layout
+import GridLayout
 
-constant real INSPECTOR_WIDTH = 0.25
-constant real INSPECTOR_HEIGHT = 0.34
-constant real INSPECTOR_HEADER_HEIGHT = 0.03
-constant real INSPECTOR_ROW_CONTAINER_MARGIN = 0.01
-constant real INSPECTOR_ROW_CONTAINER_HEIGHT = INSPECTOR_HEIGHT - INSPECTOR_HEADER_HEIGHT - INSPECTOR_ROW_CONTAINER_MARGIN*2
-constant real INSPECTOR_ROW_WIDTH = 0.25 - INSPECTOR_ROW_CONTAINER_MARGIN * 2
-constant real INSPECTOR_ROW_HEIGHT = 0.022
+constant vec2 INSPECTOR_POS = vec2(0.55, 0.2)
+constant vec2 INSPECTOR_SIZE = vec2(0.25, 0.34)
 
 InspectorFrame g_inspectorFrame
 
@@ -39,8 +37,8 @@ public class InspectorEditorRow extends InspectorRow
   private IPropertyDescriptor m_descriptor
   private IPropertyEditorFactory m_editorFactory
   private IterableMap<string, PropertyEditor> m_editors
-  private framehandle m_rowText
-  private framehandle m_propertyEditorFrame
+  private Frame m_rowText
+  private Frame m_propertyEditorFrame
   private PropertyEditor m_activeEditor
   private LinkedList<int> m_contexts
 
@@ -49,6 +47,7 @@ public class InspectorEditorRow extends InspectorRow
     super("InspectorRowTemplate", GAME_UI)
     m_editorFactory = editorFactory
     m_editors = new IterableMap<string, PropertyEditor>()
+    setLayout(new DockPanelLayout())
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -57,10 +56,8 @@ public class InspectorEditorRow extends InspectorRow
     destroy m_editors
 
   // --------------------------------------------------------------------------
-  function setDescriptor(IPropertyDescriptor descriptor)
-    if (m_descriptor == descriptor)
-      return
-
+  function setContext(IPropertyDescriptor descriptor, LinkedList<int> contexts)
+    m_contexts = contexts
     m_descriptor = descriptor
 
     if (m_descriptor == null)
@@ -72,21 +69,9 @@ public class InspectorEditorRow extends InspectorRow
 
     let editor = getOrAddEditor(descriptor)
     if (m_activeEditor == editor)
-      m_activeEditor.setDescriptorAndContexts(descriptor, m_contexts)
+      m_activeEditor.setContext(descriptor, m_contexts)
     else
       activateEditor(editor)
-  
-  // --------------------------------------------------------------------------
-  function setContexts(LinkedList<int> contexts)
-    if (m_contexts != contexts)
-      m_contexts = contexts
-      if (m_activeEditor != null)
-        m_activeEditor.setContexts(m_contexts)
-
-  // --------------------------------------------------------------------------
-  function setDescriptorAndContexts(IPropertyDescriptor descriptor, LinkedList<int> contexts)
-    m_contexts = contexts
-    setDescriptor(descriptor)
 
   // --------------------------------------------------------------------------
   function getDescriptor() returns IPropertyDescriptor
@@ -98,6 +83,7 @@ public class InspectorEditorRow extends InspectorRow
 
   // --------------------------------------------------------------------------
   function addEditor(string editorType, PropertyEditor editor)
+    addChild(editor)
     m_editors.put(editorType, editor)
   
   // --------------------------------------------------------------------------
@@ -108,8 +94,8 @@ public class InspectorEditorRow extends InspectorRow
   // --------------------------------------------------------------------------
   override function initialize()
     super.initialize()
-    m_rowText = getFrame("InspectorRowText")
-    m_propertyEditorFrame = getFrame("InspectorEditorFrame")
+    m_rowText = getOrAddChild<Frame>("InspectorRowText")
+    m_propertyEditorFrame = getOrAddChild<Frame>("InspectorEditorFrame")
 
   // --------------------------------------------------------------------------
   private function getOrAddEditor(IPropertyDescriptor descriptor) returns PropertyEditor
@@ -117,10 +103,6 @@ public class InspectorEditorRow extends InspectorRow
     var editor = getEditor(editorType)
     if (editor == null)
       editor = m_editorFactory.createEditor(descriptor)
-      editor.getFrameHandle()
-        ..clearAllPoints()
-        ..setAllPoints(m_propertyEditorFrame)
-        ..setParent(m_propertyEditorFrame)
       addEditor(editorType, editor)
     return editor
 
@@ -129,14 +111,14 @@ public class InspectorEditorRow extends InspectorRow
     if (m_activeEditor != editor)
       deactivateActiveEditor()
       m_activeEditor = editor
-      m_activeEditor..setDescriptorAndContexts(m_descriptor, m_contexts)..show()
+      m_activeEditor..setContext(m_descriptor, m_contexts)..show()
       return true
     return false
 
   // --------------------------------------------------------------------------
   private function deactivateActiveEditor()
     if (m_activeEditor != null)
-      m_activeEditor..hide()..setDescriptorAndContexts(null, null)
+      m_activeEditor..hide()..setContext(null, null)
       m_activeEditor = null
 
 // ============================================================================
@@ -171,9 +153,15 @@ public class PropertyEditorFactory implements IPropertyEditorFactory
 // ============================================================================
 public class InspectorFrame extends Frame
   private LinkedList<int> m_contexts
-  private framehandle m_rowsContainer
-  private framehandle m_titleFrame
-  private framehandle m_rowsContainerScrollBar
+  
+  private Frame m_inspectorBody
+  private Frame m_titleText
+  private Frame m_titleFrame
+  private Frame m_scrollBar
+  
+  private StackPanelLayout m_stackPanelLayout
+  private DockPanelLayout m_dockPanelLayout
+  private real m_itemHeight = 0.01
 
   private int m_numRows
   private Vector<InspectorRow> m_rows
@@ -191,6 +179,8 @@ public class InspectorFrame extends Frame
     m_descriptors = new HashList<IPropertyDescriptor>()
     m_descriptorWindow = new Vector<IPropertyDescriptor>()
     m_rows = new Vector<InspectorRow>()
+    m_stackPanelLayout = new StackPanelLayout()
+    m_dockPanelLayout = new DockPanelLayout()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -199,16 +189,35 @@ public class InspectorFrame extends Frame
     destroy m_descriptors
     destroy m_descriptorWindow
     destroy m_contexts
+    destroy m_stackPanelLayout
+    destroy m_dockPanelLayout
 
   // --------------------------------------------------------------------------
   override function initialize()
     super.initialize()
 
-    m_rowsContainer = getFrame("InspectorRowsContainer")
-    m_rowsContainerScrollBar = getFrame("InspectorRowsContainerScrollBar")
-    
-    m_titleFrame = getFrame("InspectorTitle")
-    ..setText("Inspector")
+    m_inspectorBody = getOrAddChild("InspectorBody")
+
+    let titleFrameHandle = createFrame("FRAME", "TitleFrame", GAME_UI, "", 0)
+    m_titleFrame = new Frame(titleFrameHandle)
+      ..setHeight(0.03)
+      ..setDock(Dock.TOP)
+      ..setLayout(new GridLayout())
+    addChild(m_titleFrame)
+
+    let titleTextHandle = createFrame("TEXT", "InspectorTitle", GAME_UI, "", 0)
+    m_titleText = new Frame(titleTextHandle)
+      ..setText("Inspector")
+      ..setHeight(0.03)
+      ..setTextAlignment(TEXT_JUSTIFY_CENTER, TEXT_JUSTIFY_CENTER)
+    m_titleFrame.addChild(m_titleText)
+
+    let scrollBarHandle = createFrame("SCROLLBAR", "ScrollBar", GAME_UI, "BattleNetScrollBarTemplate", 0)
+    m_scrollBar = new Frame(scrollBarHandle)
+      ..setWidth(0.012)
+      ..setDock(Dock.RIGHT)
+      ..show()
+    addChild(m_scrollBar)
 
     rebuild()
 
@@ -223,7 +232,7 @@ public class InspectorFrame extends Frame
 
   // --------------------------------------------------------------------------
   function rebuild()
-    buildInspectorRows()
+    layout()
     updatePropertyDescriptors()
     updateWindow()
     updateRows()
@@ -279,16 +288,15 @@ public class InspectorFrame extends Frame
     for i = 0 to m_descriptorWindow.getCount() - 1
       let descriptor = m_descriptorWindow.getItem(i)
       let row = i < m_rows.getCount() ? m_rows.getItem(i) : addEditorRow()
-      (row castTo InspectorEditorRow)..setDescriptorAndContexts(descriptor, m_contexts)
+      (row castTo InspectorEditorRow)..setContext(descriptor, m_contexts)
 
   // --------------------------------------------------------------------------
-  private function buildInspectorRows()
+  override function layout()
 
-    if (m_contexts == null)
-      return
+    let area = getLocalArea()
 
-    let numRows = getMaxNumberOfRows(INSPECTOR_ROW_HEIGHT, INSPECTOR_ROW_CONTAINER_HEIGHT)
-    let spacing = getSpacing(INSPECTOR_ROW_HEIGHT, INSPECTOR_ROW_CONTAINER_HEIGHT)
+    let numRows = getMaxNumberOfRows(m_itemHeight, area.height())
+    let spacing = getSpacing(m_itemHeight, area.height())
 
     if (numRows == m_numRows)
       return
@@ -301,38 +309,27 @@ public class InspectorFrame extends Frame
     for i = 0 to m_numRows
       addEditorRow()
 
-    let layout = new StackPanelLayout()
-    layout.setOrientation(LayoutOrientation.DOWN)
-    layout.setMargin(vec2(0.01, 0.01))
-    layout.setSpacing(vec2(0.0, spacing))
-    layout.layoutBegin()
+    m_dockPanelLayout.reset(area)
+    m_dockPanelLayout.layoutNextFrame(m_titleFrame)
+    m_dockPanelLayout.layoutNextFrame(m_scrollBar)
+
+    m_stackPanelLayout.setOrientation(LayoutOrientation.DOWN)
+    m_stackPanelLayout.setMargin(vec2(0.01, 0.01))
+    m_stackPanelLayout.setSpacing(vec2(0, spacing))
+    m_stackPanelLayout.reset(m_dockPanelLayout.getRemaining())
 
     for row in m_rows
-      layout.layoutNextFrame(row.getFrameHandle(), m_rowsContainer)
+      row.setHeight(m_itemHeight)
+      m_stackPanelLayout.layoutNextFrame(row)
 
-    destroy layout
-
-  // --------------------------------------------------------------------------
-  private static function getMaxNumberOfRows(real rowHeight, real totalHeight) returns int
-    return (totalHeight / rowHeight).floor()
-
-  // --------------------------------------------------------------------------
-  private static function getSpacing(real rowHeight, real totalHeight) returns real
-    let rowsAbs = totalHeight / rowHeight
-    let rowsFloor = rowsAbs.floor()
-    return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
+    super.layout()
 
   // --------------------------------------------------------------------------
   private function addEditorRow() returns InspectorEditorRow
-
     let row = new InspectorEditorRow(m_propertyEditorFactory)
     ..initialize()
-    ..setParent(m_rowsContainer)
     ..show()
-
-    row.getFrameHandle().setWidth(INSPECTOR_ROW_WIDTH)
-    row.getFrameHandle().setHeight(INSPECTOR_ROW_HEIGHT)
-
+    addChild(row)
     m_rows.add(row)
     return row
 
@@ -343,6 +340,16 @@ public class InspectorFrame extends Frame
   //   ..setParent(m_listBoxFrame)
   //   m_rows.add(row)
   //   return row
+
+  // --------------------------------------------------------------------------
+  private static function getMaxNumberOfRows(real rowHeight, real totalHeight) returns int
+    return (totalHeight / rowHeight).floor()
+
+  // --------------------------------------------------------------------------
+  private static function getSpacing(real rowHeight, real totalHeight) returns real
+    let rowsAbs = totalHeight / rowHeight
+    let rowsFloor = rowsAbs.floor()
+    return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
 
 // ============================================================================
 public class Inspector
@@ -402,11 +409,9 @@ public class Inspector
     g_inspectorFrame = new InspectorFrame()
     ..setPlayer(_player)
     ..initialize()
+    ..setAbsPos(INSPECTOR_POS)
+    ..setSize(INSPECTOR_SIZE)
     ..hide()
-
-    let frame = g_inspectorFrame.getFrameHandle()
-    frame.setAbsPoint(FRAMEPOINT_TOPRIGHT, 0.8, 0.54)
-    frame.setSize(INSPECTOR_WIDTH, INSPECTOR_HEIGHT)
 
     doPeriodically(1.0) (CallbackPeriodic cb) ->
       Inspector.rebuild()

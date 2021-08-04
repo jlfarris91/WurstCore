@@ -36,7 +36,7 @@ public abstract class PropertyEditor extends Frame
       refresh()
 
   // --------------------------------------------------------------------------
-  function setDescriptorAndContexts(IPropertyDescriptor descriptor, LinkedList<int> contexts)
+  function setContext(IPropertyDescriptor descriptor, LinkedList<int> contexts)
     if (m_descriptor == descriptor and m_contexts == contexts)
       return
     m_descriptor = descriptor
@@ -67,11 +67,11 @@ public abstract class PropertyEditor extends Frame
   protected function setDescriptorValue(int context, Union value) returns bool
     if (m_descriptor == null)
       return false
-    Log.info("PropertyEditor", "setDescriptorValue", "", "setting descriptor value + " + value.getString() + " for context " + context.toString())
+    // Log.info("PropertyEditor", "setDescriptorValue", (this castTo int).toString(), "setting descriptor value + " + value.toString() + " for context " + context.toString())
     if (m_descriptor.setValue(context, value))
-      Log.info("PropertyEditor", "setDescriptorValue", "", "successfully set descriptor value " + value.getString() +" for context " + context.toString())
+      // Log.info("PropertyEditor", "setDescriptorValue", (this castTo int).toString(), "successfully set descriptor value " + value.toString() +" for context " + context.toString())
       return true
-    Log.info("PropertyEditor", "setDescriptorValue", "", "failed to set descriptor value + " + value.getString() + " for context " + context.toString())
+    // Log.info("PropertyEditor", "setDescriptorValue", (this castTo int).toString(), "failed to set descriptor value + " + value.toString() + " for context " + context.toString())
     return false
 
   // --------------------------------------------------------------------------
@@ -158,7 +158,7 @@ public class IntEditor extends PropertyEditor
     ..onEditboxEnter(() -> onEditboxEnter())
     ..setText("<MISSING>")
     ..setLevel(999)
-    ..setAllPoints(getFrameHandle())
+    ..setAllPoints(m_handle)
     ..show()
 
   // --------------------------------------------------------------------------
@@ -170,22 +170,28 @@ public class IntEditor extends PropertyEditor
     if (m_value == value)
       return
 
-    Log.info("IntEditor", "updateSourceValue", "", "value = " + value.toString())
+    // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "value = " + value.toString())
     m_value = value
 
     let contexts = getContexts()
-    if (contexts != null)
+    if (contexts == null)
+      // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "contexts is null")
+      return
+    if (contexts.isEmpty())
+      // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "contexts is empty")
       return
     let union = Union.fromInt(value)
     for context in contexts
-      if (canGetDescriptorValue(context, union))
+      if (canSetDescriptorValue(context, union))
         setDescriptorValue(context, union)
+      else
+        // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "cannot set descriptor value")
     destroy union
 
   // --------------------------------------------------------------------------
   function updateTargetValue(int value)
     if (m_value != value)
-      Log.info("IntEditor", "updateTargetValue", "", "value = " + value.toString())
+      // Log.info("IntEditor", "updateTargetValue", (this castTo int).toString(), "value = " + value.toString())
       m_value = value
       updateEditBoxText()
 
@@ -199,6 +205,8 @@ public class IntEditor extends PropertyEditor
 
     let contexts = getContexts()
     if (contexts != null)
+      if (contexts.isEmpty())
+        // Log.info("IntEditor", "refresh", (this castTo int).toString(), "contexts is empty")
       for context in contexts
         if (canGetDescriptorValue(context, union) and getDescriptorValue(context, union))
           if (not firstValueReceived)
@@ -208,6 +216,8 @@ public class IntEditor extends PropertyEditor
             if (firstValue != union.getInt())
               allValuesMatch = false
               break
+    else
+      // Log.info("IntEditor", "refresh", (this castTo int).toString(), "contexts is null")
 
     setIsIndeterminate(not allValuesMatch)
     updateTargetValue(union.getInt())
@@ -216,7 +226,7 @@ public class IntEditor extends PropertyEditor
 
   // --------------------------------------------------------------------------
   function onEditboxEnter()
-    Log.info("IntEditor", "onEditboxEnter", "", "value " + m_editBox.getText().toInt().toString())
+    // Log.info("IntEditor", "onEditboxEnter", (this castTo int).toString(), "value " + m_editBox.getText().toInt().toString())
     updateSourceValue(m_editBox.getText().toInt())
     updateEditBoxText()
 
@@ -228,7 +238,7 @@ public class IntEditor extends PropertyEditor
   // --------------------------------------------------------------------------
   function updateEditBoxText()
     m_editBox.setText(getIsIndeterminate() ? "<Multiple>" : m_value.toString())
-    Log.info("edit box -> " + m_editBox.getText())
+    // Log.info("edit box -> " + m_editBox.getText())
 
 // ============================================================================
 public class StringEditor extends PropertyEditor
@@ -250,7 +260,7 @@ public class StringEditor extends PropertyEditor
       "InspectorEditBoxTemplate", 0)
     ..setText("<MISSING>")
     ..setLevel(999)
-    ..setAllPoints(getFrameHandle())
+    ..setAllPoints(m_handle)
     ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 
@@ -270,7 +280,7 @@ public class StringEditor extends PropertyEditor
       return
     let union = Union.fromString(value)
     for context in contexts
-      if (canGetDescriptorValue(context, union))
+      if (canSetDescriptorValue(context, union))
         setDescriptorValue(context, union)
     destroy union
 
@@ -343,7 +353,7 @@ public class RealEditor extends PropertyEditor
       "InspectorEditBoxTemplate", 0)
     ..setText("<MISSING>")
     ..setLevel(999)
-    ..setAllPoints(getFrameHandle())
+    ..setAllPoints(m_handle)
     ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 

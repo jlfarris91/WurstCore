@@ -1,0 +1,91 @@
+package GridLayout
+import Layout
+import Frame
+import HashMap
+
+HashMap<Frame, int> m_frameToColumnMap = new HashMap<Frame, int>()
+HashMap<Frame, int> m_frameToRowMap = new HashMap<Frame, int>()
+
+// ============================================================================
+public class GridLayout implements IFrameLayout
+  private rectr m_area
+  private int m_columns = 1
+  private int m_rows = 1
+
+  // --------------------------------------------------------------------------
+  function getColumns() returns int
+    return m_columns
+
+  // --------------------------------------------------------------------------
+  function setColumns(int columns)
+    m_columns = max(columns, 1)
+
+  // --------------------------------------------------------------------------
+  function getRows() returns int
+    return m_rows
+
+  // --------------------------------------------------------------------------
+  function setRows(int rows)
+    m_rows = max(rows, 1)
+
+  // --------------------------------------------------------------------------
+  override function reset(rectr area)
+    m_area = area
+
+  // --------------------------------------------------------------------------
+  override function layoutNextFrame(Frame frame)
+
+    let row = frame.getGridRow()
+    let col = frame.getGridColumn()
+    let cellWidth = m_area.width() / m_columns
+    let cellHeight = m_area.height() / m_rows
+    let cellX = m_area.left + cellWidth * col
+    let cellY = m_area.bottom + cellHeight * row
+    let cellArea = rectr(cellX, cellY, cellX + cellWidth, cellY + cellHeight)
+
+    let localCenter = cellArea.center()
+    var frameSize = frame.getSize()
+    var localPos = cellArea.bottomLeft()
+
+    // Remember that x/y frame of reference is bottom left
+    switch (frame.getVerticalLayoutMode())
+      case VerticalLayoutMode.TOP
+        localPos.y = m_area.top - frameSize.y
+      case VerticalLayoutMode.CENTER
+        localPos.y = localCenter.y - frameSize.y / 2.0
+      case VerticalLayoutMode.BOTTOM
+        localPos.y = m_area.bottom
+      case VerticalLayoutMode.STRETCH
+        localPos.y = m_area.bottom
+        frameSize.y = m_area.height()
+
+    switch (frame.getHorizontalLayoutMode())
+      case HorizontalLayoutMode.LEFT
+        localPos.x = m_area.left
+      case HorizontalLayoutMode.CENTER
+        localPos.x = localCenter.x - frameSize.x / 2.0
+      case HorizontalLayoutMode.RIGHT
+        localPos.x = m_area.right - frameSize.x
+      case HorizontalLayoutMode.STRETCH
+        localPos.x = m_area.left
+        frameSize.x = m_area.width()
+
+    // Actually update the frame
+    frame.setLocalPos(localPos)
+    frame.setSize(frameSize)
+
+// ============================================================================
+public function Frame.getGridColumn() returns int
+  return m_frameToColumnMap.get(this)
+
+// ============================================================================
+public function Frame.setGridColumn(int column)
+  m_frameToColumnMap.put(this, column)
+
+// ============================================================================
+public function Frame.getGridRow() returns int
+  return m_frameToRowMap.get(this)
+
+// ============================================================================
+public function Frame.setGridRow(int row)
+  m_frameToRowMap.put(this, row)

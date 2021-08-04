@@ -1,43 +1,88 @@
 package Frame
+import LinkedList
+import initlater Layout
+import HashMap
 import ErrorHandling
+import Range
 
 // ============================================================================
-public class Frame
+public interface IFrameFactory
+  function createFrame(framehandle frameHandle) returns Frame
+
+// ============================================================================
+public class DefaultFrameFactory implements IFrameFactory
+  constant static IFrameFactory instance = new DefaultFrameFactory()
+  override function createFrame(framehandle frameHandle) returns Frame
+    return new Frame(frameHandle)
+
+// ============================================================================
+public enum HorizontalLayoutMode
+  LEFT
+  CENTER
+  RIGHT
+  STRETCH
+
+// ============================================================================
+public enum VerticalLayoutMode
+  BOTTOM
+  CENTER
+  TOP
+  STRETCH
+
+// ============================================================================
+public class Frame  
+  private Frame m_parent
+
+  private HashMap<framehandle, Frame> m_childMap
+  protected LinkedList<Frame> m_children
+
+  protected framehandle m_handle
+
   private player m_player
-  private framehandle m_frame
   private bool m_initialized
+  private vec2 m_size
+  private vec2 m_localPos
+  private rangeReal m_minMax
+  private textaligntype m_textHorzAlign
+  private textaligntype m_textVertAlign
+
+  private IFrameLayout m_layout
+  private HorizontalLayoutMode m_horizontalLayoutMode = STRETCH
+  private VerticalLayoutMode m_verticalLayoutMode = STRETCH
+
+  private IFrameFactory m_frameFactory
 
   // --------------------------------------------------------------------------
-  construct(string name, framehandle owner)
-    if (owner == null)
-      argumentNullError("owner")
-    m_frame = createFrame(name, owner, 0, 0)
-    m_frame.hide()
+  construct (string framename, framehandle owner)
+    m_handle = createFrame(framename, owner, 0, 0)
+    construct_initialize()
 
   // --------------------------------------------------------------------------
   construct(framehandle frame)
-    if (frame == null)
-      argumentNullError("frame")
-    m_frame = frame
-    m_frame.hide()
+    m_handle = frame
+    construct_initialize()
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_frame != null)
-      m_frame.remove()
-      m_frame = null
+    if (m_handle != null)
+      m_handle.remove()
+      m_handle = null
 
   // --------------------------------------------------------------------------
-  function getFrameHandle() returns framehandle
-    return m_frame
+  function getFrameFactory() returns IFrameFactory
+    if (m_frameFactory != null)
+      return m_frameFactory
+    if (m_parent != null)
+      return m_parent.getFrameFactory()
+    return DefaultFrameFactory.instance
 
   // --------------------------------------------------------------------------
-  function setParent(framehandle value)
-    m_frame.setParent(value)
+  function setFrameFactory(IFrameFactory factory)
+    m_frameFactory = factory
 
   // --------------------------------------------------------------------------
-  function getParent() returns framehandle
-    return m_frame != null ? m_frame.getParent() : null
+  function getParent() returns Frame
+    return m_parent
 
   // --------------------------------------------------------------------------
   function getPlayer() returns player
@@ -54,21 +99,239 @@ public class Frame
     m_initialized = true
 
   // --------------------------------------------------------------------------
+  private function construct_initialize()
+
+    m_childMap = new HashMap<framehandle, Frame>()
+    m_children = new LinkedList<Frame>()
+
+    m_size.x = m_handle.getWidth()
+    m_size.y = m_handle.getHeight()
+    
+    m_handle.clearAllPoints()
+
+  // --------------------------------------------------------------------------
   function show()
     if (not m_initialized)
       initialize()
     if (m_player != null)
-      m_frame.show(m_player)
+      m_handle.show(m_player)
     else
-      m_frame.show()
+      m_handle.show()
     
   // --------------------------------------------------------------------------
   function hide()
     if (m_player != null)
-      m_frame.hide(m_player)
+      m_handle.hide(m_player)
     else
-      m_frame.hide()
+      m_handle.hide()
+
+  // --------------------------------------------------------------------------
+  function getText() returns string
+    return m_handle.getText()
+
+  // --------------------------------------------------------------------------
+  function setText(string text)
+    m_handle.setText(text)
+
+  // --------------------------------------------------------------------------
+  function getTextSizeLimit() returns int
+    return m_handle.getTextSizeLimit()
+
+  // --------------------------------------------------------------------------
+  function setTextSizeLimit(int value)
+    m_handle.setTextSizeLimit(value)
+
+  // --------------------------------------------------------------------------
+  function setTextAlignment(textaligntype vert, textaligntype horz)
+    m_textVertAlign = vert
+    m_textHorzAlign = horz
+    m_handle.setTextAlignment(vert, horz)
+
+  // --------------------------------------------------------------------------
+  function getHorizontalTextAlignment() returns textaligntype
+    return m_textHorzAlign
+
+  // --------------------------------------------------------------------------
+  function getVerticalTextAlignment() returns textaligntype
+    return m_textVertAlign
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_handle.getValue()
+
+  // --------------------------------------------------------------------------
+  function setValue(real value)
+    m_handle.setValue(value)
+
+  // --------------------------------------------------------------------------
+  function setMinMax(rangeReal minMax)
+    m_minMax = minMax
+    m_handle.setMinMax(minMax.min, minMax.max)
+
+  // --------------------------------------------------------------------------
+  function getMinMax() returns rangeReal
+    return m_minMax
 
   // --------------------------------------------------------------------------
   function getIsVisible() returns bool
-    return m_frame.isVisible()
+    return m_handle.isVisible()
+
+  // --------------------------------------------------------------------------
+  function getWidth() returns real
+    return m_size.x
+
+  // --------------------------------------------------------------------------
+  function setWidth(real width)
+    m_size.x = width
+    m_handle.setWidth(width)
+    invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getHeight() returns real
+    return m_size.x
+  
+  // --------------------------------------------------------------------------
+  function setHeight(real height)
+    m_size.y = height
+    m_handle.setHeight(height)
+    invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getSize() returns vec2
+    return m_size
+  
+  // --------------------------------------------------------------------------
+  function setSize(vec2 size)
+    m_size = size
+    m_handle.setWidth(size.x)
+    m_handle.setHeight(size.y)
+    invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getLocalPos() returns vec2
+    return m_localPos
+
+  // --------------------------------------------------------------------------
+  function setLocalPos(vec2 pos)
+    m_localPos = pos
+    updatePosition()
+
+  // --------------------------------------------------------------------------
+  function getAbsPos() returns vec2
+    return m_parent != null ? getAbsPos() + getLocalPos() : getLocalPos()
+
+  // --------------------------------------------------------------------------
+  function setAbsPos(vec2 pos)
+    setLocalPos(m_parent != null ? getAbsPos() - pos : pos)
+
+  // --------------------------------------------------------------------------
+  function getLocalArea() returns rectr
+    return rectr(0, 0, m_size.x, m_size.y)
+
+  // --------------------------------------------------------------------------
+  function getArea() returns rectr
+    return rectr(m_localPos.x, m_localPos.y, m_localPos.x + m_size.x, m_localPos.y + m_size.y)
+
+  // --------------------------------------------------------------------------
+  function setArea(rectr area)
+    setLocalPos(area.bottomLeft())
+    setSize(area.size())
+
+  // --------------------------------------------------------------------------
+  function getAbsArea() returns rectr
+    let absPos = getAbsPos()
+    return rectr(absPos.x, absPos.y, absPos.x + m_size.x, absPos.y + m_size.y)
+
+  // --------------------------------------------------------------------------
+  function getLayout() returns IFrameLayout
+    return m_layout
+
+  // --------------------------------------------------------------------------
+  function setLayout(IFrameLayout layout)
+    m_layout = layout
+    invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getHorizontalLayoutMode() returns HorizontalLayoutMode
+    return m_horizontalLayoutMode
+
+  // --------------------------------------------------------------------------
+  function setHorizontalLayoutMode(HorizontalLayoutMode mode)
+    m_horizontalLayoutMode = mode
+    updatePosition()
+
+  // --------------------------------------------------------------------------
+  function getVerticalLayoutMode() returns VerticalLayoutMode
+    return m_verticalLayoutMode
+
+  // --------------------------------------------------------------------------
+  function setVerticalLayoutMode(VerticalLayoutMode mode)
+    m_verticalLayoutMode = mode
+    updatePosition()
+
+  // --------------------------------------------------------------------------
+  private function updatePosition()
+    if (m_parent != null)
+      m_handle.setPoint(FRAMEPOINT_BOTTOMLEFT, m_parent.m_handle, FRAMEPOINT_BOTTOMLEFT, m_localPos)
+    else
+      m_handle.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, m_localPos)
+
+  // --------------------------------------------------------------------------
+  function invalidateLayout()
+    layout()
+
+  // --------------------------------------------------------------------------
+  protected function layout()
+    if (m_layout != null)
+      m_layout.reset(getLocalArea())
+      for childFrame in m_children
+        m_layout.layoutNextFrame(childFrame)
+    else
+      for childFrame in m_children
+        childFrame.invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getChild(string name) returns Frame
+    return getChild(name, 0)
+
+  // --------------------------------------------------------------------------
+  function getChild(string name, int context) returns Frame
+    return m_childMap.get(getFrame(name, context))
+
+  // --------------------------------------------------------------------------
+  function addChild(Frame frame)
+    if (m_childMap.has(frame.m_handle))
+      // error("Cannot add a child frame that is already a child of this frame")
+      return
+    m_childMap.put(frame.m_handle, frame)
+    m_children.add(frame)
+    frame.m_parent = this
+    frame.m_handle.setParent(m_handle)
+    updatePosition()
+
+  // --------------------------------------------------------------------------
+  function removeChild(Frame frame)
+    if (not m_childMap.has(frame.m_handle))
+      // error("Cannot remove a child frame that is not a child of this frame")
+      return
+    m_childMap.remove(frame.m_handle)
+    m_children.remove(frame)
+    frame.m_parent = null
+    frame.m_handle.setParent(null)
+    frame.m_handle.clearAllPoints()
+    frame.updatePosition()
+
+  // --------------------------------------------------------------------------
+  protected function getOrAddChild(string name) returns Frame
+    return getOrAddChild(name, 0)
+
+  // --------------------------------------------------------------------------
+  protected function getOrAddChild(string name, int context) returns Frame
+    let childFrameHandle = getFrame(name, context)
+    var childFrame = m_childMap.get(childFrameHandle)
+    if (childFrame == null)
+      childFrame = getFrameFactory().createFrame(childFrameHandle)
+      m_childMap.put(childFrameHandle, childFrame)
+      m_children.add(childFrame)
+      childFrame.initialize()
+    return childFrame

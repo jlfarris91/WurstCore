@@ -1,4 +1,6 @@
 package StackPanelLayout
+import Layout
+import Frame
 
 // ============================================================================
 public enum LayoutOrientation
@@ -8,13 +10,13 @@ public enum LayoutOrientation
   UP
 
 // ============================================================================
-tuple rectr(real left, real top, real right, real bottom)
-
-// ============================================================================
-public class StackPanelLayout
+public class StackPanelLayout implements IFrameLayout
+  private rectr m_area = RECTR_ZERO
   private vec2 m_spacing = ZERO2
   private vec2 m_margin = ZERO2
   private vec2 m_layoutPos = ZERO2
+  private vec2 m_layoutPosStart = ZERO2
+  private vec2 m_layoutDir = ZERO2
   private LayoutOrientation m_orientation
   private vec2 m_size = ZERO2
 
@@ -51,46 +53,77 @@ public class StackPanelLayout
     return m_size.y + m_margin.y * 2.0
 
   // --------------------------------------------------------------------------
-  function layoutBegin()
-    m_layoutPos = ZERO2
+  override function reset(rectr area)
+    m_area = area
     m_size = ZERO2
-
-  // --------------------------------------------------------------------------
-  function layoutNextFrame(framehandle frame, framehandle panel)
-
-    frame.clearAllPoints()
-
-    switch (m_orientation)
-      case RIGHT | LEFT
-        m_layoutPos.x += m_layoutPos.x == 0 ? 0 : m_spacing.x
-      case DOWN | UP
-        m_layoutPos.y += m_layoutPos.y == 0 ? 0 : m_spacing.y
-
+    
+    // Remember that x/y frame of reference is bottom left
     switch (m_orientation)
       case RIGHT
-        frame.setPoint(FRAMEPOINT_BOTTOMLEFT, panel, FRAMEPOINT_BOTTOMLEFT, m_margin.x + m_layoutPos.x, m_margin.y)
-        frame.setPoint(FRAMEPOINT_TOPRIGHT, panel, FRAMEPOINT_TOPLEFT, m_margin.x + m_layoutPos.x + frame.getWidth(), -m_margin.y)
+        m_layoutPos.x = m_area.left
+        m_layoutDir = vec2(1, 0)
       case LEFT
-        frame.setPoint(FRAMEPOINT_BOTTOMLEFT, panel, FRAMEPOINT_BOTTOMRIGHT, -m_margin.x - (m_layoutPos.x + frame.getWidth()), m_margin.y)
-        frame.setPoint(FRAMEPOINT_TOPRIGHT, panel, FRAMEPOINT_TOPRIGHT, -m_margin.x - m_layoutPos.x, -m_margin.y)
+        m_layoutPos.x = m_area.right
+        m_layoutDir = vec2(-1, 0)
       case DOWN
-        frame.setPoint(FRAMEPOINT_BOTTOMLEFT, panel, FRAMEPOINT_TOPLEFT, m_margin.x, -m_margin.y - (m_layoutPos.y + frame.getHeight()))
-        frame.setPoint(FRAMEPOINT_TOPRIGHT, panel, FRAMEPOINT_TOPRIGHT, -m_margin.x, -m_margin.y - m_layoutPos.y)
+        m_layoutPos.y = m_area.top
+        m_layoutDir = vec2(0, -1)
       case UP
-        frame.setPoint(FRAMEPOINT_BOTTOMLEFT, panel, FRAMEPOINT_BOTTOMLEFT, m_margin.x, m_margin.y + m_layoutPos.y)
-        frame.setPoint(FRAMEPOINT_TOPRIGHT, panel, FRAMEPOINT_BOTTOMRIGHT, -m_margin.x, m_margin.y + m_layoutPos.y + frame.getHeight())
+        m_layoutPos.y = m_area.bottom
+        m_layoutDir = vec2(0, 1)
 
-    switch (m_orientation)
-      case RIGHT | LEFT
-        m_layoutPos.x += frame.getWidth()
-        m_size.x = m_layoutPos.x
-        m_size.y = max(m_size.y, frame.getHeight())
-      case DOWN | UP
-        m_layoutPos.y += frame.getHeight()
-        m_size.x = max(m_size.x, frame.getWidth())
-        m_size.y = m_layoutPos.y
+    m_layoutPosStart = m_layoutPos
 
   // --------------------------------------------------------------------------
-  function layoutEnd()
-    m_layoutPos = ZERO2
-    m_size = ZERO2
+  override function layoutNextFrame(Frame frame)
+
+    // Add spacing if not the first frame
+    switch (m_orientation)
+      case RIGHT | LEFT
+        m_layoutPos.x += m_layoutPos.x == m_layoutPosStart.x ? 0 : m_layoutDir.x * m_spacing.x
+      case DOWN | UP
+        m_layoutPos.y += m_layoutPos.y == m_layoutPosStart.y ? 0 : m_layoutDir.y * m_spacing.y
+
+    let localCenter = m_area.center()
+    var frameSize = frame.getSize()
+    var localPos = m_layoutPos
+
+    // Remember that x/y frame of reference is bottom left
+    switch (m_orientation)
+      case RIGHT | LEFT
+        switch (frame.getVerticalLayoutMode())
+          case VerticalLayoutMode.TOP
+            localPos.y = m_area.top - frameSize.y
+          case VerticalLayoutMode.CENTER
+            localPos.y = localCenter.y - frameSize.y / 2.0
+          case VerticalLayoutMode.BOTTOM
+            localPos.y = m_area.bottom
+          case VerticalLayoutMode.STRETCH
+            localPos.y = m_area.bottom
+            frameSize.y = m_area.height()
+      case UP | DOWN
+        switch (frame.getHorizontalLayoutMode())
+          case HorizontalLayoutMode.LEFT
+            localPos.x = m_area.left
+          case HorizontalLayoutMode.CENTER
+            localPos.x = localCenter.x - frameSize.x / 2.0
+          case HorizontalLayoutMode.RIGHT
+            localPos.x = m_area.right - frameSize.x
+          case HorizontalLayoutMode.STRETCH
+            localPos.x = m_area.left
+            frameSize.x = m_area.width()
+
+    // Actually update the frame
+    frame.setLocalPos(localPos)
+    frame.setSize(frameSize)
+
+    // Prepare for next frame
+    switch (m_orientation)
+      case RIGHT | LEFT
+        m_layoutPos.x += m_layoutDir.x * frameSize.x
+        m_size.x = m_layoutPos.x
+        m_size.y = max(m_size.y, frameSize.y)
+      case UP | DOWN
+        m_layoutPos.y += m_layoutDir.y * frameSize.y
+        m_size.x = max(m_size.x, frameSize.x)
+        m_size.y = m_layoutPos.y
