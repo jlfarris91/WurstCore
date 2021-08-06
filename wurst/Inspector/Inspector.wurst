@@ -26,6 +26,10 @@ public abstract class InspectorRow extends Frame
     super(framename, owner)
 
   // --------------------------------------------------------------------------
+  construct (framehandle frame)
+    super(frame)
+
+  // --------------------------------------------------------------------------
   function refresh()
 
 // ============================================================================
@@ -37,17 +41,16 @@ public class InspectorEditorRow extends InspectorRow
   private IPropertyDescriptor m_descriptor
   private IPropertyEditorFactory m_editorFactory
   private IterableMap<string, PropertyEditor> m_editors
-  private Frame m_rowText
-  private Frame m_propertyEditorFrame
+  private Frame m_headerText
   private PropertyEditor m_activeEditor
   private LinkedList<int> m_contexts
 
   // --------------------------------------------------------------------------
   construct(IPropertyEditorFactory editorFactory)
-    super("InspectorRowTemplate", GAME_UI)
+    super(createFrame("FRAME", "InspectorRow", GAME_UI, "", 0))
     m_editorFactory = editorFactory
     m_editors = new IterableMap<string, PropertyEditor>()
-    setLayout(new DockPanelLayout())
+    setLayout(new GridLayout()..setColumns(2))
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -61,11 +64,11 @@ public class InspectorEditorRow extends InspectorRow
     m_descriptor = descriptor
 
     if (m_descriptor == null)
-      m_rowText.setText("")
+      m_headerText.setText("")
       deactivateActiveEditor()
       return
 
-    m_rowText.setText(m_descriptor.getName())
+    m_headerText.setText(m_descriptor.getName())
 
     let editor = getOrAddEditor(descriptor)
     if (m_activeEditor == editor)
@@ -83,6 +86,7 @@ public class InspectorEditorRow extends InspectorRow
 
   // --------------------------------------------------------------------------
   function addEditor(string editorType, PropertyEditor editor)
+    editor.setGridColumn(1)
     addChild(editor)
     m_editors.put(editorType, editor)
   
@@ -94,8 +98,11 @@ public class InspectorEditorRow extends InspectorRow
   // --------------------------------------------------------------------------
   override function initialize()
     super.initialize()
-    m_rowText = getOrAddChild<Frame>("InspectorRowText")
-    m_propertyEditorFrame = getOrAddChild<Frame>("InspectorEditorFrame")
+
+    let textFrame = createFrame("TEXT", "HeaderText", GAME_UI, "", 0)
+    m_headerText = new Frame(textFrame)
+      ..setGridColumn(0)
+    addChild(m_headerText)
 
   // --------------------------------------------------------------------------
   private function getOrAddEditor(IPropertyDescriptor descriptor) returns PropertyEditor
@@ -153,15 +160,14 @@ public class PropertyEditorFactory implements IPropertyEditorFactory
 // ============================================================================
 public class InspectorFrame extends Frame
   private LinkedList<int> m_contexts
-  
-  private Frame m_inspectorBody
+
   private Frame m_titleText
-  private Frame m_titleFrame
+  private Frame m_titleContainer
   private Frame m_scrollBar
   
   private StackPanelLayout m_stackPanelLayout
   private DockPanelLayout m_dockPanelLayout
-  private real m_itemHeight = 0.01
+  private real m_itemHeight = 0.022
 
   private int m_numRows
   private Vector<InspectorRow> m_rows
@@ -196,21 +202,19 @@ public class InspectorFrame extends Frame
   override function initialize()
     super.initialize()
 
-    m_inspectorBody = getOrAddChild("InspectorBody")
-
     let titleFrameHandle = createFrame("FRAME", "TitleFrame", GAME_UI, "", 0)
-    m_titleFrame = new Frame(titleFrameHandle)
+    m_titleContainer = new Frame(titleFrameHandle)
       ..setHeight(0.03)
       ..setDock(Dock.TOP)
       ..setLayout(new GridLayout())
-    addChild(m_titleFrame)
+    addChild(m_titleContainer)
 
     let titleTextHandle = createFrame("TEXT", "InspectorTitle", GAME_UI, "", 0)
     m_titleText = new Frame(titleTextHandle)
       ..setText("Inspector")
       ..setHeight(0.03)
       ..setTextAlignment(TEXT_JUSTIFY_CENTER, TEXT_JUSTIFY_CENTER)
-    m_titleFrame.addChild(m_titleText)
+    m_titleContainer.addChild(m_titleText)
 
     let scrollBarHandle = createFrame("SCROLLBAR", "ScrollBar", GAME_UI, "BattleNetScrollBarTemplate", 0)
     m_scrollBar = new Frame(scrollBarHandle)
@@ -310,7 +314,7 @@ public class InspectorFrame extends Frame
       addEditorRow()
 
     m_dockPanelLayout.reset(area)
-    m_dockPanelLayout.layoutNextFrame(m_titleFrame)
+    m_dockPanelLayout.layoutNextFrame(m_titleContainer)
     m_dockPanelLayout.layoutNextFrame(m_scrollBar)
 
     m_stackPanelLayout.setOrientation(LayoutOrientation.DOWN)
@@ -318,9 +322,12 @@ public class InspectorFrame extends Frame
     m_stackPanelLayout.setSpacing(vec2(0, spacing))
     m_stackPanelLayout.reset(m_dockPanelLayout.getRemaining())
 
+    var j = 0
     for row in m_rows
       row.setHeight(m_itemHeight)
       m_stackPanelLayout.layoutNextFrame(row)
+      Log.info("Row {0} : lpos: {1} size: {2}".format(j.toString(), row.getLocalPos().toString(), row.getSize().toString()))
+      j++
 
     super.layout()
 
