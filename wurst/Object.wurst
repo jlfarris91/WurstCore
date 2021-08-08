@@ -1,0 +1,33 @@
+package Object
+
+public tuple object(int objectHandle)
+
+public constant object NULL = object(0)
+
+// ============================================================================
+public function object.is<T>() returns bool
+  return this.cast<T>() != null
+
+// ============================================================================
+public function object.cast<T>() returns T
+  return this.objectHandle castTo T
+
+// ============================================================================
+public function object.isNull() returns bool
+  return this == NULL
+
+// ============================================================================
+public function toObject<T>(T source) returns object
+  return object(source castTo int)
+
+// ============================================================================
+public function fromObject<T>(object obj) returns T
+  return obj.cast<T>()
+
+// ============================================================================
+public function objectToIndex(object typeInfo) returns int
+  return typeInfo.objectHandle
+
+// ============================================================================
+public function objectFromIndex(int index) returns object
+  return object(index)

@@ -1,0 +1,131 @@
+package Layout
+import Frame
+
+public tuple rectr(real x, real y, real width, real height)
+public tuple thickness(real left, real bottom, real right, real top)
+
+public constant rectr ZERORECTR = rectr(0,0,0,0)
+public constant thickness ZEROTHICK = thickness(0,0,0,0)
+
+// ============================================================================
+public function rectrFromPosSize(vec2 pos, vec2 size) returns rectr
+  return rectr(pos.x, pos.y, size.x, size.y)
+
+// ============================================================================
+public function thickness.width() returns real
+  return this.left + this.right
+
+// ============================================================================
+public function thickness.height() returns real
+  return this.bottom + this.top
+
+// ============================================================================
+public function thickness.size() returns vec2
+  return vec2(this.width(), this.height())
+
+// ============================================================================
+public function thickness.op_mult(real factor) returns thickness
+  return thickness(this.left * factor, this.bottom * factor, this.right * factor, this.top * factor)
+
+// ============================================================================
+public function rectr.toString() returns string
+  return "[{0}, {1}, {2}, {3}]".format(this.x.toString(), this.y.toString(), this.width.toString(), this.height.toString())
+
+// ============================================================================
+public function thickness.toString() returns string
+  return "[{0}, {1}, {2}, {3}]".format(this.left.toString(), this.bottom.toString(), this.right.toString(), this.top.toString())
+
+// ============================================================================
+public function rectr.size() returns vec2
+  return vec2(this.width, this.height)
+
+// ============================================================================
+public function rectr.topLeft() returns vec2
+  return vec2(this.x, this.y + this.height)
+
+// ============================================================================
+public function rectr.topRight() returns vec2
+  return vec2(this.x + this.width, this.y + this.height)
+
+// ============================================================================
+public function rectr.bottomLeft() returns vec2
+  return vec2(this.x, this.y)
+
+// ============================================================================
+public function rectr.bottomRight() returns vec2
+  return vec2(this.x + this.width, this.y)
+
+// ============================================================================
+public function rectr.center() returns vec2
+  return vec2(this.x + this.width / 2.0, this.y + this.height / 2.0)
+
+// ============================================================================
+public function rectr.shrink(real value) returns rectr
+  return this.grow(-value)
+
+// ============================================================================
+public function rectr.shrink(vec2 value) returns rectr
+  return this.grow(value * -1.0)
+
+// ============================================================================
+public function rectr.shrink(thickness value) returns rectr
+  return this.grow(value * -1.0)
+
+// ============================================================================
+public function rectr.grow(real value) returns rectr
+  return this.shrink(vec2(value,value))
+
+// ============================================================================
+public function rectr.grow(vec2 value) returns rectr
+  return this.shrink(thickness(value.x,value.y,value.x,value.y))
+
+// ============================================================================
+public function rectr.grow(thickness value) returns rectr
+  return rectr(this.x - value.left, this.y - value.bottom, this.width + value.width(), this.height + value.height())
+
+// ============================================================================
+public function rectr.translate(vec2 pos) returns rectr
+  return this.translate(pos.x, pos.y)
+
+// ============================================================================
+public function rectr.translate(real x, real y) returns rectr
+  return rectr(this.x + x, this.y + y, this.width, this.height)
+
+// ============================================================================
+public interface IFrameLayout
+  function reset(rectr area)
+  function layoutNextFrame(Frame frame)
+
+// ============================================================================
+public enum Orientation
+  HORIZONTAL
+  VERTICAL
+
+// ============================================================================
+public enum LayoutOrientation
+  LEFTTORIGHT
+  TOPTOBOTTOM
+  RIGHTTOLEFT
+  BOTTOMTOTOP
+
+// ============================================================================
+public function LayoutOrientation.getLayoutDir() returns vec2
+  switch (this)
+    case LEFTTORIGHT
+      return vec2(1, 0)
+    case RIGHTTOLEFT
+      return vec2(-1, 0)
+    case BOTTOMTOTOP
+      return vec2(0, 1)
+    case TOPTOBOTTOM
+      return vec2(0, -1)
+
+// ============================================================================
+public enum HorizontalLayoutOrientation
+  LEFTTORIGHT
+  RIGHTTOLEFT
+
+// ============================================================================
+public enum VerticalLayoutOrientation
+  BOTTOMTOTOP
+  TOPTOBOTTOM

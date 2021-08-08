@@ -3,13 +3,13 @@ import Inspection
 import LinkedList
 import ClosureTimers
 import Frame
-import StackPanelLayout
+import StackLayout
 import PropertyEditors
 import Vector
 import Range
 import HashList
 import HashMap
-import DockPanelLayout
+import DockLayout
 import Layout
 import GridLayout
 
@@ -50,7 +50,7 @@ public class InspectorEditorRow extends InspectorRow
     super(createFrame("FRAME", "InspectorRow", GAME_UI, "", 0))
     m_editorFactory = editorFactory
     m_editors = new IterableMap<string, PropertyEditor>()
-    setLayout(new GridLayout()..setColumns(2))
+    //setLayout(new GridLayout()..setColumns(2))
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -86,8 +86,8 @@ public class InspectorEditorRow extends InspectorRow
 
   // --------------------------------------------------------------------------
   function addEditor(string editorType, PropertyEditor editor)
-    editor.setGridColumn(1)
-    addChild(editor)
+    // editor.setGridColumn(1)
+    addLogicalChild(editor)
     m_editors.put(editorType, editor)
   
   // --------------------------------------------------------------------------
@@ -101,8 +101,8 @@ public class InspectorEditorRow extends InspectorRow
 
     let textFrame = createFrame("TEXT", "HeaderText", GAME_UI, "", 0)
     m_headerText = new Frame(textFrame)
-      ..setGridColumn(0)
-    addChild(m_headerText)
+      // ..setGridColumn(0)
+    addLogicalChild(m_headerText)
 
   // --------------------------------------------------------------------------
   private function getOrAddEditor(IPropertyDescriptor descriptor) returns PropertyEditor
@@ -165,8 +165,8 @@ public class InspectorFrame extends Frame
   private Frame m_titleContainer
   private Frame m_scrollBar
   
-  private StackPanelLayout m_stackPanelLayout
-  private DockPanelLayout m_dockPanelLayout
+  // private StackLayout m_stackPanelLayout
+  // private DockLayout m_dockPanelLayout
   private real m_itemHeight = 0.022
 
   private int m_numRows
@@ -185,8 +185,8 @@ public class InspectorFrame extends Frame
     m_descriptors = new HashList<IPropertyDescriptor>()
     m_descriptorWindow = new Vector<IPropertyDescriptor>()
     m_rows = new Vector<InspectorRow>()
-    m_stackPanelLayout = new StackPanelLayout()
-    m_dockPanelLayout = new DockPanelLayout()
+    // m_stackPanelLayout = new StackLayout()
+    // m_dockPanelLayout = new DockLayout()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -195,8 +195,8 @@ public class InspectorFrame extends Frame
     destroy m_descriptors
     destroy m_descriptorWindow
     destroy m_contexts
-    destroy m_stackPanelLayout
-    destroy m_dockPanelLayout
+    // destroy m_stackPanelLayout
+    // destroy m_dockPanelLayout
 
   // --------------------------------------------------------------------------
   override function initialize()
@@ -205,23 +205,23 @@ public class InspectorFrame extends Frame
     let titleFrameHandle = createFrame("FRAME", "TitleFrame", GAME_UI, "", 0)
     m_titleContainer = new Frame(titleFrameHandle)
       ..setHeight(0.03)
-      ..setDock(Dock.TOP)
-      ..setLayout(new GridLayout())
-    addChild(m_titleContainer)
+      // ..setDock(Dock.TOP)
+      // ..setLayout(new GridLayout())
+    addLogicalChild(m_titleContainer)
 
     let titleTextHandle = createFrame("TEXT", "InspectorTitle", GAME_UI, "", 0)
     m_titleText = new Frame(titleTextHandle)
       ..setText("Inspector")
       ..setHeight(0.03)
       ..setTextAlignment(TEXT_JUSTIFY_CENTER, TEXT_JUSTIFY_CENTER)
-    m_titleContainer.addChild(m_titleText)
+    m_titleContainer.addLogicalChild(m_titleText)
 
     let scrollBarHandle = createFrame("SCROLLBAR", "ScrollBar", GAME_UI, "BattleNetScrollBarTemplate", 0)
     m_scrollBar = new Frame(scrollBarHandle)
       ..setWidth(0.012)
-      ..setDock(Dock.RIGHT)
+      // ..setDock(Dock.RIGHT)
       ..show()
-    addChild(m_scrollBar)
+    addLogicalChild(m_scrollBar)
 
     rebuild()
 
@@ -295,12 +295,12 @@ public class InspectorFrame extends Frame
       (row castTo InspectorEditorRow)..setContext(descriptor, m_contexts)
 
   // --------------------------------------------------------------------------
-  override function layout()
+  function layout()
 
     let area = getLocalArea()
 
-    let numRows = getMaxNumberOfRows(m_itemHeight, area.height())
-    let spacing = getSpacing(m_itemHeight, area.height())
+    let numRows = getMaxNumberOfRows(m_itemHeight, area.height)
+    let spacing = getSpacing(m_itemHeight, area.height)
 
     if (numRows == m_numRows)
       return
@@ -313,30 +313,27 @@ public class InspectorFrame extends Frame
     for i = 0 to m_numRows
       addEditorRow()
 
-    m_dockPanelLayout.reset(area)
-    m_dockPanelLayout.layoutNextFrame(m_titleContainer)
-    m_dockPanelLayout.layoutNextFrame(m_scrollBar)
+    // m_dockPanelLayout.reset(area)
+    // m_dockPanelLayout.layoutNextFrame(m_titleContainer)
+    // m_dockPanelLayout.layoutNextFrame(m_scrollBar)
 
-    m_stackPanelLayout.setOrientation(LayoutOrientation.DOWN)
-    m_stackPanelLayout.setMargin(vec2(0.01, 0.01))
-    m_stackPanelLayout.setSpacing(vec2(0, spacing))
-    m_stackPanelLayout.reset(m_dockPanelLayout.getRemaining())
+    // m_stackPanelLayout.setOrientation(LayoutOrientation.TOPTOBOTTOM)
+    // m_stackPanelLayout.setSpacing(vec2(0, spacing))
+    // m_stackPanelLayout.reset(m_dockPanelLayout.getRemaining())
 
-    var j = 0
-    for row in m_rows
-      row.setHeight(m_itemHeight)
-      m_stackPanelLayout.layoutNextFrame(row)
-      Log.info("Row {0} : lpos: {1} size: {2}".format(j.toString(), row.getLocalPos().toString(), row.getSize().toString()))
-      j++
-
-    super.layout()
+    // var j = 0
+    // for row in m_rows
+    //   row.setHeight(m_itemHeight)
+    //   m_stackPanelLayout.layoutNextFrame(row)
+    //   Log.info("Row {0} : lpos: {1} size: {2}".format(j.toString(), row.getLocalPos().toString(), row.getSize().toString()))
+    //   j++
 
   // --------------------------------------------------------------------------
   private function addEditorRow() returns InspectorEditorRow
     let row = new InspectorEditorRow(m_propertyEditorFactory)
     ..initialize()
     ..show()
-    addChild(row)
+    addLogicalChild(row)
     m_rows.add(row)
     return row
 
@@ -416,7 +413,7 @@ public class Inspector
     g_inspectorFrame = new InspectorFrame()
     ..setPlayer(_player)
     ..initialize()
-    ..setAbsPos(INSPECTOR_POS)
+    ..setLocalPos(INSPECTOR_POS)
     ..setSize(INSPECTOR_SIZE)
     ..hide()
 

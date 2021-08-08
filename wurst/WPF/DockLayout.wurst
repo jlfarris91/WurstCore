@@ -1,0 +1,64 @@
+package DockLayout
+// import HashMap
+// import initlater Frame
+// import initlater Layout
+
+// // ============================================================================
+// public enum Dock
+//   FILL
+//   LEFT
+//   RIGHT
+//   TOP
+//   BOTTOM
+
+// HashMap<Frame, Dock> m_frameToDockLookup = new HashMap<Frame, Dock>()
+
+// // ============================================================================
+// public class DockLayout implements IFrameLayout
+//   private rectr m_area
+//   private rectr m_remaining
+
+//   // --------------------------------------------------------------------------
+//   function getRemaining() returns rectr
+//     return m_remaining
+
+//   // --------------------------------------------------------------------------
+//   override function reset(rectr area)
+//     m_area = area
+//     m_remaining = area
+
+//   // --------------------------------------------------------------------------
+//   override function layoutNextFrame(Frame frame)
+
+//     let dock = frame.getDock()
+
+//     var area = m_remaining
+//     let frameSize = frame.getSize()
+
+//     switch (dock)
+//       case Dock.LEFT
+//         area.right = area.left + frameSize.x
+//         m_remaining.left += frameSize.x
+//       case Dock.RIGHT
+//         area.left = area.right - frameSize.x
+//         m_remaining.right -= frameSize.x
+//       case Dock.BOTTOM
+//         area.top = area.bottom + frameSize.y
+//         m_remaining.bottom += frameSize.y
+//       case Dock.TOP
+//         area.bottom = area.top - frameSize.y
+//         m_remaining.top -= frameSize.y
+//       case Dock.FILL
+//         skip
+    
+//     frame.setArea(area)
+
+// // ============================================================================
+// public function Frame.setDock(Dock dock)
+//   m_frameToDockLookup.put(this, dock)
+
+// // ============================================================================
+// public function Frame.getDock() returns Dock
+//   if (m_frameToDockLookup.has(this))
+//     return m_frameToDockLookup.get(this)
+//   return Dock.FILL

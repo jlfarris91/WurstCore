@@ -1,0 +1,203 @@
+package ListBox
+import Frame
+import ErrorHandling
+import Vector
+import Layout
+import Panel
+import Object
+
+// ============================================================================
+public class ListBox extends Panel
+  private LayoutOrientation m_orientation = LayoutOrientation.TOPTOBOTTOM
+  private Vector<object> m_itemsSource
+  private FrameTemplate m_itemFrameTemplate
+  private Frame m_scrollBar
+  private Vector<Frame> m_itemFrames
+  private bool m_showScrollbar
+  private real m_itemSize
+  private real m_spacing
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_itemsSource = null
+    m_itemFrames = new Vector<Frame>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_itemFrames
+
+  // --------------------------------------------------------------------------
+  function getOrientation() returns LayoutOrientation
+    return m_orientation
+
+  // --------------------------------------------------------------------------
+  function setOrientation(LayoutOrientation value)
+    m_orientation = value
+
+  // --------------------------------------------------------------------------
+  function getItemFrameTemplate() returns FrameTemplate
+    return m_itemFrameTemplate
+  
+  // --------------------------------------------------------------------------
+  function setItemFrameTemplate(FrameTemplate value)
+    m_itemFrameTemplate = value
+
+  // --------------------------------------------------------------------------
+  function getItemsSource() returns Vector<object>
+    return m_itemsSource
+
+  // --------------------------------------------------------------------------
+  function setItemsSource(Vector<object> itemsSource)
+    m_itemsSource = itemsSource
+
+  // --------------------------------------------------------------------------
+  override function initialize()
+    super.initialize()
+
+    let scrollBarHandle = createFrame("SCROLLBAR", "ScrollBar", GAME_UI, "BattleNetScrollBarTemplate", 0)
+    m_scrollBar = new Frame(scrollBarHandle)
+      ..setWidth(0.012)
+      ..setHeight(0.012)
+      ..show()
+    addLogicalChild(m_scrollBar)
+  
+  // --------------------------------------------------------------------------
+  private function measure_rebuild(vec2 size)
+
+    if (m_itemsSource == null or m_itemsSource.isEmpty())
+      Log.info("ListBox", "measure_rebuild", "", "items source is null or empty")
+      destroyItemFrames()
+      return
+
+    let itemFrameTemplate = getItemFrameTemplate()
+    if (itemFrameTemplate == null)
+      error("No item frame template specified")
+
+    let firstItemFrame = itemFrameTemplate.createFrame()
+    if (firstItemFrame == null)
+      error("No item frame constructed from item frame template")
+
+    destroyItemFrames()
+
+    addItemFrame(firstItemFrame)
+    firstItemFrame.measure(vec2(REAL_MAX, REAL_MAX))
+    let itemFrameDesiredSize = firstItemFrame.getDesiredSize()
+    Log.info("ListBox", "measure_rebuild", "", "desiredSize : " + itemFrameDesiredSize.toString())
+    
+    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
+    m_itemSize = isHorizontal ? itemFrameDesiredSize.x : itemFrameDesiredSize.y
+    let panelSize = isHorizontal ? size.x : size.y
+    
+    Log.info("ListBox", "measure_rebuild", "", "m_itemSize : " + m_itemSize.toString())
+    Log.info("ListBox", "measure_rebuild", "", "panelSize : " + panelSize.toString())
+
+    let itemSourceCount = m_itemsSource.getCount()
+
+    Log.info("ListBox", "measure_rebuild", "", "itemSourceCount : " + itemSourceCount.toString())
+
+    let maxNumItems = getMaxNumberOfItems(m_itemSize, panelSize)
+    let numItems = min(maxNumItems, itemSourceCount)
+    m_spacing = getSpacing(m_itemSize, panelSize)
+    
+    Log.info("ListBox", "measure_rebuild", "", "numItems : " + maxNumItems.toString() + " spacing : " + m_spacing.toString())
+    
+    m_itemFrames = new Vector<Frame>(numItems)
+
+    for i = 1 to numItems - 1
+      let childFrame = itemFrameTemplate.createFrame()
+      childFrame.setDataContext(m_itemsSource.getItem(i))
+      addItemFrame(childFrame)
+
+    m_showScrollbar = numItems < itemSourceCount
+
+  // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+
+    measure_rebuild(availableSize)
+
+    var childSize = availableSize
+    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
+    
+    if (m_children.size() > 0)
+
+      if (m_showScrollbar)  
+        m_scrollBar.measure(availableSize)
+
+      if (isHorizontal)
+        childSize.x = m_itemSize
+        if (m_showScrollbar)
+          childSize.y -= m_scrollBar.getDesiredSize().y
+      else
+        childSize.y = m_itemSize
+        if (m_showScrollbar)
+          childSize.x -= m_scrollBar.getDesiredSize().x
+
+      for i = 0 to m_children.size() - 1
+        let childFrame = m_children.get(i)
+        childFrame.measure(childSize)
+
+    return availableSize
+
+  // --------------------------------------------------------------------------
+  override function arrangeOverride(vec2 arrangeSize) returns vec2
+
+    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
+    let layoutDir = m_orientation.getLayoutDir()
+    var childRect = rectr(0, 0, arrangeSize.x, arrangeSize.y)
+    var scrollBarSize = 0.
+    var prevChildSize = 0.    
+
+    if (m_showScrollbar)
+      scrollBarSize = isHorizontal ? m_scrollBar.getDesiredSize().y : m_scrollBar.getDesiredSize().x
+      let scrollBarRect = isHorizontal
+        ? rectr(0, 0, arrangeSize.x, scrollBarSize)
+        : rectr(arrangeSize.x - scrollBarSize, 0, scrollBarSize, arrangeSize.y)
+      m_scrollBar.arrange(scrollBarRect)
+
+    if (m_orientation == RIGHTTOLEFT)
+      childRect.x = arrangeSize.x - m_itemSize
+      childRect.y += scrollBarSize
+      childRect.height -= scrollBarSize
+    else if (m_orientation == TOPTOBOTTOM)
+      childRect.y = arrangeSize.y - m_itemSize
+      childRect.width -= scrollBarSize
+
+    for childFrame in m_children
+      let childDesiredSize = childFrame.getDesiredSize()
+
+      if (isHorizontal)
+        childRect.x += (prevChildSize + m_spacing) * layoutDir.x
+        prevChildSize = childDesiredSize.x
+        childRect.width = prevChildSize
+        childRect.height = max(arrangeSize.y - scrollBarSize, childDesiredSize.y)
+      else
+        childRect.y += (prevChildSize + m_spacing) * layoutDir.y
+        prevChildSize = childDesiredSize.y
+        childRect.height = prevChildSize
+        childRect.width = max(arrangeSize.x - scrollBarSize, childDesiredSize.x)
+
+      childFrame.arrange(childRect)
+
+    return arrangeSize
+
+  // --------------------------------------------------------------------------
+  private static function getMaxNumberOfItems(real rowHeight, real totalHeight) returns int
+    return (totalHeight / rowHeight).floor()
+
+  // --------------------------------------------------------------------------
+  private static function getSpacing(real rowHeight, real totalHeight) returns real
+    let rowsAbs = totalHeight / rowHeight
+    let rowsFloor = rowsAbs.floor()
+    return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
+
+  // --------------------------------------------------------------------------
+  private function addItemFrame(Frame frame)
+    addChild(frame)
+    m_itemFrames.add(frame)
+
+  // --------------------------------------------------------------------------
+  private function destroyItemFrames()
+    while (m_itemFrames.isEmpty() == false)
+      let childFrame = m_itemFrames.pop()
+      removeChild(childFrame)
+      destroy childFrame

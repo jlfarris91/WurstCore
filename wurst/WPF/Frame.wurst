@@ -1,0 +1,549 @@
+package Frame
+import Range
+import Action
+import initlater Layout
+import Reflection
+import Execute
+import Math
+import Object
+
+// ============================================================================
+public interface IFrameFactory
+  function createFrame(framehandle frameHandle) returns Frame
+
+// ============================================================================
+public class DefaultFrameFactory implements IFrameFactory
+  constant static IFrameFactory instance = new DefaultFrameFactory()
+  override function createFrame(framehandle frameHandle) returns Frame
+    return new Frame(frameHandle)
+
+// ============================================================================
+public enum HorizontalLayoutMode
+  LEFT
+  CENTER
+  RIGHT
+  STRETCH
+
+// ============================================================================
+public enum VerticalLayoutMode
+  BOTTOM
+  CENTER
+  TOP
+  STRETCH
+
+public constant vec2 INF2 = vec2(REAL_MAX, REAL_MAX)
+
+// ============================================================================
+public class Frame
+  protected Frame m_parent
+  protected framehandle m_handle
+
+  private player m_player
+  private bool m_initialized
+  private vec2 m_size
+  private vec2 m_desiredSize
+  private vec2 m_minSize = vec2(0.001, 0.001)
+  private vec2 m_maxSize = INF2
+  private vec2 m_localPos
+  private rangeReal m_minMax
+  private textaligntype m_textHorzAlign
+  private textaligntype m_textVertAlign
+  private thickness m_margin = ZEROTHICK
+  private thickness m_padding = ZEROTHICK
+  private object m_dataContext = NULL
+
+  private bool m_neverMeasured = true
+  private rectr m_finalRect = ZERORECTR
+
+  private HorizontalLayoutMode m_horizontalLayoutMode = STRETCH
+  private VerticalLayoutMode m_verticalLayoutMode = STRETCH
+
+  private IFrameFactory m_frameFactory
+
+  // --------------------------------------------------------------------------
+  construct (string framename, framehandle owner)
+    m_handle = createFrame(framename, owner, 0, 0)
+    construct_initialize()
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    m_handle = frame
+    construct_initialize()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_handle != null)
+      m_handle.remove()
+      m_handle = null
+
+  // --------------------------------------------------------------------------
+  function getFrameFactory() returns IFrameFactory
+    if (m_frameFactory != null)
+      return m_frameFactory
+    if (m_parent != null)
+      return m_parent.getFrameFactory()
+    return DefaultFrameFactory.instance
+
+  // --------------------------------------------------------------------------
+  function setFrameFactory(IFrameFactory factory)
+    m_frameFactory = factory
+
+  // --------------------------------------------------------------------------
+  function getParent() returns Frame
+    return m_parent
+
+  // --------------------------------------------------------------------------
+  function getPlayer() returns player
+    return m_player
+
+  // --------------------------------------------------------------------------
+  function setPlayer(player value)
+    m_player = value
+
+  // --------------------------------------------------------------------------
+  function getDataContext() returns object
+    if (m_dataContext != NULL)
+      return m_dataContext
+    if (m_parent != null)
+      return m_parent.getDataContext()
+    return NULL
+
+  // --------------------------------------------------------------------------
+  function setDataContext(object value)
+    let oldValue = m_dataContext
+    if (oldValue != value)
+      m_dataContext = value
+      onDataContextChanged(oldValue, value)
+
+  // --------------------------------------------------------------------------
+  function initialize()
+    if (m_initialized)
+      return
+    m_initialized = true
+
+  // --------------------------------------------------------------------------
+  private function construct_initialize()
+    m_size.x = m_handle.getWidth()
+    m_size.y = m_handle.getHeight()    
+    m_handle.clearAllPoints()
+
+  // --------------------------------------------------------------------------
+  function show()
+    if (not m_initialized)
+      initialize()
+    if (m_player != null)
+      m_handle.show(m_player)
+    else
+      m_handle.show()
+    
+  // --------------------------------------------------------------------------
+  function hide()
+    if (m_player != null)
+      m_handle.hide(m_player)
+    else
+      m_handle.hide()
+
+  // --------------------------------------------------------------------------
+  function getText() returns string
+    return m_handle.getText()
+
+  // --------------------------------------------------------------------------
+  function setText(string text)
+    m_handle.setText(text)
+
+  // --------------------------------------------------------------------------
+  function getTextSizeLimit() returns int
+    return m_handle.getTextSizeLimit()
+
+  // --------------------------------------------------------------------------
+  function setTextSizeLimit(int value)
+    m_handle.setTextSizeLimit(value)
+
+  // --------------------------------------------------------------------------
+  function setTextAlignment(textaligntype vert, textaligntype horz)
+    m_textVertAlign = vert
+    m_textHorzAlign = horz
+    m_handle.setTextAlignment(vert, horz)
+
+  // --------------------------------------------------------------------------
+  function getHorizontalTextAlignment() returns textaligntype
+    return m_textHorzAlign
+
+  // --------------------------------------------------------------------------
+  function getVerticalTextAlignment() returns textaligntype
+    return m_textVertAlign
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_handle.getValue()
+
+  // --------------------------------------------------------------------------
+  function setValue(real value)
+    m_handle.setValue(value)
+
+  // --------------------------------------------------------------------------
+  function setMinMax(rangeReal minMax)
+    m_minMax = minMax
+    m_handle.setMinMax(minMax.min, minMax.max)
+
+  // --------------------------------------------------------------------------
+  function getMinMax() returns rangeReal
+    return m_minMax
+
+  // --------------------------------------------------------------------------
+  function getIsVisible() returns bool
+    return m_handle.isVisible()
+
+  // --------------------------------------------------------------------------
+  function getWidth() returns real
+    return m_size.x
+
+  // --------------------------------------------------------------------------
+  function setWidth(real width)
+    m_size.x = width
+    invalidateArrange()
+
+  // --------------------------------------------------------------------------
+  function getHeight() returns real
+    return m_size.x
+  
+  // --------------------------------------------------------------------------
+  function setHeight(real height)
+    m_size.y = height
+    invalidateArrange()
+
+  // --------------------------------------------------------------------------
+  function getSize() returns vec2
+    return m_size
+  
+  // --------------------------------------------------------------------------
+  function setSize(vec2 size)
+    m_size = size
+    invalidateArrange()
+
+  // --------------------------------------------------------------------------
+  function getDesiredSize() returns vec2
+    return m_desiredSize
+
+  // --------------------------------------------------------------------------
+  function getMinSize() returns vec2
+    return m_minSize
+
+  // --------------------------------------------------------------------------
+  function setMinSize(vec2 value)
+    m_minSize = value
+
+  // --------------------------------------------------------------------------
+  function getMaxSize() returns vec2
+    return m_maxSize
+
+  // --------------------------------------------------------------------------
+  function setMaxSize(vec2 value)
+    m_maxSize = value
+
+  // --------------------------------------------------------------------------
+  function getActualSize() returns vec2
+    return m_finalRect.size()
+
+  // --------------------------------------------------------------------------
+  function getLocalPos() returns vec2
+    return m_finalRect.bottomLeft()
+
+  // --------------------------------------------------------------------------
+  function setLocalPos(vec2 pos)
+    // TODO: setting local position directly should probably not be a thing
+    m_finalRect.x = pos.x
+    m_finalRect.y = pos.y
+    updateFramePositionAndSize()
+
+  // --------------------------------------------------------------------------
+  function getAbsPos() returns vec2
+    return m_parent != null ? getAbsPos() + getLocalPos() : getLocalPos()
+
+  // --------------------------------------------------------------------------
+  function getLocalArea() returns rectr
+    return rectr(0, 0, m_size.x, m_size.y)
+
+  // --------------------------------------------------------------------------
+  function getArea() returns rectr
+    return rectr(m_localPos.x, m_localPos.y, m_localPos.x + m_size.x, m_localPos.y + m_size.y)
+
+  // --------------------------------------------------------------------------
+  function getAbsArea() returns rectr
+    let absPos = getAbsPos()
+    return rectr(absPos.x, absPos.y, absPos.x + m_size.x, absPos.y + m_size.y)
+
+  // --------------------------------------------------------------------------
+  function getHorizontalLayoutMode() returns HorizontalLayoutMode
+    return m_horizontalLayoutMode
+
+  // --------------------------------------------------------------------------
+  function setHorizontalLayoutMode(HorizontalLayoutMode mode)
+    m_horizontalLayoutMode = mode
+    updateFramePositionAndSize()
+
+  // --------------------------------------------------------------------------
+  function getVerticalLayoutMode() returns VerticalLayoutMode
+    return m_verticalLayoutMode
+
+  // --------------------------------------------------------------------------
+  function setVerticalLayoutMode(VerticalLayoutMode mode)
+    m_verticalLayoutMode = mode
+    updateFramePositionAndSize()
+
+  // --------------------------------------------------------------------------
+  function getMargin() returns thickness
+    return m_margin
+
+  // --------------------------------------------------------------------------
+  function setMargin(real value)
+    m_margin = thickness(value, value, value, value)
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function setMargin(vec2 value)
+    m_margin = thickness(value.x, value.y, value.x, value.y)
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function setMargin(real left, real bottom, real right, real top)
+    m_margin = thickness(left, bottom, right, top)
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function setMargin(thickness value)
+    m_margin = value
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function getPadding() returns thickness
+    return m_padding
+
+  // --------------------------------------------------------------------------
+  function setPadding(real value)
+    m_padding = thickness(value, value, value, value)
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function setPadding(vec2 value)
+    m_padding = thickness(value.x, value.y, value.x, value.y)
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function setPadding(thickness value)
+    m_padding = value
+    invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  private function updateFramePositionAndSize()
+    m_handle.clearAllPoints()
+    if (m_parent != null)
+      m_handle.setPoint(FRAMEPOINT_BOTTOMLEFT, m_parent.m_handle, FRAMEPOINT_BOTTOMLEFT, m_finalRect.bottomLeft())
+    else
+      m_handle.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, m_finalRect.bottomLeft())
+    m_handle.setWidth(m_finalRect.width)
+    m_handle.setHeight(m_finalRect.height)
+
+  // --------------------------------------------------------------------------
+  function invalidateMeasure()
+    skip
+
+  // --------------------------------------------------------------------------
+  function invalidateArrange()
+    skip
+
+  // --------------------------------------------------------------------------
+  function addLogicalChild(Frame frame)
+    frame.m_parent = this
+    frame.m_handle.setParent(m_handle)
+    updateFramePositionAndSize()
+
+  // --------------------------------------------------------------------------
+  function removeLogicalChild(Frame frame)
+    frame.m_parent = null
+    frame.m_handle.setParent(null)
+    frame.m_handle.clearAllPoints()
+    updateFramePositionAndSize()
+
+  // --------------------------------------------------------------------------
+  function measure(vec2 availableSize)
+
+    execute() () ->
+
+      //Log.info(typeIdToTypeName(this.typeId), "measure", "", "availableSize : " + availableSize.toString())
+      m_desiredSize = measureCore(availableSize)
+      Log.info(typeIdToTypeName(this.typeId), "measure", "", "desiredSize : " + m_desiredSize.toString())
+      m_neverMeasured = false
+
+  // --------------------------------------------------------------------------
+  protected function measureCore(vec2 availableSize) returns vec2
+    let marginSize = m_margin.size()
+    let frameworkAvailableSize = availableSize - marginSize
+    var desiredSize = measureOverride(frameworkAvailableSize)    
+    desiredSize = clamp(desiredSize, m_minSize, m_maxSize) + marginSize
+    return vec2(max(0, desiredSize.x), max(0, desiredSize.y))
+
+  // --------------------------------------------------------------------------
+  protected function measureOverride(vec2 _availableSize) returns vec2
+    return getSize()
+
+  // --------------------------------------------------------------------------
+  function arrange(rectr finalRect)
+    
+    execute() () ->
+
+      //Log.info(typeIdToTypeName(this.typeId), "arrange", "", "finalRect : " + finalRect.toString())
+
+      if (getNeverMeasured())
+        measure(finalRect.size())
+      arrangeCore(finalRect)
+      
+      Log.info(typeIdToTypeName(this.typeId), "arrange", "", "m_finalRect : " + m_finalRect.toString())
+
+  // --------------------------------------------------------------------------
+  protected function arrangeCore(rectr finalRect)
+
+    //Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalRect : " + finalRect.toString())
+
+    var arrangeSize = finalRect.size()
+
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "m_margin : " + m_margin.toString())
+
+    arrangeSize.x = max(0, arrangeSize.x - m_margin.width())
+    arrangeSize.y = max(0, arrangeSize.y - m_margin.height())
+    
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 1 : " + arrangeSize.toString())
+
+    let desiredSize = getSize()
+  
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "desiredSize : " + desiredSize.toString())
+
+    arrangeSize.x = max(arrangeSize.x, desiredSize.x)
+    arrangeSize.y = max(arrangeSize.y, desiredSize.y)
+
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 2 : " + arrangeSize.toString())
+
+    if (m_horizontalLayoutMode != HorizontalLayoutMode.STRETCH)
+      arrangeSize.x = desiredSize.x
+    
+    if (m_verticalLayoutMode != VerticalLayoutMode.STRETCH)
+      arrangeSize.y = desiredSize.y
+
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 3 : " + arrangeSize.toString())
+
+    let effectiveMaxSize = vec2(max(desiredSize.x, m_maxSize.x), max(desiredSize.y, m_maxSize.y))
+
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "effectiveMaxSize : " + effectiveMaxSize.toString())
+
+    arrangeSize.x = min(arrangeSize.x, effectiveMaxSize.x)
+    arrangeSize.y = min(arrangeSize.y, effectiveMaxSize.y)
+
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 4 : " + arrangeSize.toString())
+
+    let finalSize = arrangeOverride(arrangeSize)
+    
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalSize : " + finalSize.toString())
+    
+    m_finalRect = finalRect
+
+    m_finalRect.x += m_margin.left
+    m_finalRect.y += m_margin.bottom
+    m_finalRect.width = finalSize.x
+    m_finalRect.height = finalSize.y
+
+    updateFramePositionAndSize()
+
+  // --------------------------------------------------------------------------
+  protected function arrangeOverride(vec2 arrangeSize) returns vec2
+    return arrangeSize
+    
+  // --------------------------------------------------------------------------
+  function getNeverMeasured() returns bool
+    return m_neverMeasured    
+
+  // --------------------------------------------------------------------------
+  protected function onDataContextChanged(object _oldValue, object _newValue)
+    skip
+
+// ============================================================================
+public interface IFrameTemplate
+  function getFrameDefinition() returns FrameDefinition
+  function setFrameDefinition(FrameDefinition definition)
+  function getItemFrameFactory() returns IFrameFactory
+  function setItemFrameFactory(IFrameFactory factory)
+  function createFrame() returns Frame
+
+// ============================================================================
+public class FrameDefinition
+  private string m_name = null
+  private string m_typeName = null
+  private framehandle m_owner = null
+  private int m_priority = -1
+  private string m_inherits = null
+  private int m_createContext = -1
+
+  // --------------------------------------------------------------------------
+  construct (string name)
+    m_name = name
+
+  // --------------------------------------------------------------------------
+  construct (string name, framehandle owner, int priority, int createContext)
+    m_name = name
+    m_owner = owner
+    m_priority = priority
+    m_createContext = createContext
+
+  // --------------------------------------------------------------------------
+  construct (string typeName, string name, framehandle owner, string inherits, int createContext)
+    m_typeName = typeName
+    m_name = name
+    m_owner = owner
+    m_inherits = inherits
+    m_createContext = createContext
+
+  // --------------------------------------------------------------------------
+  function buildFrame() returns framehandle
+    if (m_typeName != null)
+      return createFrame(m_typeName, m_name, m_owner, m_inherits, m_createContext)
+    if (m_owner != null)
+      return createFrame(m_name, m_owner, m_priority, m_createContext)
+    return createFrame(m_name)
+
+// ============================================================================
+public class FrameTemplate implements IFrameTemplate
+  private FrameDefinition m_frameDef
+  private IFrameFactory m_frameFactory
+  private Action1<Frame> m_initializer
+
+  // --------------------------------------------------------------------------
+  override function getFrameDefinition() returns FrameDefinition
+    return m_frameDef
+  
+  // --------------------------------------------------------------------------
+  override function setFrameDefinition(FrameDefinition value)
+    m_frameDef = value
+
+  // --------------------------------------------------------------------------
+  override function getItemFrameFactory() returns IFrameFactory
+    return m_frameFactory
+  
+  // --------------------------------------------------------------------------
+  override function setItemFrameFactory(IFrameFactory value)
+    m_frameFactory = value
+
+  // --------------------------------------------------------------------------
+  function getInitializer() returns Action1<Frame>
+    return m_initializer
+  
+  // --------------------------------------------------------------------------
+  function setInitializer(Action1<Frame> value)
+    m_initializer = value
+
+  // --------------------------------------------------------------------------
+  override function createFrame() returns Frame
+    if (m_frameDef == null or m_frameFactory == null)
+      return null
+    let frame = m_frameFactory.createFrame(m_frameDef.buildFrame())
+    if (m_initializer != null)
+      m_initializer.call(frame)
+    return frame

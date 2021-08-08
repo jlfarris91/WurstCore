@@ -1,0 +1,66 @@
+package StackPanel
+import Panel
+import Layout
+import Frame
+
+// ============================================================================
+public class StackPanel extends Panel
+  private LayoutOrientation m_orientation
+
+  // --------------------------------------------------------------------------
+  override function initialize()
+    super.initialize()
+
+  // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+
+    var stackDesiredSize = ZERO2
+    var layoutSlotSize = availableSize
+    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
+    let layoutDir = m_orientation.getLayoutDir()
+
+    if (isHorizontal)
+      layoutSlotSize.x = REAL_MAX
+    else
+      layoutSlotSize.y = REAL_MAX
+
+    for child in m_children
+    //{
+      child.measure(layoutSlotSize)
+      let childDesiredSize = child.getDesiredSize()
+
+      if (isHorizontal)
+        stackDesiredSize.x += childDesiredSize.x * layoutDir.x
+        stackDesiredSize.y = max(stackDesiredSize.y, childDesiredSize.y)
+      else
+        stackDesiredSize.x = max(stackDesiredSize.x, childDesiredSize.x)
+        stackDesiredSize.y += childDesiredSize.y * layoutDir.y
+    //}
+
+    return stackDesiredSize
+
+  // --------------------------------------------------------------------------
+  override function arrangeOverride(vec2 arrangeSize) returns vec2
+
+    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
+    let layoutDir = m_orientation.getLayoutDir()
+    var childRect = rectr(0, 0, arrangeSize.x, arrangeSize.y)
+    var prevChildSize = 0.
+
+    for child in m_children
+    //{
+      let childDesiredSize = child.getDesiredSize()
+
+      if (isHorizontal)
+        childRect.x += prevChildSize * layoutDir.x
+        prevChildSize = childDesiredSize.x
+        childRect.width = prevChildSize
+        childRect.height = max(arrangeSize.y, childDesiredSize.y)
+      else
+        childRect.y += prevChildSize * layoutDir.y
+        prevChildSize = childDesiredSize.y
+        childRect.height = prevChildSize
+        childRect.width = max(arrangeSize.x, childDesiredSize.x)
+    //}
+
+    return arrangeSize

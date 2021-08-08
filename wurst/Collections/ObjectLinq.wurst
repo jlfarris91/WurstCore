@@ -1,0 +1,16 @@
+package ObjectLinq
+import ObjectEnumerable
+
+// ============================================================================
+public function IObjectEnumerable.any() returns bool
+  let iterator = this.iterator()
+  let any = iterator.hasNext()
+  destroy iterator
+  return any
+
+// ============================================================================
+public function IObjectEnumerable.count() returns int
+  var count = 0
+  for i in this
+    count++
+  return count

@@ -1,0 +1,55 @@
+package Panel
+import Frame
+import HashMap
+import LinkedList
+
+// ============================================================================
+public abstract class Panel extends Frame
+  private HashMap<framehandle, Frame> m_childMap
+  protected LinkedList<Frame> m_children
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(createFrame("BACKDROP", "Panel", GAME_UI, "TestBackdrop", 0))
+    m_childMap = new HashMap<framehandle, Frame>()
+    m_children = new LinkedList<Frame>()
+
+  // --------------------------------------------------------------------------
+  function getChild(string name) returns Frame
+    return getChild(name, 0)
+
+  // --------------------------------------------------------------------------
+  function getChild(string name, int context) returns Frame
+    return m_childMap.get(getFrame(name, context))
+
+  // --------------------------------------------------------------------------
+  protected function getOrAddChild(string name) returns Frame
+    return getOrAddChild(name, 0)
+
+  // --------------------------------------------------------------------------
+  protected function getOrAddChild(string name, int context) returns Frame
+    let childFrameHandle = getFrame(name, context)
+    var childFrame = m_childMap.get(childFrameHandle)
+    if (childFrame == null)
+      childFrame = getFrameFactory().createFrame(childFrameHandle)
+      addChild(childFrame)
+      childFrame.initialize()
+    return childFrame
+
+  // --------------------------------------------------------------------------
+  function addChild(Frame frame)
+    if (m_childMap.has(frame.m_handle))
+      // error("Cannot add a child frame that is already a child of this frame")
+      return
+    m_childMap.put(frame.m_handle, frame)
+    m_children.add(frame)
+    addLogicalChild(frame)
+
+  // --------------------------------------------------------------------------
+  function removeChild(Frame frame)
+    if (not m_childMap.has(frame.m_handle))
+      // error("Cannot remove a child frame that is not a child of this frame")
+      return
+    m_childMap.remove(frame.m_handle)
+    m_children.remove(frame)
+    removeLogicalChild(frame)
