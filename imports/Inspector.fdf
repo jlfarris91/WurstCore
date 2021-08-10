@@ -16,86 +16,55 @@ Frame "TEXT" "InspectorTitle" INHERITS "BattleNetLabelTextTemplate" {
 
 // ============================================================================
 Frame "FRAME" "InspectorTemplate" {
-
   Frame "BACKDROP" "InspectorBackdrop" INHERITS "BattleNetControlBackdropTemplate" {
     SetAllPoints,
     // SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, 0.0,
     // SetPoint BOTTOMRIGHT, "InspectorTemplate", TOPRIGHT, 0.0, -0.03,
   }
+}
 
-  // Frame "FRAME" "InspectorBody" {
-  //   SetPoint TOPLEFT, "InspectorTemplate", TOPLEFT, 0.0, -0.03,
-  //   SetPoint BOTTOMRIGHT, "InspectorTemplate", BOTTOMRIGHT, 0.0, 0.0,
+Frame "SLIDER" "VerticalSliderTest" {
+    Width 0.012,
+    SliderLayoutVertical,
 
-  //   Frame "BACKDROP" "InspectorBodyBackdrop" INHERITS "BattleNetControlBackdropTemplate" {
-  //     SetAllPoints,
-  //   }
+    ControlBackdrop "EscMenuScrollBarBackdrop",
+    Frame "BACKDROP" "EscMenuScrollBarBackdrop" {
+        DecorateFileNames,
+        BackdropTileBackground,
+        BackdropBackground  "EscMenuSliderBackground",
+        BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+        BackdropCornerSize  0.006,
+        BackdropBackgroundSize 0.006,
+        BackdropBackgroundInsets 0.0025 0.0025 0.0025 0.0025,
+        BackdropEdgeFile  "EscMenuSliderBorder",
+        BackdropBlendAll,
+    }
 
-  //   // Row container is shifted left to make room for scrollbar
-  //   Frame "FRAME" "InspectorRowContainer" {
-  //     SetPoint TOPLEFT, "InspectorBody", TOPLEFT, 0.01, -0.01,
-  //     SetPoint BOTTOMRIGHT, "InspectorBody", BOTTOMRIGHT, -0.022, 0.01, // -0.01 (margin) -0.012 (scrollbar)
-  //   }
+    SliderThumbButtonFrame "EscMenuScrollThumbButton",
+    Frame "BUTTON" "EscMenuScrollThumbButton" {
+        Width 0.016,
+        Height 0.016,
 
-  //   // Frame "FRAME" "InspectorBodyScrollBarContainer" {
-  //   //   SetPoint TOPLEFT, "InspectorBody", TOPRIGHT, 0.01, -0.01,
-  //   //   SetPoint BOTTOMRIGHT, "InspectorBody", BOTTOMRIGHT, -0.01, 0.01,      
-  //   // }
-
-  //   Frame "BACKDROP" "InspectorBodyScrollBarContainer" {
-  //     DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
-  //     BackdropTileBackground, //Tile mode enabled
-  //     BackdropBackground  "ToolTipBackground", //BackgroundFile
-  //     BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  //     BackdropCornerSize  0.008, //higher numbers make the corners bigger.
-  //     BackdropBackgroundInsets 0.0022 0.0022 0.0022 0.0022, //makes the background smaller, from the outside.
-  //     BackdropEdgeFile  "ToolTipBorder", //the border File
-  //     BackdropBlendAll,
-  //   }
-
-  //   Frame "SCROLLBAR" "InspectorBodyScrollBar" INHERITS WITHCHILDREN "BattleNetScrollBarTemplate" {
-  //     Width 0.012,
-  //     // SetPoint TOPLEFT, "InspectorBody", TOPRIGHT, -0.012, 0,
-  //     // SetPoint BOTTOMRIGHT, "InspectorBody", BOTTOMRIGHT, -0.012, 0,
-  //   }
-  // }
+        ControlBackdrop "EscMenuScrollThumbButtonBackdrop",
+        Frame "BACKDROP" "EscMenuScrollThumbButtonBackdrop" {
+            DecorateFileNames,
+            BackdropBlendAll,
+            BackdropBackground  "EscMenuSliderThumbButton",
+        }
+    }
 }
 
 // ============================================================================
-Frame "FRAME" "InspectorRowTemplate" {
-  UseActiveContext,
-  Height 0.03,
-
-  Frame "TEXT" "InspectorRowText" INHERITS "EscMenuLabelTextTemplate" {
-    UseActiveContext,
-    SetPoint LEFT, "InspectorRowTemplate", LEFT, 0.0, 0.0,
-    SetPoint RIGHT, "InspectorRowTemplate", CENTER, -0.001, 0.0,
-    // SetPoint TOPLEFT, "InspectorRowTemplate", TOPLEFT, 0.0, 0.0,
-    // SetPoint BOTTOMRIGHT, "InspectorRowTemplate", BOTTOMRIGHT, 0.0, 0.0,
-    FrameFont "MasterFont", 0.012,"",
-    FontJustificationH JUSTIFYLEFT,
-  }
-
-  Frame "FRAME" "InspectorEditorFrame" {
-    UseActiveContext,
-    // SetPoint LEFT, "InspectorRowTemplate", CENTER, 0.0, 0.0,
-    // SetPoint RIGHT, "InspectorRowTemplate", RIGHT, 0.0, 0.0,
-    SetPoint TOPLEFT, "InspectorRowTemplate", TOP, 0.001, 0.0,
-    SetPoint BOTTOMRIGHT, "InspectorRowTemplate", BOTTOMRIGHT, 0.0, 0.0,
-  }
-
-  // Frame "BACKDROP" "InspectorEditorFrame" {
-  //   SetPoint TOPLEFT, "InspectorRowTemplate", TOP, 0.0, 0.0,
-  //   SetPoint BOTTOMRIGHT, "InspectorRowTemplate", BOTTOMRIGHT, 0.0, 0.0,
-  //   DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
-  //   BackdropTileBackground, //Tile mode enabled
-  //   BackdropBackground  "ToolTipBackground", //BackgroundFile
-  //   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  //   BackdropCornerSize  0.008, //higher numbers make the corners bigger.
-  //   BackdropBackgroundInsets 0.0022 0.0022 0.0022 0.0022, //makes the background smaller, from the outside.
-  //   BackdropEdgeFile  "ToolTipBorder", //the border File
-  //   BackdropBlendAll,
-  // }
+Frame "BACKDROP" "TestBackdrop" {
+  SetAllPoints,
+  DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "ToolTipBackground", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.003, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "ToolTipBorder", //the border File
+  BackdropBlendAll,
 }
 
 // ============================================================================
