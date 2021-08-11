@@ -3,15 +3,13 @@ import Inspection
 import LinkedList
 import ClosureTimers
 import Frame
-import StackLayout
 import PropertyEditors
 import Vector
 import Range
 import HashList
 import HashMap
-import DockLayout
 import Layout
-import GridLayout
+import GridPanel
 
 constant vec2 INSPECTOR_POS = vec2(0.55, 0.2)
 constant vec2 INSPECTOR_SIZE = vec2(0.25, 0.34)
@@ -44,13 +42,13 @@ public class InspectorEditorRow extends InspectorRow
   private Frame m_headerText
   private PropertyEditor m_activeEditor
   private LinkedList<int> m_contexts
+  private GridPanel m_gridPanel
 
   // --------------------------------------------------------------------------
   construct(IPropertyEditorFactory editorFactory)
     super(createFrame("FRAME", "InspectorRow", GAME_UI, "", 0))
     m_editorFactory = editorFactory
     m_editors = new IterableMap<string, PropertyEditor>()
-    //setLayout(new GridLayout()..setColumns(2))
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -86,8 +84,8 @@ public class InspectorEditorRow extends InspectorRow
 
   // --------------------------------------------------------------------------
   function addEditor(string editorType, PropertyEditor editor)
-    // editor.setGridColumn(1)
-    addLogicalChild(editor)
+    editor.setGridColumn(1)
+    m_gridPanel.addLogicalChild(editor)
     m_editors.put(editorType, editor)
   
   // --------------------------------------------------------------------------
@@ -99,10 +97,15 @@ public class InspectorEditorRow extends InspectorRow
   override function initialize()
     super.initialize()
 
+    m_gridPanel = new GridPanel()
+    m_gridPanel.addColumnDefinition(new ColumnDefinition(GridSizeMode.PROPORTIONAL, 1))
+    m_gridPanel.addColumnDefinition(new ColumnDefinition(GridSizeMode.PROPORTIONAL, 1))
+    addLogicalChild(m_gridPanel)
+
     let textFrame = createFrame("TEXT", "HeaderText", GAME_UI, "", 0)
     m_headerText = new Frame(textFrame)
-      // ..setGridColumn(0)
-    addLogicalChild(m_headerText)
+      ..setGridColumn(0)
+    m_gridPanel.addLogicalChild(m_headerText)
 
   // --------------------------------------------------------------------------
   private function getOrAddEditor(IPropertyDescriptor descriptor) returns PropertyEditor
@@ -127,23 +130,6 @@ public class InspectorEditorRow extends InspectorRow
     if (m_activeEditor != null)
       m_activeEditor..hide()..setContext(null, null)
       m_activeEditor = null
-
-// ============================================================================
-public class InspectorCategoryRow extends InspectorRow
-  private string m_category
-  private framehandle m_rowText
-
-  // --------------------------------------------------------------------------
-  construct(string category)
-    super("InspectorCategoryRowTemplate", GAME_UI)
-    m_category = category
-
-  // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
-
-    m_rowText = getFrame("InspectorCategoryRowText")
-    m_rowText.setText(m_category)
 
 // ============================================================================
 public class PropertyEditorFactory implements IPropertyEditorFactory

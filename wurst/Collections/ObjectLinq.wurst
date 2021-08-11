@@ -11,6 +11,6 @@ public function IObjectEnumerable.any() returns bool
 // ============================================================================
 public function IObjectEnumerable.count() returns int
   var count = 0
-  for i in this
+  for _ in this
     count++
   return count

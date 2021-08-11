@@ -1,0 +1,250 @@
+package GridPanel
+import Panel
+import HashMap
+import Frame
+import Vector
+import Math
+import Layout
+import LinkedList
+
+HashMap<Frame, int> m_frameToColumnMap = new HashMap<Frame, int>()
+HashMap<Frame, int> m_frameToRowMap = new HashMap<Frame, int>()
+
+public enum GridSizeMode
+  FIXED
+  AUTO
+  PROPORTIONAL
+
+// ============================================================================
+public class ColumnDefinition
+  private real m_value
+  private GridSizeMode m_mode = AUTO
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_mode = AUTO
+    m_value = 0.0
+
+  // --------------------------------------------------------------------------
+  construct(real width)
+    m_mode = FIXED
+    m_value = width
+
+  // --------------------------------------------------------------------------
+  construct(GridSizeMode mode, real value)
+    m_mode = mode
+    m_value = value
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function getSizeMode() returns GridSizeMode
+    return m_mode
+
+// ============================================================================
+public class RowDefinition
+  private real m_value
+  private GridSizeMode m_mode = AUTO
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_mode = AUTO
+    m_value = 0.0
+
+  // --------------------------------------------------------------------------
+  construct(real height)
+    m_mode = FIXED
+    m_value = height
+
+  // --------------------------------------------------------------------------
+  construct(GridSizeMode mode, real value)
+    m_mode = mode
+    m_value = value
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function getSizeMode() returns GridSizeMode
+    return m_mode
+
+// ============================================================================
+public class GridPanel extends Panel
+  private LinkedList<ColumnDefinition> m_columnDefinitions
+  private LinkedList<RowDefinition> m_rowDefinitions
+  private Vector<real> m_columnDesiredSizes
+  private Vector<real> m_rowDesiredSizes
+  private bool m_dirty
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_columnDefinitions = new LinkedList<ColumnDefinition>()
+    m_rowDefinitions = new LinkedList<RowDefinition>()
+    m_columnDesiredSizes = new Vector<real>()
+    m_rowDesiredSizes = new Vector<real>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    while m_columnDefinitions.isEmpty() == false
+      destroy m_columnDefinitions.pop()
+    m_columnDefinitions = null
+
+    while m_rowDefinitions.isEmpty() == false
+      destroy m_rowDefinitions.pop()
+    m_rowDefinitions = null
+
+  // --------------------------------------------------------------------------
+  function addColumnDefinition(ColumnDefinition columnDefinition)
+    m_columnDefinitions.add(columnDefinition)
+    m_columnDefinitions.sortWith() (ColumnDefinition o1, ColumnDefinition o2) ->
+      return (o1.getSizeMode() castTo int) - (o2.getSizeMode() castTo int)
+
+    m_columnDesiredSizes.add(0.0)
+    m_dirty = true
+
+  // --------------------------------------------------------------------------
+  function addRowDefinition(RowDefinition rowDefinition)
+    m_rowDefinitions.add(rowDefinition)
+    m_rowDefinitions.sortWith() (RowDefinition o1, RowDefinition o2) ->
+      return (o1.getSizeMode() castTo int) - (o2.getSizeMode() castTo int)
+    m_rowDesiredSizes.add(0.0)
+    m_dirty = true
+
+  // --------------------------------------------------------------------------
+  override function invalidateMeasure()
+    super.invalidateMeasure()
+    m_dirty = true
+
+  // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+
+    if (m_dirty)
+      measureCellAreas(availableSize)
+      m_dirty = false
+
+    for childFrame in m_children
+      let row = getRowClamped(childFrame)
+      let col = getColumnClamped(childFrame)
+      let cellArea = getCellArea(availableSize, row, col)
+      childFrame.measure(cellArea.size())
+    return availableSize
+
+  // --------------------------------------------------------------------------
+  override function arrangeOverride(vec2 arrangeSize) returns vec2
+    for childFrame in m_children
+      let row = getRowClamped(childFrame)
+      let col = getColumnClamped(childFrame)
+      let cellArea = getCellArea(arrangeSize, row, col)
+      childFrame.arrange(cellArea)
+    return arrangeSize
+
+  // --------------------------------------------------------------------------
+  private function getRowClamped(Frame frame) returns int
+    return clamp(frame.getGridRow(), 0, min(m_rowDefinitions.size() - 1, 0))
+
+  // --------------------------------------------------------------------------
+  private function getColumnClamped(Frame frame) returns int
+    return clamp(frame.getGridColumn(), 0, min(m_columnDefinitions.size() - 1, 0))
+
+  private Vector<Frame> m_childrenNeedingMeasure = new Vector<Frame>()
+
+  // --------------------------------------------------------------------------
+  private function measureCellAreas(vec2 availableSize)
+
+    var remainingSize = availableSize
+    var totalWeight = 0.0
+
+    m_childrenNeedingMeasure.clear()
+    for childFrame in m_children
+      let row = getRowClamped(childFrame)
+      let col = getColumnClamped(childFrame)
+      let colDef = m_columnDefinitions.get(col)
+      let rowDef = m_rowDefinitions.get(row)
+      if (colDef.getSizeMode() == AUTO or rowDef.getSizeMode() == AUTO)
+        m_childrenNeedingMeasure.emplaceAdd(childFrame)
+
+    for i = 0 to m_columnDefinitions.size() - 1
+      let colDef = m_columnDefinitions.get(i)
+      let sizeMode = colDef.getSizeMode()
+      var cachedSize = 0.
+
+      switch sizeMode
+        case FIXED
+          cachedSize = min(colDef.getValue(), remainingSize.x)
+          m_columnDesiredSizes.setItem(i, cachedSize)
+          remainingSize.x -= cachedSize
+
+        case AUTO
+          for f = 0 to m_childrenNeedingMeasure.getCount() - 1
+            let childFrame = m_childrenNeedingMeasure.getItem(f)
+            if (childFrame != null)
+              childFrame.measure(remainingSize)
+              cachedSize = max(cachedSize, childFrame.getDesiredSize().x)
+              m_childrenNeedingMeasure.emplaceRemove(childFrame)
+          m_columnDesiredSizes.setItem(i, cachedSize)
+          remainingSize.x -= cachedSize
+
+        case PROPORTIONAL
+          let proportionalWeight = colDef.getValue() / totalWeight
+          m_columnDesiredSizes.setItem(i, remainingSize.x * proportionalWeight)
+          totalWeight += colDef.getValue()
+
+    totalWeight = 0.0
+
+    for i = 0 to m_rowDefinitions.size() - 1
+      let rowDef = m_rowDefinitions.get(i)
+      let sizeMode = rowDef.getSizeMode()
+      var cachedSize = 0.
+
+      switch sizeMode
+        case FIXED
+          cachedSize = min(rowDef.getValue(), remainingSize.y)
+          m_rowDesiredSizes.setItem(i, cachedSize)
+          remainingSize.y -= cachedSize
+
+        case AUTO
+          for f = 0 to m_childrenNeedingMeasure.getCount() - 1
+            let childFrame = m_childrenNeedingMeasure.getItem(f)
+            if (childFrame != null)
+              childFrame.measure(remainingSize)
+              cachedSize = max(cachedSize, childFrame.getDesiredSize().y)
+              m_childrenNeedingMeasure.emplaceRemove(childFrame)
+          m_rowDesiredSizes.setItem(i, cachedSize)
+          remainingSize.y -= cachedSize
+
+        case PROPORTIONAL
+          let proportionalWeight = rowDef.getValue() / totalWeight
+          m_rowDesiredSizes.setItem(i, remainingSize.y * proportionalWeight)
+          totalWeight += rowDef.getValue()
+
+  // --------------------------------------------------------------------------
+  private function getCellArea(vec2 availableSize, int row, int col) returns rectr
+    let rowDefs = m_rowDefinitions.size()
+    let colDefs = m_columnDefinitions.size()
+    var cellArea = ZERORECTR
+    cellArea.height = (row < rowDefs) ? m_rowDesiredSizes.getItem(row) : availableSize.y
+    cellArea.width = (col < colDefs) ? m_columnDesiredSizes.getItem(col) : availableSize.x
+    for r = 0 to row - 1
+      cellArea.y += (r < rowDefs) ? m_rowDesiredSizes.getItem(r) : 0
+    for c = 0 to col - 1
+      cellArea.x += (c < colDefs) ? m_columnDesiredSizes.getItem(c) : 0
+    return cellArea
+
+// ============================================================================
+public function Frame.getGridColumn() returns int
+  return m_frameToColumnMap.get(this)
+
+// ============================================================================
+public function Frame.setGridColumn(int column)
+  m_frameToColumnMap.put(this, column)
+
+// ============================================================================
+public function Frame.getGridRow() returns int
+  return m_frameToRowMap.get(this)
+
+// ============================================================================
+public function Frame.setGridRow(int row)
+  m_frameToRowMap.put(this, row)
