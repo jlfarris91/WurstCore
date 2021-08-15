@@ -31,9 +31,9 @@ public function unit.setLumberAwarded(int lumber)
   this.setLumberAwarded(lumber.toDice())
 
 // ============================================================================
-public function unit.countTotalItemCharges(int itemTypeId) returns int
+public function unit.countTotalItemCharges(int itemTypeId, item ignoreItem) returns int
   var charges = 0
   for _item in this.inventory()
-    if (_item.getTypeId() == itemTypeId)
-      charges += _item.getCharges()
+    if (_item != ignoreItem and _item.getTypeId() == itemTypeId)
+      charges += max(_item.getCharges(), 1)
   return charges
