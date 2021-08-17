@@ -78,7 +78,7 @@ public function lerpInt(int start, int _end, real t) returns int
 
 // ============================================================================
 public function parameterize(real start, real _end, real value) returns real
-  let diff = RAbsBJ(_end - start)
+  let diff = _end - start
   return diff == 0.0 ? 0.0 : (value - start) / diff
 
 // ============================================================================
