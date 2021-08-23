@@ -185,6 +185,31 @@ public class CBIterator<T>
   cb.isEmpty().assertTrue()
 
 // ============================================================================
+@test function test_enqueueDequeueStressTest()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(1024)
+
+  // Act
+  for i = 1 to 100
+    cb.enqueue(i)
+
+  for i = 1 to 100
+    cb.dequeue().assertEquals(i)
+
+  for i = 1 to 1024
+    cb.enqueue(i * 2)
+
+  cb.isFull().assertTrue()
+
+  for i = 1 to 1024
+    cb.dequeue().assertEquals(i * 2)
+
+  // Assert
+  cb.getCount().assertEquals(0)
+  cb.isEmpty().assertTrue()
+
+// ============================================================================
 @test function test_clear()
 
   // Arrange

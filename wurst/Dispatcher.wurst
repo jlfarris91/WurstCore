@@ -37,6 +37,9 @@ public class GlobalDispatcher
 public class Dispatcher
   private CircularBuffer<Action> array[3] m_dispatchQueue
   private int array[3] m_maxProcessCount
+  private int array[3] m_totalExecutions
+  private int array[3] m_executionInLastSecond
+  private int array[3] m_executionsPerSecond
   private CallbackPeriodic m_callbackHigh
   private CallbackPeriodic m_callbackLow
   private CallbackPeriodic m_callbackBackground
@@ -63,6 +66,15 @@ public class Dispatcher
     m_callbackHigh = doPeriodically(DISPATCHER_INTERVAL_HIGH, (CallbackPeriodic cb) -> process(DispatchPriority.HIGH))
     m_callbackLow = doPeriodically(DISPATCHER_INTERVAL_LOW, (CallbackPeriodic cb) -> process(DispatchPriority.LOW))
     m_callbackBackground = doPeriodically(DISPATCHER_INTERVAL_BACKGROUND, (CallbackPeriodic cb) -> process(DispatchPriority.BACKGROUND))
+
+    // update periodically
+    doPeriodically(0.1) (CallbackPeriodic cb) ->
+      m_executionsPerSecond[0] = m_executionInLastSecond[0]
+      m_executionInLastSecond[0] = 0
+      m_executionsPerSecond[1] = m_executionInLastSecond[1]
+      m_executionInLastSecond[1] = 0
+      m_executionsPerSecond[2] = m_executionInLastSecond[2]
+      m_executionInLastSecond[2] = 0
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -100,6 +112,22 @@ public class Dispatcher
       invoke(priority, action)
 
   // --------------------------------------------------------------------------
+  function getTotalExecutions(DispatchPriority priority) returns int
+    return m_totalExecutions[(priority castTo int)]
+
+  // --------------------------------------------------------------------------
+  function getExecutionPerSecond(DispatchPriority priority) returns int
+    return m_executionsPerSecond[(priority castTo int)]
+
+  // --------------------------------------------------------------------------
+  function getCount(DispatchPriority priority) returns int
+    return m_dispatchQueue[priority castTo int].getCount()
+
+  // --------------------------------------------------------------------------
+  function getCapacity(DispatchPriority priority) returns int
+    return m_dispatchQueue[priority castTo int].getCapacity()
+
+  // --------------------------------------------------------------------------
   protected function process(DispatchPriority priority)
     let queue = m_dispatchQueue[priority castTo int]
     if (queue.isEmpty())
@@ -110,10 +138,14 @@ public class Dispatcher
     var executionCount = 0
     while (not queue.isEmpty() and executionCount < maxProcessCount)
       let action = queue.dequeue()
-      action.call()
-      executionCount++
-      if (action.getDestroyAfterUse())
-        destroy action
+      if (action != null)
+        action.call()
+        executionCount++
+        if (action.getDestroyAfterUse())
+          destroy action
+
+    m_totalExecutions[priority castTo int] += executionCount
+    m_executionInLastSecond[priority castTo int] += executionCount
     
     if (executionCount > 0)
       Log.debug("Dispatcher", "process", m_id, "[Priority {0}] Processed {1} actions ({2}/{3})".format((priority castTo int).toString(), executionCount.toString(), queue.getCount().toString(), queue.getCapacity().toString()))
