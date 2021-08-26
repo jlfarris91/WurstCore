@@ -2,6 +2,7 @@ package Vector
 import FixedArray
 import ErrorHandling
 import Action
+import Func
 
 constant int DEFAULT_VECTOR_CAPACITY = 8
 
@@ -231,6 +232,38 @@ public function Vector<string>.joinBy(string separator) returns string
 
   iter.close()
   return joined
+
+// ============================================================================
+public function Vector<T>.swap<T>(int indexA, int indexB)
+  if (indexA >= 0 and indexA < this.getCount() and indexB >= 0 and indexB < this.getCount())
+    let temp = this.getItem(indexA)
+    this.setItem(indexA, this.getItem(indexB))
+    this.setItem(indexB, temp)
+
+// ============================================================================
+function Vector<T>.quickSortPartition<T>(int low, int high, Func2<T, T, bool> comparator) returns int
+  let pivot = this.getItem(high)
+  let count = this.getCount()
+  var i = low - 1
+  var j = low
+  while (j <= high - 1)
+    if (j >= 0 and j < count and comparator.call(this.getItem(j), pivot))
+      i++
+      this.swap(i, j)
+    j++
+  this.swap(i + 1,high)
+  return i + 1
+
+// ============================================================================
+function Vector<T>.quickSort<T>(int left, int right, Func2<T, T, bool> comparator)
+  if (left < right)
+    let partition = this.quickSortPartition(left, right, comparator)
+    this.quickSort(left, partition-1, comparator)
+    this.quickSort(partition+1, right, comparator)
+
+// ============================================================================
+public function Vector<T>.sort<T>(Func2<T, T, bool> comparator)
+  this.quickSort(0, this.getCount() - 1, comparator)
 
 // ============================================================================
 public class VectorIterator<T>
@@ -550,3 +583,31 @@ function testClone()
   clone.getCount().assertEquals(8)
   for i = 0 to 7
     clone.getItem(i).assertEquals(i + 1)
+
+// ============================================================================
+@test
+function testSort()
+  let vector = new Vector<int>(8)
+  
+  vector.add(1)
+  vector.add(4)
+  vector.add(3)
+  vector.add(8)
+  vector.add(5)
+  vector.add(2)
+  vector.add(7)
+  vector.add(6)
+
+  // act
+  vector.sort() (a, b) ->
+    return a < b
+
+  // assert
+  vector.getItem(0).assertEquals(1)
+  vector.getItem(1).assertEquals(2)
+  vector.getItem(2).assertEquals(3)
+  vector.getItem(3).assertEquals(4)
+  vector.getItem(4).assertEquals(5)
+  vector.getItem(5).assertEquals(6)
+  vector.getItem(6).assertEquals(7)
+  vector.getItem(7).assertEquals(8)
