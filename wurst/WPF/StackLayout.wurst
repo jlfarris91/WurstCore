@@ -1,114 +1,105 @@
 package StackLayout
-// import Layout
-// import Frame
+import Layout
 
-// // ============================================================================
-// public class StackLayout implements IFrameLayout
-//   private rectr m_area = ZERORECTR
-//   private vec2 m_spacing = ZERO2
-//   private vec2 m_layoutPos = ZERO2
-//   private vec2 m_layoutPosStart = ZERO2
-//   private vec2 m_layoutDir = ZERO2
-//   private LayoutOrientation m_orientation
-//   private vec2 m_size = ZERO2
+// ============================================================================
+public class StackLayout
+  private rectr m_area = ZERORECTR
+  private vec2 m_spacing = ZERO2
+  private vec2 m_layoutPos = ZERO2
+  private vec2 m_layoutPosStart = ZERO2
+  private vec2 m_layoutDir = ZERO2
+  private LayoutOrientation m_orientation
+  private vec2 m_size = ZERO2
 
-//   // --------------------------------------------------------------------------
-//   function setOrientation(LayoutOrientation value)
-//     m_orientation = value
+  // --------------------------------------------------------------------------
+  function setOrientation(LayoutOrientation value)
+    m_orientation = value
 
-//   // --------------------------------------------------------------------------
-//   function getOrientation() returns LayoutOrientation
-//     return m_orientation
+  // --------------------------------------------------------------------------
+  function getOrientation() returns LayoutOrientation
+    return m_orientation
 
-//   // --------------------------------------------------------------------------
-//   function setSpacing(vec2 value)
-//     m_spacing = value
+  // --------------------------------------------------------------------------
+  function setSpacing(vec2 value)
+    m_spacing = value
 
-//   // --------------------------------------------------------------------------
-//   function getSpacing() returns vec2
-//     return m_spacing
+  // --------------------------------------------------------------------------
+  function getSpacing() returns vec2
+    return m_spacing
 
-//   // --------------------------------------------------------------------------
-//   function getWidth() returns real
-//     return m_size.x
+  // --------------------------------------------------------------------------
+  function getWidth() returns real
+    return m_size.x
 
-//   // --------------------------------------------------------------------------
-//   function getHeight() returns real
-//     return m_size.y
+  // --------------------------------------------------------------------------
+  function getHeight() returns real
+    return m_size.y
 
-//   // --------------------------------------------------------------------------
-//   override function reset(rectr area)
-//     m_area = area
-//     m_size = ZERO2
+  // --------------------------------------------------------------------------
+  function reset(rectr area)
+    m_area = area
+    m_size = ZERO2
     
-//     // Remember that x/y frame of reference is bottom left
-//     switch (m_orientation)
-//       case LEFTTORIGHT
-//         m_layoutPos.x = m_area.left
-//         m_layoutDir = vec2(1, 0)
-//       case RIGHTTOLEFT
-//         m_layoutPos.x = m_area.right
-//         m_layoutDir = vec2(-1, 0)
-//       case TOPTOBOTTOM
-//         m_layoutPos.y = m_area.top
-//         m_layoutDir = vec2(0, -1)
-//       case BOTTOMTOTOP
-//         m_layoutPos.y = m_area.bottom
-//         m_layoutDir = vec2(0, 1)
+    // Remember that x/y frame of reference is bottom left
+    switch (m_orientation)
+      case LEFTTORIGHT
+        m_layoutPos.x = m_area.left()
+        m_layoutDir = vec2(1, 0)
+      case RIGHTTOLEFT
+        m_layoutPos.x = m_area.right()
+        m_layoutDir = vec2(-1, 0)
+      case TOPTOBOTTOM
+        m_layoutPos.y = m_area.top()
+        m_layoutDir = vec2(0, -1)
+      case BOTTOMTOTOP
+        m_layoutPos.y = m_area.bottom()
+        m_layoutDir = vec2(0, 1)
 
-//     m_layoutPosStart = m_layoutPos
+    m_layoutPosStart = m_layoutPos
 
-//   // --------------------------------------------------------------------------
-//   override function layoutNextFrame(Frame frame)
+  // --------------------------------------------------------------------------
+  function layoutNextFrame(framehandle frame)
+    layoutNextFrame(frame, null)
 
-//     // Add spacing if not the first frame
-//     switch (m_orientation)
-//       case LEFTTORIGHT | RIGHTTOLEFT
-//         m_layoutPos.x += m_layoutPos.x == m_layoutPosStart.x ? 0 : m_layoutDir.x * m_spacing.x
-//       case TOPTOBOTTOM | BOTTOMTOTOP
-//         m_layoutPos.y += m_layoutPos.y == m_layoutPosStart.y ? 0 : m_layoutDir.y * m_spacing.y
+  // --------------------------------------------------------------------------
+  function layoutNextFrame(framehandle frame, framehandle parent)
 
-//     let localCenter = m_area.center()
-//     let framePad = frame.getPadding()
-//     var frameSize = frame.getSize()
-//     var localPos = m_layoutPos
+    // Add spacing if not the first frame
+    switch (m_orientation)
+      case LEFTTORIGHT | RIGHTTOLEFT
+        m_layoutPos.x += m_layoutPos.x == m_layoutPosStart.x ? 0 : m_layoutDir.x * m_spacing.x
+      case TOPTOBOTTOM | BOTTOMTOTOP
+        m_layoutPos.y += m_layoutPos.y == m_layoutPosStart.y ? 0 : m_layoutDir.y * m_spacing.y
 
-//     // Remember that x/y frame of reference is bottom left
-//     switch (m_orientation)
-//       case LEFTTORIGHT | RIGHTTOLEFT
-//         switch (frame.getVerticalLayoutMode())
-//           case VerticalLayoutMode.TOP
-//             localPos.y = m_area.top - frameSize.y
-//           case VerticalLayoutMode.CENTER
-//             localPos.y = localCenter.y - frameSize.y / 2.0
-//           case VerticalLayoutMode.BOTTOM
-//             localPos.y = m_area.bottom
-//           case VerticalLayoutMode.STRETCH
-//             localPos.y = m_area.bottom + framePad.bottom
-//             frameSize.y = m_area.height() - framePad.height()
-//       case BOTTOMTOTOP | TOPTOBOTTOM
-//         switch (frame.getHorizontalLayoutMode())
-//           case HorizontalLayoutMode.LEFT
-//             localPos.x = m_area.left
-//           case HorizontalLayoutMode.CENTER
-//             localPos.x = localCenter.x - frameSize.x / 2.0
-//           case HorizontalLayoutMode.RIGHT
-//             localPos.x = m_area.right - frameSize.x
-//           case HorizontalLayoutMode.STRETCH
-//             localPos.x = m_area.left + framePad.left
-//             frameSize.x = m_area.width() - framePad.width()
+    var frameSize = vec2(frame.getWidth(), frame.getHeight())
+    var localPos = m_layoutPos
 
-//     // Actually update the frame
-//     frame.setLocalPos(localPos)
-//     frame.setSize(frameSize)
+    // Remember that x/y frame of reference is bottom left
+    switch (m_orientation)
+      case LEFTTORIGHT | RIGHTTOLEFT
+        localPos.y = m_area.bottom()
+        frameSize.y = m_area.height
+      case BOTTOMTOTOP | TOPTOBOTTOM
+        localPos.x = m_area.left()
+        frameSize.x = m_area.width
 
-//     // Prepare for next frame
-//     switch (m_orientation)
-//       case LEFTTORIGHT | RIGHTTOLEFT
-//         m_layoutPos.x += m_layoutDir.x * (frameSize.x + framePad.width())
-//         m_size.x = m_layoutPos.x
-//         m_size.y = max(m_size.y, frameSize.y + framePad.height())
-//       case BOTTOMTOTOP | TOPTOBOTTOM
-//         m_layoutPos.y += m_layoutDir.y * (frameSize.y + framePad.height())
-//         m_size.x = max(m_size.x, frameSize.x + framePad.width())
-//         m_size.y = m_layoutPos.y
+    // Actually update the frame
+    frame.clearAllPoints()
+    if (parent != null)
+      frame.setPoint(FRAMEPOINT_BOTTOMLEFT, parent, FRAMEPOINT_BOTTOMLEFT, localPos)
+    else
+      frame.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, localPos)
+
+    frame.setWidth(frameSize.x)
+    frame.setHeight(frameSize.y)
+
+    // Prepare for next frame
+    switch (m_orientation)
+      case LEFTTORIGHT | RIGHTTOLEFT
+        m_layoutPos.x += m_layoutDir.x * frameSize.x
+        m_size.x = m_layoutPos.x
+        m_size.y = max(m_size.y, frameSize.y)
+      case BOTTOMTOTOP | TOPTOBOTTOM
+        m_layoutPos.y += m_layoutDir.y * frameSize.y
+        m_size.x = max(m_size.x, frameSize.x)
+        m_size.y = m_layoutPos.y

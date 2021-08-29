@@ -1,5 +1,4 @@
 package Layout
-import Frame
 
 public tuple rectr(real x, real y, real width, real height)
 public tuple thickness(real left, real bottom, real right, real top)
@@ -40,20 +39,36 @@ public function rectr.size() returns vec2
   return vec2(this.width, this.height)
 
 // ============================================================================
+public function rectr.left() returns real
+  return this.x
+  
+// ============================================================================
+public function rectr.right() returns real
+  return this.x + this.width
+  
+// ============================================================================
+public function rectr.bottom() returns real
+  return this.y
+  
+// ============================================================================
+public function rectr.top() returns real
+  return this.y + this.height
+
+// ============================================================================
 public function rectr.topLeft() returns vec2
-  return vec2(this.x, this.y + this.height)
+  return vec2(this.left(), this.top())
 
 // ============================================================================
 public function rectr.topRight() returns vec2
-  return vec2(this.x + this.width, this.y + this.height)
+  return vec2(this.right(), this.top())
 
 // ============================================================================
 public function rectr.bottomLeft() returns vec2
-  return vec2(this.x, this.y)
+  return vec2(this.left(), this.bottom())
 
 // ============================================================================
 public function rectr.bottomRight() returns vec2
-  return vec2(this.x + this.width, this.y)
+  return vec2(this.right(), this.bottom())
 
 // ============================================================================
 public function rectr.center() returns vec2
@@ -90,11 +105,6 @@ public function rectr.translate(vec2 pos) returns rectr
 // ============================================================================
 public function rectr.translate(real x, real y) returns rectr
   return rectr(this.x + x, this.y + y, this.width, this.height)
-
-// ============================================================================
-public interface IFrameLayout
-  function reset(rectr area)
-  function layoutNextFrame(Frame frame)
 
 // ============================================================================
 public enum Orientation

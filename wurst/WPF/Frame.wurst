@@ -5,6 +5,7 @@ import initlater Layout
 import Execute
 import Math
 import Object
+import FramehandleExtensions
 
 // ============================================================================
 public interface IFrameFactory
@@ -30,6 +31,12 @@ public enum VerticalLayoutMode
   TOP
   STRETCH
 
+// ============================================================================
+public enum FrameVisibility
+  VISIBLE
+  HIDDEN
+  COLLAPSED
+
 public constant vec2 INF2 = vec2(REAL_MAX, REAL_MAX)
 
 // ============================================================================
@@ -50,6 +57,7 @@ public class Frame
   private thickness m_margin = ZEROTHICK
   private thickness m_padding = ZEROTHICK
   private object m_dataContext = NULL
+  private FrameVisibility m_visibility = FrameVisibility.VISIBLE
 
   private bool m_neverMeasured = true
   private rectr m_finalRect = ZERORECTR
@@ -131,14 +139,19 @@ public class Frame
     m_handle.clearAllPoints()
 
   // --------------------------------------------------------------------------
-  function setIsVisible(bool isVisible)
-    if (isVisible)
-      show()
-    else
-      hide()
+  function getVisibility() returns FrameVisibility
+    return m_visibility
 
   // --------------------------------------------------------------------------
-  function show()
+  function setVisibility(FrameVisibility value)
+    if (m_visibility != value)
+      if (value == VISIBLE)
+        show()
+      else
+        hide()
+
+  // --------------------------------------------------------------------------
+  private function show()
     if (not m_initialized)
       initialize()
     if (m_player != null)
@@ -147,7 +160,7 @@ public class Frame
       m_handle.show()
     
   // --------------------------------------------------------------------------
-  function hide()
+  private function hide()
     if (m_player != null)
       m_handle.hide(m_player)
     else
@@ -343,6 +356,10 @@ public class Frame
   function setPadding(thickness value)
     m_padding = value
     invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function clearFocus()
+    m_handle.clearFocus()
 
   // --------------------------------------------------------------------------
   private function updateFramePositionAndSize()

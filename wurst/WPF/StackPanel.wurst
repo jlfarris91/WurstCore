@@ -8,8 +8,13 @@ public class StackPanel extends Panel
   private LayoutOrientation m_orientation
 
   // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
+  function getLayoutOrientation() returns LayoutOrientation
+    return m_orientation
+
+  // --------------------------------------------------------------------------
+  function setLayoutOrientation(LayoutOrientation value)
+    m_orientation = value
+    invalidateArrange()
 
   // --------------------------------------------------------------------------
   override function measureOverride(vec2 availableSize) returns vec2
