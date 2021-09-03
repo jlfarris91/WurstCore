@@ -398,6 +398,15 @@ public function getUnitRecycler(int unitId) returns UnitRecycler
   return g_unitIdToUnitRecyclerMap.get(unitId)
 
 // ============================================================================
+function onUnitDeathAfterDeathTime(unit dyingUnit)
+  if (dyingUnit == null)
+    return
+  let recycler = dyingUnit.getRecycler()
+  if (recycler == null)
+    return
+  recycler.stock(dyingUnit)
+
+// ============================================================================
 function onUnitDeath()
   let dyingUnit = GetDyingUnit()
   let recycler = dyingUnit.getRecycler()
@@ -405,7 +414,7 @@ function onUnitDeath()
     return
   if (not recycler.getAutoRecycleDead())
     return
-  doAfter(recycler.getDeathTime(), () -> recycler.stock(dyingUnit))
+  doAfter(recycler.getDeathTime(), () -> onUnitDeathAfterDeathTime(dyingUnit))
 
 // ============================================================================
 function onUnitDeindexed()
