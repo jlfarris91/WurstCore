@@ -13,8 +13,9 @@ public class StackPanel extends Panel
 
   // --------------------------------------------------------------------------
   function setLayoutOrientation(LayoutOrientation value)
-    m_orientation = value
-    invalidateArrange()
+    if (m_orientation != value)
+      m_orientation = value
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   override function measureOverride(vec2 availableSize) returns vec2
@@ -32,14 +33,14 @@ public class StackPanel extends Panel
     for child in m_children
     //{
       child.measure(layoutSlotSize)
-      let childDesiredSize = child.getDesiredSize()
-
-      if (isHorizontal)
-        stackDesiredSize.x += childDesiredSize.x * layoutDir.x
-        stackDesiredSize.y = max(stackDesiredSize.y, childDesiredSize.y)
-      else
-        stackDesiredSize.x = max(stackDesiredSize.x, childDesiredSize.x)
-        stackDesiredSize.y += childDesiredSize.y * layoutDir.y
+      if (child.getVisibility() != FrameVisibility.COLLAPSED)
+        let childDesiredSize = child.getDesiredSize()
+        if (isHorizontal)
+          stackDesiredSize.x += childDesiredSize.x * layoutDir.x
+          stackDesiredSize.y = max(stackDesiredSize.y, childDesiredSize.y)
+        else
+          stackDesiredSize.x = max(stackDesiredSize.x, childDesiredSize.x)
+          stackDesiredSize.y += childDesiredSize.y * layoutDir.y
     //}
 
     return stackDesiredSize
@@ -54,18 +55,18 @@ public class StackPanel extends Panel
 
     for child in m_children
     //{
-      let childDesiredSize = child.getDesiredSize()
-
-      if (isHorizontal)
-        childRect.x += prevChildSize * layoutDir.x
-        prevChildSize = childDesiredSize.x
-        childRect.width = prevChildSize
-        childRect.height = max(arrangeSize.y, childDesiredSize.y)
-      else
-        childRect.y += prevChildSize * layoutDir.y
-        prevChildSize = childDesiredSize.y
-        childRect.height = prevChildSize
-        childRect.width = max(arrangeSize.x, childDesiredSize.x)
+      if (child.getVisibility() != FrameVisibility.COLLAPSED)
+        let childDesiredSize = child.getDesiredSize()
+        if (isHorizontal)
+          childRect.x += prevChildSize * layoutDir.x
+          prevChildSize = childDesiredSize.x
+          childRect.width = prevChildSize
+          childRect.height = max(arrangeSize.y, childDesiredSize.y)
+        else
+          childRect.y += prevChildSize * layoutDir.y
+          prevChildSize = childDesiredSize.y
+          childRect.height = prevChildSize
+          childRect.width = max(arrangeSize.x, childDesiredSize.x)
     //}
 
     return arrangeSize

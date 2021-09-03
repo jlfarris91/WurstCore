@@ -2,7 +2,6 @@ package Frame
 import Range
 import Action
 import initlater Layout
-import Execute
 import Math
 import Object
 import FramehandleExtensions
@@ -36,6 +35,15 @@ public enum FrameVisibility
   VISIBLE
   HIDDEN
   COLLAPSED
+
+public function FrameVisibility.toString() returns string
+  switch (this)
+    case VISIBLE
+      return "VISIBLE"
+    case HIDDEN
+      return "HIDDEN"
+    case COLLAPSED
+      return "COLLAPSED"
 
 public constant vec2 INF2 = vec2(REAL_MAX, REAL_MAX)
 
@@ -144,11 +152,16 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function setVisibility(FrameVisibility value)
-    if (m_visibility != value)
-      if (value == VISIBLE)
-        show()
-      else
-        hide()
+    if (m_visibility == value)
+      return
+    let prevValue = m_visibility
+    m_visibility = value
+    if (m_parent != null and (value == COLLAPSED or prevValue == COLLAPSED))
+      m_parent.invalidateArrange()
+    if (value == VISIBLE)
+      show()
+    else
+      hide()
 
   // --------------------------------------------------------------------------
   private function show()
@@ -266,7 +279,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getActualSize() returns vec2
-    return m_finalRect.size()
+    return vec2(m_handle.getWidth(), m_handle.getHeight())
 
   // --------------------------------------------------------------------------
   function getLocalPos() returns vec2
@@ -289,12 +302,12 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getArea() returns rectr
-    return rectr(m_localPos.x, m_localPos.y, m_localPos.x + m_size.x, m_localPos.y + m_size.y)
+    return rectr(m_localPos.x, m_localPos.y, m_size.x, m_size.y)
 
   // --------------------------------------------------------------------------
   function getAbsArea() returns rectr
     let absPos = getAbsPos()
-    return rectr(absPos.x, absPos.y, absPos.x + m_size.x, absPos.y + m_size.y)
+    return rectr(absPos.x, absPos.y, m_size.x, m_size.y)
 
   // --------------------------------------------------------------------------
   function getHorizontalLayoutMode() returns HorizontalLayoutMode
@@ -420,12 +433,11 @@ public class Frame
     m_isBeingMeasured++
     m_previousConstraint = availableSize
 
-    execute() () ->
-      //Log.info(typeIdToTypeName(this.typeId), "measure", "", "availableSize : " + availableSize.toString())
-      m_desiredSize = measureCore(availableSize)
-      // Log.info(typeIdToTypeName(this.typeId), "measure", "", "desiredSize : " + m_desiredSize.toString())
-      m_neverMeasured = false
-      m_isBeingMeasured--
+    //Log.info(typeIdToTypeName(this.typeId), "measure", "", "availableSize : " + availableSize.toString())
+    m_desiredSize = measureCore(availableSize)
+    // Log.info(typeIdToTypeName(this.typeId), "measure", "", "desiredSize : " + m_desiredSize.toString())
+    m_neverMeasured = false
+    m_isBeingMeasured--
 
   // --------------------------------------------------------------------------
   protected function measureCore(vec2 availableSize) returns vec2
@@ -448,13 +460,12 @@ public class Frame
     m_isBeingArranged++
     m_previousArrangeRect = arrangeRect
 
-    execute() () ->
-      //Log.info(typeIdToTypeName(this.typeId), "arrange", "", "finalRect : " + finalRect.toString())
-      if (getNeverMeasured())
-        measure(arrangeRect.size())
-      arrangeCore(arrangeRect)
-      // Log.info(typeIdToTypeName(this.typeId), "arrange", "", "m_finalRect : " + m_finalRect.toString())
-      m_isBeingArranged--
+    //Log.info(typeIdToTypeName(this.typeId), "arrange", "", "finalRect : " + finalRect.toString())
+    if (getNeverMeasured())
+      measure(arrangeRect.size())
+    arrangeCore(arrangeRect)
+    // Log.info(typeIdToTypeName(this.typeId), "arrange", "", "m_finalRect : " + m_finalRect.toString())
+    m_isBeingArranged--
 
   // --------------------------------------------------------------------------
   protected function arrangeCore(rectr finalRect)

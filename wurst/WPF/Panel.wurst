@@ -2,15 +2,18 @@ package Panel
 import Frame
 import HashMap
 import LinkedList
+import Execute
+import Layout
 
 // ============================================================================
 public abstract class Panel extends Frame
   private HashMap<framehandle, Frame> m_childMap
   protected LinkedList<Frame> m_children
+  private vec2 m_measureCoreExecuteResult
 
   // --------------------------------------------------------------------------
   construct()
-    super(createFrame("BACKDROP", "Panel", GAME_UI, "TestBackdrop", 0))
+    super(createFrame("FRAME", "Panel", GAME_UI, "", 0))
     m_childMap = new HashMap<framehandle, Frame>()
     m_children = new LinkedList<Frame>()
 
@@ -53,3 +56,14 @@ public abstract class Panel extends Frame
     m_childMap.remove(frame.m_handle)
     m_children.remove(frame)
     removeLogicalChild(frame)
+
+  // --------------------------------------------------------------------------
+  override function measureCore(vec2 availableSize) returns vec2
+    m_measureCoreExecuteResult = ZERO2
+    execute() ->
+      m_measureCoreExecuteResult = super.measureCore(availableSize)
+    return m_measureCoreExecuteResult
+
+  // --------------------------------------------------------------------------
+  override function arrangeCore(rectr finalRect)
+    execute(() -> super.arrangeCore(finalRect))

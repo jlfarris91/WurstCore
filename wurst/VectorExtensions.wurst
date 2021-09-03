@@ -1,0 +1,4 @@
+package VectorExtensions
+
+public function vec2.toString2() returns string
+  return "[" + this.x.toString() + ", " + this.y.toString() + "]"
