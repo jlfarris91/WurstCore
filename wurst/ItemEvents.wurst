@@ -38,15 +38,15 @@ public function getItemActivatedEvent(int itemTypeId) returns Event2<unit, item>
   return _event
 
 // ============================================================================
-public function registerItemAcquiredEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Event2Callback<unit, item>
+public function registerItemAcquiredEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Handle
   return getItemAcquiredEvent(itemTypeId).register(callback)
 
 // ============================================================================
-public function registerItemDroppedEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Event2Callback<unit, item>
+public function registerItemDroppedEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Handle
   return getItemDroppedEvent(itemTypeId).register(callback)
 
 // ============================================================================
-public function registerItemActivatedEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Event2Callback<unit, item>
+public function registerItemActivatedEvent(int itemTypeId, Event2Callback<unit, item> callback) returns Handle
   return getItemActivatedEvent(itemTypeId).register(callback)
 
 // ============================================================================

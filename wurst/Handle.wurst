@@ -1,0 +1,22 @@
+package Handle
+
+public constant Handle HANDLE_INVALID = Handle(0)
+
+// ============================================================================
+public tuple Handle(int id)
+
+// ============================================================================
+public interface IHandleProvider
+  abstract function isHandleValid(Handle h) returns bool
+
+// ============================================================================
+public interface IHandleProviderT<T> extends IHandleProvider
+  abstract function get(Handle h) returns T
+
+// ============================================================================
+public function HandleFromIndex(int index) returns Handle
+  return Handle(index)
+
+// ============================================================================
+public function HandleToIndex(Handle h) returns int
+  return h.id

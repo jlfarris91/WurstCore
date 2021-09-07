@@ -51,6 +51,10 @@ public class Vector<T>
     m_array.setItem(i, _item)
 
   // --------------------------------------------------------------------------
+  function contains(T _item) returns bool
+    return indexOf(_item) != -1
+
+  // --------------------------------------------------------------------------
   function add(T _item)
     m_array = FixedArray.growArray(m_array, m_count + 1)
     m_array.setItem(m_count, _item)

@@ -2,11 +2,12 @@ package Events
 import public Action
 import ErrorHandling
 import Vector
+import public Handle
 
 // ============================================================================
-public class Event
+public class Event implements IHandleProvider
+  private int m_callStackDepth = 0
   private Vector<EventCallback> m_callbacks
-  private int m_stackDepth = 0
 
   // --------------------------------------------------------------------------
   construct()
@@ -18,71 +19,71 @@ public class Event
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_stackDepth > 0)
-      error("Deleting event in the middle of execution")
     for callback in m_callbacks
-      if (callback != null)
-        destroy callback
+      destroy callback
     destroy m_callbacks
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(EventCallback callback) returns EventCallback
+  function register(EventCallback callback) returns Handle
     if (callback == null)
       argumentNullError("callback")
+    
+    if (m_callbacks.contains(callback) == false)
+      m_callbacks.add(callback)
+    
+    callback.markedForRemoval = false
 
-    if (callback.m_event != null)
-      error("Attempting to double register a callback")
-    callback.m_event = this
-    callback.m_recentlyAdded = true
-    callback.m_index = m_callbacks.getCount()
-    m_callbacks.add(callback)
-    return callback
+    return Handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(EventCallback callback)
-    if (callback == null)
-      argumentNullError("callback")
-
-    if (callback.m_event == null or callback.m_index == -1)
-      error("Attempting to double unregister a callback")
-    if (callback.m_event != this)
-      error("Attempting to unregister a callback that was registered with a different event")
-    m_callbacks.setItem(callback.m_index, null)
-    callback.m_event = null
+  function unregister(Handle callbackHandle)
+    if (callbackHandle.id castTo EventCallback == null)
+      // Log.info("Event", "unregister", "", "callbackHandle.id castTo EventCallback == null")
+      return
+    let index = m_callbacks.indexOf(callbackHandle.id castTo EventCallback)
+    if (index == -1)
+      // Log.info("Event", "unregister", "", "index == -1")
+      return
+    let callback = m_callbacks.getItem(index)
+    callback.markedForRemoval = true
+    // Log.info("Event", "unregister", "", "Callback at index {0} marked for removal.".format(index.toString()))
 
   // --------------------------------------------------------------------------
   function call()
-    m_stackDepth++
 
-    var callbackIndex = 0
-    while callbackIndex < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(callbackIndex)
-      // If callback is null then that means it was removed while this event was being fired
-      if (callback != null)
-        if (not callback.m_recentlyAdded)
-          callback.call()
-        callback.m_recentlyAdded = false
-      callbackIndex++
-  
-    m_stackDepth--
-    if (m_stackDepth == 0)
-      cleanupCallbacks()
+    m_callStackDepth++
+    
+    for callback in m_callbacks
+      if (callback.markedForRemoval == false)
+        callback.call()
+      else
+        // Log.info("Event", "call", "", "Callback marked for removal. Skipping.")
+
+    m_callStackDepth--
+    if (m_callStackDepth == 0)
+      cleanup()
 
   // --------------------------------------------------------------------------
-  private function cleanupCallbacks()
-    var callbackIndex = 0
-    while callbackIndex < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(callbackIndex)
-      if (callback == null)
-        m_callbacks.removeAt(callbackIndex)
+  private function cleanup()
+    var index = 0
+    while index < m_callbacks.getCount()
+      let callback = m_callbacks.getItem(index)
+      if (callback.markedForRemoval)
+        destroy m_callbacks.removeAt(index)
+        // Log.info("Event", "cleanup", "", "Callback at index {0} destroyed.".format(index.toString()))
       else
-        callbackIndex++
+        index++
+
+  // --------------------------------------------------------------------------
+  override function isHandleValid(Handle h) returns bool
+    return h.id castTo EventCallback != null and
+           m_callbacks.contains(h.id castTo EventCallback)
 
 // ============================================================================
-public class Event1<TArg1>
+public class Event1<TArg1> implements IHandleProvider
+  private int m_callStackDepth = 0
   private Vector<Event1Callback<TArg1>> m_callbacks
-  private int m_stackDepth = 0
 
   // --------------------------------------------------------------------------
   construct()
@@ -94,69 +95,65 @@ public class Event1<TArg1>
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_stackDepth > 0)
-      error("Deleting event in the middle of execution")
     for callback in m_callbacks
-      if (callback != null)
-        destroy callback
+      destroy callback
     destroy m_callbacks
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Event1Callback<TArg1> callback) returns Event1Callback<TArg1>
+  function register(Event1Callback<TArg1> callback) returns Handle
     if (callback == null)
       argumentNullError("callback")
-    if (callback.m_event != null)
-      error("Attempting to double register a callback")
-    callback.m_event = this
-    callback.m_recentlyAdded = true
-    callback.m_index = m_callbacks.getCount()
-    m_callbacks.add(callback)
-    return callback
+    
+    if (m_callbacks.contains(callback) == false)
+      m_callbacks.add(callback)
+    
+    callback.markedForRemoval = false
+
+    return Handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(Event1Callback<TArg1> callback)
-    if (callback == null)
-      argumentNullError("callback")
-    if (callback.m_event == null or callback.m_index == -1)
-      error("Attempting to double unregister a callback")
-    if (callback.m_event != this)
-      error("Attempting to unregister a callback that was registered with a different event")
-    m_callbacks.setItem(callback.m_index, null)
-    callback.m_event = null
+  function unregister(Handle callbackHandle)
+    if (callbackHandle.id castTo EventCallback == null)
+      return
+    let index = m_callbacks.indexOf(callbackHandle.id castTo Event1Callback<TArg1>)
+    if (index == -1)
+      return
+    let callback = m_callbacks.getItem(index)
+    callback.markedForRemoval = true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1)
-    m_stackDepth++
 
-    var callbackIndex = 0
-    while callbackIndex < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(callbackIndex)
-      // If callback is null then that means it was removed while this event was being fired
-      if (callback != null)
-        if (not callback.m_recentlyAdded)
-          callback.call(arg1)
-        callback.m_recentlyAdded = false
-      callbackIndex++
-  
-    m_stackDepth--
-    if (m_stackDepth == 0)
-      cleanupCallbacks()
+    m_callStackDepth++
+    
+    for callback in m_callbacks
+      if (callback.markedForRemoval == false)
+        callback.call(arg1)
+
+    m_callStackDepth--
+    if (m_callStackDepth == 0)
+      cleanup()
 
   // --------------------------------------------------------------------------
-  private function cleanupCallbacks()
-    var callbackIndex = 0
-    while callbackIndex < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(callbackIndex)
-      if (callback == null)
-        m_callbacks.removeAt(callbackIndex)
+  private function cleanup()
+    var index = 0
+    while index < m_callbacks.getCount()
+      let callback = m_callbacks.getItem(index)
+      if (callback.markedForRemoval)
+        destroy m_callbacks.removeAt(index)
       else
-        callbackIndex++
+        index++
+
+  // --------------------------------------------------------------------------
+  override function isHandleValid(Handle h) returns bool
+    return h.id castTo EventCallback != null and
+           m_callbacks.contains(h.id castTo Event1Callback<TArg1>)
 
 // ============================================================================
-public class Event2<TArg1, TArg2>
+public class Event2<TArg1, TArg2> implements IHandleProvider
+  private int m_callStackDepth = 0
   private Vector<Event2Callback<TArg1, TArg2>> m_callbacks
-  private int m_stackDepth = 0
 
   // --------------------------------------------------------------------------
   construct()
@@ -168,91 +165,75 @@ public class Event2<TArg1, TArg2>
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_stackDepth > 0)
-      error("Deleting event in the middle of execution")
     for callback in m_callbacks
-      if (callback != null)
-        destroy callback
+      destroy callback
     destroy m_callbacks
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Event2Callback<TArg1, TArg2> callback) returns Event2Callback<TArg1, TArg2>
+  function register(Event2Callback<TArg1, TArg2> callback) returns Handle
     if (callback == null)
       argumentNullError("callback")
-    if (callback.m_event != null)
-      error("Attempting to double register a callback")
-    callback.m_event = this
-    callback.m_recentlyAdded = true
-    callback.m_index = m_callbacks.getCount()
-    m_callbacks.add(callback)
-    return callback
+    
+    if (m_callbacks.contains(callback) == false)
+      m_callbacks.add(callback)
+    
+    callback.markedForRemoval = false
+
+    return Handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(Event2Callback<TArg1, TArg2> callback)
-    if (callback == null)
-      argumentNullError("callback")
-    if (callback.m_event == null or callback.m_index == -1)
-      error("Attempting to double unregister a callback")
-    if (callback.m_event != this)
-      error("Attempting to unregister a callback that was registered with a different event")
-    m_callbacks.setItem(callback.m_index, null)
-    callback.m_event = null
+  function unregister(Handle callbackHandle)
+    if (callbackHandle.id castTo EventCallback == null)
+      return
+    let index = m_callbacks.indexOf(callbackHandle.id castTo Event2Callback<TArg1, TArg2>)
+    if (index == -1)
+      return
+    let callback = m_callbacks.getItem(index)
+    callback.markedForRemoval = true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1, TArg2 arg2)
-    m_stackDepth++
 
-    var callbackIndex = 0
-    while callbackIndex < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(callbackIndex)
-      // If callback is null then that means it was removed while this event was being fired
-      if (callback != null)
-        if (not callback.m_recentlyAdded)
-          callback.call(arg1, arg2)
-        callback.m_recentlyAdded = false
-      callbackIndex++
-  
-    m_stackDepth--
-    if (m_stackDepth == 0)
-      cleanupCallbacks()
+    m_callStackDepth++
+    
+    for callback in m_callbacks
+      if (callback.markedForRemoval == false)
+        callback.call(arg1, arg2)
+
+    m_callStackDepth--
+    if (m_callStackDepth == 0)
+      cleanup()
 
   // --------------------------------------------------------------------------
-  private function cleanupCallbacks()
-    var callbackIndex = 0
-    while callbackIndex < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(callbackIndex)
-      if (callback == null)
-        m_callbacks.removeAt(callbackIndex)
+  private function cleanup()
+    var index = 0
+    while index < m_callbacks.getCount()
+      let callback = m_callbacks.getItem(index)
+      if (callback.markedForRemoval)
+        destroy m_callbacks.removeAt(index)
       else
-        callbackIndex++
+        index++
+
+  // --------------------------------------------------------------------------
+  override function isHandleValid(Handle h) returns bool
+    return h.id castTo EventCallback != null and
+           m_callbacks.contains(h.id castTo Event2Callback<TArg1, TArg2>)
 
 // ============================================================================
 public abstract class EventCallback
-  protected Event m_event
-  protected int m_index = -1
-  protected bool m_recentlyAdded = true
+  protected bool markedForRemoval
   abstract function call()
-  ondestroy
-    m_event.unregister(this)
 
 // ============================================================================
 public abstract class Event1Callback<TArg1>
-  protected Event1<TArg1> m_event
-  protected int m_index = -1
-  protected bool m_recentlyAdded = true
+  protected bool markedForRemoval
   abstract function call(TArg1 arg1)
-  ondestroy
-    m_event.unregister(this)
 
 // ============================================================================
 public abstract class Event2Callback<TArg1, TArg2>
-  protected Event2<TArg1, TArg2> m_event
-  protected int m_index = -1
-  protected bool m_recentlyAdded = true
+  protected bool markedForRemoval
   abstract function call(TArg1 arg1, TArg2 arg2)
-  ondestroy
-    m_event.unregister(this)
 
 // ============================================================================
 @test function stressTest_register()
@@ -285,7 +266,7 @@ public abstract class Event2Callback<TArg1, TArg2>
 // ============================================================================
 class Foo
   Event m_action
-  EventCallback registration
+  Handle registration
   Foo m_other
   int m_index
   bool m_shouldNotBeExecuted
@@ -308,9 +289,7 @@ class Foo
           error("This should not have been executed")
 
   function unregister()
-    if (registration != null)
-      destroy registration
-      registration = null
+    m_action.unregister(registration)
 
   function shouldNotBeExecuted()
     m_shouldNotBeExecuted = true
@@ -337,3 +316,29 @@ Foo array g_foos
 
   for i = 0 to 100
     ma.call()
+
+// ============================================================================
+class Test
+  int a = 0
+  Handle handleToUnregister = HANDLE_INVALID
+@test function unregister_unregisteringExecutingCallbackCallsRemainingCallbacks()
+
+  let pool = new Vector<EventCallback>()
+  let ma = new Event(pool)
+
+  var test = new Test()
+
+  for i = 0 to 8
+    let h = ma.register() () ->
+    //{
+      test.a++
+      // Log.info("test.a == " + test.a.toString())
+      if (test.a == 4)
+        ma.unregister(test.handleToUnregister)
+    //}
+    if (i == 4)
+      test.handleToUnregister = h
+
+  ma.call() 
+
+  test.a.assertEquals(pool.getCount())
