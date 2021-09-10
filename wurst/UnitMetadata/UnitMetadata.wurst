@@ -27,7 +27,7 @@ public interface IUnitMetadata extends IComposite, IObjectDescriptor
 
 // ============================================================================
 public interface IUnitMetadataFactory
-  function createUnit(unit u) returns IUnitMetadata
+  function createUnit(IUnitMetadata metadata) returns bool
 
 // ============================================================================
 public class UnitMetadata implements IUnitMetadata
@@ -214,16 +214,13 @@ public function constructUnitMetadata(unit u) returns IUnitMetadata
   if (u == null)
     argumentNullError("u")
 
-  IUnitMetadata metadata = null
-  for factory in g_unitMetadataFactories
-    let uu = factory.createUnit(u)
-    if (uu != null)
-      metadata = uu
-      break
-  if (metadata == null)
-    metadata = new UnitMetadata()
-    logDebug("No unit metadata factory handled unit " + u.getName() + ". defaulting to UnitMetadata")
+  let metadata = new UnitMetadata()
   metadata.attach(u)
+
+  for factory in g_unitMetadataFactories
+    if (factory.createUnit(metadata))
+      break
+
   return metadata
 
 // ============================================================================

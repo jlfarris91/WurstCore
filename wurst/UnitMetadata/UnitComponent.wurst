@@ -1,6 +1,11 @@
 package UnitComponent
 import public UnitMetadata
 import public initlater Component
+import Action
+import ClosureTimers
+import ErrorHandling
+
+//import Reflection
 
 // ============================================================================
 public abstract class UnitComponent extends Component
@@ -40,3 +45,54 @@ public abstract class UnitComponent extends Component
   // --------------------------------------------------------------------------
   function onUnitChanged(unit _oldUnit, unit _newUnit)
     skip
+
+  // --------------------------------------------------------------------------
+  protected function dispatch<TComp>(Action1<TComp> work) returns CallbackSingle
+    return dispatch(0., true, work)
+
+  // --------------------------------------------------------------------------
+  protected function dispatch<TComp>(bool requireEnabled, Action1<TComp> work) returns CallbackSingle
+    return dispatch(0., requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  protected function dispatch<TComp>(real seconds, Action1<TComp> work) returns CallbackSingle
+    return dispatch(seconds, true, work)
+
+  // --------------------------------------------------------------------------
+  protected function dispatch<TComp>(real seconds, bool requireEnabled, Action1<TComp> work) returns CallbackSingle
+    return dispatch(getOwnerUnit(), this.typeId, seconds, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  protected static function dispatch<TComp>(unit ownerUnit, int compTypeId, real seconds, bool requireEnabled, Action1<TComp> work) returns CallbackSingle
+    if (ownerUnit == null)
+      argumentNullError("ownerUnit")
+    if (work == null)
+      argumentNullError("work")
+    let callback = doAfter(seconds) () ->
+    //{
+      if (ownerUnit != null and ownerUnit.isAlive())
+        let metadata = ownerUnit.getMetadata()
+        if (metadata != null)
+          let comp = metadata.getComponent(compTypeId)
+          if (comp != null)
+            let compTyped = (comp castTo int) castTo TComp
+            if (compTyped != null)
+              if (not requireEnabled or comp.getEnabled())
+                work.call(compTyped)
+      /*
+              else
+                Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Component must be enabled")
+            else
+              Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Could not convert component to type " + typeIdToTypeName(compTypeId))
+          else
+            Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit metadata has no component of type " + typeIdToTypeName(compTypeId))
+        else
+          Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit has no metadata")
+      else
+        Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit is dead")
+      */
+
+      // TODO: work will leak if the callback is destroyed before it executes this code
+      destroy work
+    //}
+    return callback
