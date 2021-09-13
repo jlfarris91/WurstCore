@@ -483,7 +483,7 @@ public class SerializationContext
 public class Serialization
 
   // --------------------------------------------------------------------------
-  static function writeObjectToFile(SerializationContext context, player forPlayer, string filePath, object object) returns bool
+  static function writeObjectToFile(SerializationContext context, string filePath, object object) returns bool
 
     // Write data to a buffer
     let buffer = new ByteBuffer()
@@ -494,7 +494,7 @@ public class Serialization
 
       // Write it out to the file
       let file = new File(filePath)
-      file.write(forPlayer, buffer.encodeBase64())
+      file.write(context.getPlayer(), buffer.encodeBase64())
       file.close()
 
     else
@@ -505,17 +505,16 @@ public class Serialization
     return success
 
   // --------------------------------------------------------------------------
-  static function readObjectFromFile(SerializationContext context, player forPlayer, string filePath, object object) returns bool
+  static function readObjectFromFile(SerializationContext context, string filePath, object object) returns bool
     let file = new File(filePath)
-    let buffer = file.read(forPlayer).decodeBase64()
+    let buffer = file.read(context.getPlayer()).decodeBase64()
     file.close()
-
-    let reader = new BinaryReader(buffer)
     
-    if (not buffer.hasByte())
-      destroy reader
+    if (buffer.size() == 0)
       destroy buffer
       return false
+
+    let reader = new BinaryReader(buffer)
 
     let success = context.readObject(reader, object)
     if (success == false)

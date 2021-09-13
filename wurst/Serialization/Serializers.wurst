@@ -121,7 +121,7 @@ public class GroupSerializer implements ISerializerTyped<group>
         unitWriter.write(unt.getPos().x)
         unitWriter.write(unt.getPos().y)
         unitWriter.write(unt.getFacingAngle().degrees())
-        if (unitSerializer.serialize(context, unitWriter, toObject(unitToIndex(unt), typeId_unit)) == false)
+        if (unitSerializer.serialize(context, unitWriter, unt.toObject()) == false)
           return false
 
       writer.write(grp.size())
@@ -246,7 +246,7 @@ public class UnitSerializer implements ISerializerTyped<unit>
           let itm = unt.itemInSlot(i)
           if (itm != null)
             writer.write(itm.getTypeId())
-            if (itemSerializer.serialize(context, writer, toObject(itemToIndex(itm), typeId_item)) == false)
+            if (itemSerializer.serialize(context, writer, itm.toObject()) == false)
               return false
           else
             writer.writeInt(-1)
@@ -294,7 +294,7 @@ public class UnitSerializer implements ISerializerTyped<unit>
         let itemTypeId = reader.readInt()
         if (itemTypeId != -1)
           let itm = createItem(itemTypeId, unt.getPos())
-          if (itemSerializer.deserialize(context, reader, toObject(itemToIndex(itm), typeId_item)) == false)
+          if (itemSerializer.deserialize(context, reader, itm.toObject()) == false)
             return false
           UnitAddItem(unt, itm)
     //}

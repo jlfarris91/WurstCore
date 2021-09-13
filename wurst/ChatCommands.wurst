@@ -16,7 +16,9 @@ import Vector
 
 public constant string COMMAND_PREFIX = "-"
 public constant string COMMAND_HELP_STR = "help"
+public constant string COMMAND_LAST = "last"
 public constant int COMMAND_HELP_PRIORITY = -999
+
 PriorityList<ChatCommandHandler> g_commandHandlers
 trigger g_chatCommandTrigger
 ChatCommand g_chatCommand
@@ -28,6 +30,8 @@ LinkedList<CommandContext> g_contextStack = new LinkedList<CommandContext>()
 
 CommandContext g_globalContext
 LinkedList<CommandContext> g_globalContextStack = new LinkedList<CommandContext>()
+
+chatCommand g_lastChatCommand
 
 // ============================================================================
 @configurable public function chatCommandPrintToPlayer(player printTo, string msg)
@@ -756,12 +760,20 @@ function parsePlayerChatString()
   let p = GetTriggerPlayer()
   let commandLine = GetEventPlayerChatString()
   
-  let cmd = parseChatCommand(commandLine)
+  var cmd = parseChatCommand(commandLine)
   if (cmd.command == null)
     return
 
+  let replayingLastCommand = cmd.command == COMMAND_LAST
+  
+  if (replayingLastCommand)
+    cmd = g_lastChatCommand
+
   if (not executeChatCommand(p, cmd))
     printPartialMatchingCommands(cmd.command, p)
+  
+  else if (not replayingLastCommand)
+    g_lastChatCommand = cmd
 
   destroy cmd.args
 
