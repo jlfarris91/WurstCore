@@ -1,0 +1,584 @@
+package Serialization
+import ByteBuffer
+import initlater Meta
+import initlater Object
+import HashMap
+import LinkedList
+import ObjectIds
+import ErrorHandling
+import Execute
+import BinaryReaderWriter
+
+bool g_lastWriteSucceeded
+bool g_lastReadSucceeded
+object g_lastReadObject
+
+// ============================================================================
+public interface ISerializer
+  function getHeaderCode() returns int
+  function getVersion() returns int
+  function getObjectTypeId() returns int
+  function serialize(SerializationContext context, BinaryWriter writer, object object) returns bool
+  function deserialize(SerializationContext context, BinaryReader reader, object object) returns bool
+
+// ============================================================================
+public interface ISerializerTyped<T> extends ISerializer
+  function serialize(SerializationContext context, BinaryWriter writer, T object) returns bool
+  function deserialize(SerializationContext context, BinaryReader reader, T object) returns bool
+
+// ============================================================================
+public constant int typeId_ISerializable = Meta.registerInterface("Serialization.ISerializable").getTypeId()
+public interface ISerializable
+  function getVersion() returns int
+  function serialize(SerializationContext context, BinaryWriter writer) returns bool
+  function deserialize(SerializationContext context, BinaryReader reader) returns bool
+
+// ============================================================================
+public class SerializationContext
+  private HashMap<int, LinkedList<ISerializer>> m_serializerMap
+  private HashMap<ISerializer, int> m_serializerToHeaderCodeMap
+  private HashMap<int, int> m_objectTypeToHeaderCodeMap
+  private HashMap<int, ObjectFactory1> m_objectTypeToFactoryMap
+  private HashMap<int, ObjectDestructor> m_objectTypeToDestructorMap
+  private player m_player
+  private LinkedList<ObjectRef> m_objectStack
+  private LinkedList<int> m_objectVersionStack
+  private LinkedList<ObjectRef> m_creationContexts
+  private SerializableSerializer m_serializableSerializer
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_serializerMap = new HashMap<int, LinkedList<ISerializer>>()
+    m_serializerToHeaderCodeMap = new HashMap<ISerializer, int>()
+    m_objectTypeToHeaderCodeMap = new HashMap<int, int>()
+    m_objectTypeToFactoryMap = new HashMap<int, ObjectFactory1>()
+    m_objectTypeToDestructorMap = new HashMap<int, ObjectDestructor>()
+    m_objectStack = new LinkedList<ObjectRef>()
+    m_objectVersionStack = new LinkedList<int>()
+    m_creationContexts = new LinkedList<ObjectRef>()
+    
+    m_serializableSerializer = new SerializableSerializer()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_serializerMap
+    destroy m_serializerToHeaderCodeMap
+    destroy m_objectTypeToHeaderCodeMap
+    destroy m_objectTypeToFactoryMap
+    destroy m_objectStack
+    destroy m_objectVersionStack
+    destroy m_creationContexts
+    destroy m_serializableSerializer
+
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(SerializationContext.typeId)  
+  /////////////////////////////////////////////////////////////////////////////
+
+  // --------------------------------------------------------------------------
+  function setPlayer(player value)
+    m_player = value
+
+  // --------------------------------------------------------------------------
+  function getPlayer() returns player
+    return m_player
+
+  // --------------------------------------------------------------------------
+  function getHeaderCode(ISerializer serializer) returns int
+    return m_serializerToHeaderCodeMap.get(serializer)
+
+  // --------------------------------------------------------------------------
+  function getSerializingObject() returns object
+    return m_objectStack.peek().getObject()
+
+  // --------------------------------------------------------------------------
+  function getSerializingObjectVersion() returns int
+    return m_objectVersionStack.peek()
+
+  // --------------------------------------------------------------------------
+  function pushSerializingObject(object object, int objectVersion)
+    m_objectStack.push(object.ref())
+    m_objectVersionStack.push(objectVersion)
+
+  // --------------------------------------------------------------------------
+  function popSerializingObject()
+    destroy m_objectStack.pop()
+    m_objectVersionStack.pop()
+
+  // --------------------------------------------------------------------------
+  function writeObject(BinaryWriter writer, object object) returns bool
+    return writeObject(writer, object, -1)
+
+  // --------------------------------------------------------------------------
+  function writeObject(BinaryWriter writer, object object, int objectVersion) returns bool
+
+    // Special handling for ISerializable types
+    // 'objectVersion' is ignored; it is up to the ISerializable implementation to properly handle versioning
+    if (object.as<ISerializable>(typeId_ISerializable) != null)
+      return writeSerializableObject(writer, object)
+
+    let serializer = getSerializerForObject(object, objectVersion)
+    if (serializer == null)
+      error("SerializationContext", "writeObject", "", "Could not find serializer for object of type {0}".format(Meta.getTypeName(object.objectTypeId)))
+      return false
+
+    return writeObject(writer, object, serializer)
+
+  // --------------------------------------------------------------------------
+  function writeObject(BinaryWriter writer, object object, ISerializer serializer) returns bool
+    // let success = try() () ->
+    execute() () ->
+      g_lastWriteSucceeded = writeObject_impl(writer, object, serializer)
+    // if (not success)
+    //   error(lastError)
+    //   return false
+    return g_lastWriteSucceeded
+  
+  // --------------------------------------------------------------------------
+  private function writeObject_impl(BinaryWriter writer, object object, ISerializer serializer) returns bool
+
+    if (writer == null)
+      argumentNullError("writer")
+    if (serializer == null)
+      argumentNullError("serializer")
+
+    m_objectStack.push(new ObjectRef(object))
+    m_objectVersionStack.push(serializer.getVersion())
+
+    let objectBuffer = new ByteBuffer()
+    let objectWriter = new BinaryWriter(objectBuffer)
+
+    let success = serializer.serialize(this, objectWriter, object)
+    if (success)
+      writer.write(serializer.getHeaderCode())
+      writer.write(serializer.getVersion())
+      writer.write(objectBuffer.size())
+      writer.write(objectBuffer)
+    else
+      writer.writeInt(0)
+
+    destroy objectWriter
+    destroy objectBuffer
+
+    destroy m_objectStack.pop()
+    m_objectVersionStack.pop()
+
+    return success
+
+  // --------------------------------------------------------------------------
+  private function writeSerializableObject(BinaryWriter writer, object object) returns bool
+    execute() () ->
+      g_lastWriteSucceeded = writeSerializableObject_impl(writer, object)
+    return g_lastWriteSucceeded
+
+  // --------------------------------------------------------------------------
+  private function writeSerializableObject_impl(BinaryWriter writer, object object) returns bool
+
+    let objectBuffer = new ByteBuffer()
+    let objectWriter = new BinaryWriter(objectBuffer)
+
+    let success = m_serializableSerializer.writeObject(this, objectWriter, object)
+    if (success)
+      // Write out header info for this serializer
+      writer.write(m_serializableSerializer.getHeaderCode())
+      writer.write(m_serializableSerializer.getVersion())
+      writer.write(objectBuffer.size())
+      writer.write(objectBuffer)
+    else
+      writer.writeInt(0)
+
+    destroy objectWriter
+    destroy objectBuffer
+
+    return success
+
+  // --------------------------------------------------------------------------
+  function readObject(BinaryReader reader) returns object
+    // let success = try() () ->
+    execute() () ->
+      g_lastReadObject = readObject_impl(reader)
+    // if (not success)
+    //   error(lastError)
+    //   return NULLT
+    return g_lastReadObject
+
+  // --------------------------------------------------------------------------
+  private function readObject_impl(BinaryReader reader) returns object
+
+    if (reader == null)
+      argumentNullError("reader")
+
+    let headerCode = reader.readInt()
+    let objectVersion = reader.readInt()
+    let objectSize = reader.readInt()
+
+    // info("SerializationContext", "readObject_impl", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), objectSize.toString()))
+
+    // Special processor for ISerializable objects
+    if (headerCode == m_serializableSerializer.getHeaderCode())
+      return readSerializableObject(reader, objectVersion, objectSize)
+
+    let serializer = getSerializer(headerCode, objectVersion)
+    if (serializer == null)
+      warn("SerializationContext", "readObject_impl", "","Could not find serializer for object h:{0} v:{1}".format(headerCode.toRawCode(), objectVersion.toString()))
+      // Read passed the object that we can't deserialize
+      reader.readBytes(objectSize)
+      return NULL
+
+    let objectTypeId = serializer.getObjectTypeId()
+    let object = createObject(objectTypeId)
+
+    if (object == NULL)
+      error("SerializationContext", "readObject_impl", "", "Could not construct object of type " + Meta.getTypeName(objectTypeId))
+      // Read passed the object that we can't deserialize
+      reader.readBytes(objectSize)
+      return NULL
+
+    if (readObject(reader, object, objectVersion, objectSize, serializer) == false)
+      destroyObject(object)
+      return NULL
+
+    return object
+
+  // --------------------------------------------------------------------------
+  function readObject(BinaryReader reader, object object) returns bool
+    // let success = try() () ->
+    execute() () ->
+      g_lastReadSucceeded = readObject_impl(reader, object)
+    // if (not success)
+    //   error(lastError)
+    //   return false
+    return g_lastReadSucceeded
+
+  // --------------------------------------------------------------------------
+  private function readObject_impl(BinaryReader reader, object object) returns bool
+
+    let headerCode = reader.readInt()
+    let objectVersion = reader.readInt()
+    let size = reader.readInt()
+
+    // info("SerializationContext", "readObject_impl2", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), size.toString()))
+
+    if (object == NULL)
+      warn("SerializationContext", "readObject_impl2", "", "Object was NULL")
+      reader.readBytes(size)
+      return false
+
+    let serializer = getSerializer(headerCode, objectVersion)
+    if (serializer == null)
+      warn("SerializationContext", "readObject_impl2", "", "Could not find serializer for object h:{0} v:{1}".format(headerCode.toRawCode(), objectVersion.toString()))
+      // Read passed the object that we can't deserialize
+      reader.readBytes(size)
+      return false
+
+    let serializedObjectTypeId = serializer.getObjectTypeId()
+
+    if (object.objectTypeId != serializedObjectTypeId)
+      warn("SerializationContext", "readObject_impl2", "", "Type mismatch when deserializing object. Expected: {0} Actual: {1}. h:{2} v:{3} id:{4}".format(
+        Meta.getTypeName(object.objectTypeId),
+        Meta.getTypeName(serializedObjectTypeId),
+        headerCode.toRawCode(),
+        objectVersion.toString(),
+        serializedObjectTypeId.toString()))
+
+    return readObject(reader, object, objectVersion, size, serializer)
+
+  // --------------------------------------------------------------------------
+  private function readObject(BinaryReader reader, object object, int objectVersion, int size, ISerializer serializer) returns bool
+
+    pushSerializingObject(object, objectVersion)
+
+    let objectBuffer = new ByteBuffer()
+    reader.readBytes(objectBuffer, size)
+
+    let objectReader = new BinaryReader(objectBuffer)
+
+    let success = serializer.deserialize(this, objectReader, object)
+    if (success == false)
+      warn("SerializationContext", "readObject", "", "Failed to deserialize object of type {0}".format(object.getTypeName()))
+
+    destroy objectReader
+    destroy objectBuffer
+
+    popSerializingObject()
+
+    return success
+
+  // --------------------------------------------------------------------------
+  private function readSerializableObject(BinaryReader reader, int _objectVersion, int objectSize) returns object
+    execute() () ->
+      g_lastReadObject = readSerializableObject_impl(reader, _objectVersion, objectSize)
+    return g_lastReadObject
+
+  // --------------------------------------------------------------------------
+  private function readSerializableObject_impl(BinaryReader reader, int _objectVersion, int objectSize) returns object
+    let objectBuffer = new ByteBuffer()
+    reader.readBytes(objectBuffer, objectSize)
+    let objectReader = new BinaryReader(objectBuffer)
+    let object = m_serializableSerializer.readObject(this, objectReader)
+    destroy objectReader
+    destroy objectBuffer
+    return object
+
+  // --------------------------------------------------------------------------
+  function registerSerializer(ISerializer serializer)
+    let headerCode = serializer.getHeaderCode()
+    LinkedList<ISerializer> serializers = m_serializerMap.get(headerCode)
+    if (serializers == null)
+      serializers = new LinkedList<ISerializer>()
+      m_serializerMap.put(headerCode, serializers)
+    serializers.add(serializer)
+    m_serializerToHeaderCodeMap.put(serializer, headerCode)
+    if (serializer.getObjectTypeId() != -1)
+      m_objectTypeToHeaderCodeMap.put(serializer.getObjectTypeId(), headerCode)
+
+  // --------------------------------------------------------------------------
+  function getSerializer(int headerCode) returns ISerializer
+    return getSerializer(headerCode, -1)
+
+  // --------------------------------------------------------------------------
+  function getSerializer(int headerCode, int versionByte) returns ISerializer
+    let serializers = m_serializerMap.get(headerCode)
+    if (serializers == null)
+      return null
+    var highestVer = -1
+    ISerializer highestVerSerializer = null
+    for serializer in serializers
+      let ver = serializer.getVersion()
+      if (versionByte > -1 and ver == versionByte)
+        return serializer
+      else if (ver > highestVer)
+        highestVer = ver
+        highestVerSerializer = serializer
+    return highestVerSerializer
+
+  // --------------------------------------------------------------------------
+  function getObjectSerializer(object object) returns ISerializer
+    return getSerializerForObject(object, -1)
+
+  // --------------------------------------------------------------------------
+  function getSerializerForObject(object object, int objectVersion) returns ISerializer
+    let serializable = object.as<ISerializable>(typeId_ISerializable)
+    if (serializable != null)
+      return getSerializer(SerializableSerializer.HEADER_CODE, objectVersion)
+
+    if (not m_objectTypeToHeaderCodeMap.has(object.objectTypeId))
+      return null
+
+    return getSerializer(m_objectTypeToHeaderCodeMap.get(object.objectTypeId), objectVersion)
+
+  // --------------------------------------------------------------------------
+  function registerFactory(int objectTypeId, ObjectFactory1 factory)
+    m_objectTypeToFactoryMap.put(objectTypeId, factory)
+
+  // --------------------------------------------------------------------------
+  function registerDescructor(int objectTypeId, ObjectDestructor destructor)
+    m_objectTypeToDestructorMap.put(objectTypeId, destructor)
+
+  // --------------------------------------------------------------------------
+  function getFactory(int objectTypeId) returns ObjectFactory1
+    return m_objectTypeToFactoryMap.get(objectTypeId)
+
+  // --------------------------------------------------------------------------
+  function getDestructor(int objectTypeId) returns ObjectDestructor
+    return m_objectTypeToDestructorMap.get(objectTypeId)
+
+  // --------------------------------------------------------------------------
+  function createObject(int objectTypeId) returns object
+
+    let factory = getFactory(objectTypeId)
+    if (factory != null)
+      return factory.call(toObject(this, SerializationContext.typeId))
+
+    let objectType = Meta.getType(objectTypeId)
+    if (objectType == null)
+      warn("SerializationContext", "readObject_impl", "","Unknown object type: " + Meta.getTypeName(objectTypeId))
+      return NULL
+
+    return createObject(objectType)
+
+  // --------------------------------------------------------------------------
+  function createObject(Type objectType) returns object
+    if (objectType == null)
+      argumentNullError("objectType")
+
+    let concreteObjectType = objectType castTo ConcreteType
+    if (concreteObjectType == null)
+      warn("SerializationContext", "readObject_impl", "", "Encountered object type that cannot be constructed: " + objectType.getFullyQualifiedName())
+      return NULL
+
+    if (concreteObjectType.getFactory() != null)
+      return concreteObjectType.createObject()
+
+    if (concreteObjectType.getFactory1() != null)
+      var creationContext = getCreationContext()
+      if (creationContext == NULL)
+        creationContext = toObject(this, SerializationContext.typeId)
+      return concreteObjectType.createObject(creationContext)
+
+    return NULL
+
+  // --------------------------------------------------------------------------
+  function destroyObject(object object) returns bool
+    let destructor = getDestructor(object.objectTypeId)
+    if (destructor != null)
+      destructor.call(object)
+      return true
+      
+    let objectType = object.getType()
+    if (objectType != null and objectType.destroyObject(object))
+      return true
+
+    warn("SerializationContext", "destroyObject", "", "No destructor registered for object of type " + object.getTypeName())
+    return false
+
+  // --------------------------------------------------------------------------
+  function pushCreationContext(object object)
+    m_creationContexts.push(new ObjectRef(object))
+
+  // --------------------------------------------------------------------------
+  function popCreationContext()
+    destroy m_creationContexts.pop()
+
+  // --------------------------------------------------------------------------
+  function getCreationContext() returns object
+    let creationContext = m_creationContexts.size() > 0 ? m_creationContexts.peek() : null
+    return creationContext != null ? creationContext.getObject() : NULL
+
+  // --------------------------------------------------------------------------
+  function error(string message)
+    Log.error(message)
+
+  // --------------------------------------------------------------------------
+  function error(string className, string functionName, string id, string message)
+    Log.error(className, functionName, id, message)
+
+  // --------------------------------------------------------------------------
+  function warn(string message)
+    Log.warn(message)
+
+  // --------------------------------------------------------------------------
+  function warn(string className, string functionName, string id, string message)
+    Log.warn(className, functionName, id, message)
+
+  // --------------------------------------------------------------------------
+  function info(string message)
+    Log.info(message)
+
+  // --------------------------------------------------------------------------
+  function info(string className, string functionName, string id, string message)
+    Log.info(className, functionName, id, message)
+
+  // --------------------------------------------------------------------------
+  function debug(string message)
+    Log.debug(message)
+
+  // --------------------------------------------------------------------------
+  function debug(string className, string functionName, string id, string message)
+    Log.debug(className, functionName, id, message)
+
+// ============================================================================
+class SerializableSerializer
+  static constant int HEADER_CODE = 'XXSS'
+  
+  // --------------------------------------------------------------------------
+  function getHeaderCode() returns int
+    return HEADER_CODE
+
+  // --------------------------------------------------------------------------
+  function getVersion() returns int
+    return 0
+
+  // --------------------------------------------------------------------------
+  function writeObject(SerializationContext context, BinaryWriter writer, object object) returns bool
+
+    let objectType = object.getType()
+    if (objectType == null)
+      context.warn("No meta type found for object of type " + object.getTypeName())
+      return false
+
+    let serializable = object.cast<ISerializable>(typeId_ISerializable)
+    if (serializable == null)
+      context.warn("Expected object to implement ISerializable " + object.getTypeName())
+      return false
+
+    // And header code for the object being serialized
+    writer.write(objectType.getFullyQualifiedName())
+    writer.write(serializable.getVersion())
+
+    context.pushSerializingObject(object, serializable.getVersion())
+
+    let objectBuffer = new ByteBuffer()
+    let objectWriter = new BinaryWriter(objectBuffer)
+
+    let success = serializable.serialize(context, objectWriter)
+    if (success)
+      writer.write(objectBuffer.size())
+      writer.write(objectBuffer)
+    else
+      writer.writeInt(0)
+
+    destroy objectWriter
+    destroy objectBuffer
+
+    context.popSerializingObject()
+
+    return success
+
+  // --------------------------------------------------------------------------
+  function readObject(SerializationContext context, BinaryReader reader) returns object
+
+    let objectTypeName = reader.readString()
+    let objectVersion = reader.readInt()
+    let objectSize = reader.readInt()
+
+    // context.debug("SerializableSerializer", "readObject", "", "t:{0} v:{1} s:{2}".format(objectTypeName, objectVersion.toString(), objectSize.toString()))
+    
+    let objectType = Meta.getType(objectTypeName)
+    if (objectType == null)
+      context.warn("SerializableSerializer", "readObject", "", "No meta type found for object of type: " + objectTypeName)
+      return NULL
+
+    if (objectType.is(typeId_ISerializable) == false)
+      context.warn("SerializableSerializer", "readObject", "", "Expected object to implement ISerializable: " + objectTypeName)
+      reader.readBytes(objectSize)
+      return NULL
+
+    let object = context.createObject(objectType)
+    if (object == NULL)
+      context.warn("SerializableSerializer", "readObject", "", "Failed to construct object of type: " + objectTypeName)
+      reader.readBytes(objectSize)
+      return NULL
+
+    let serializable = object.cast<ISerializable>(typeId_ISerializable)
+    if (serializable == null)
+      context.warn("SerializableSerializer", "readObject", "", "Type says it implements ISerializable but cast failed: " + objectTypeName)
+      reader.readBytes(objectSize)
+      return NULL
+
+    context.pushSerializingObject(object, objectVersion)
+
+    let objectBuffer = new ByteBuffer()
+    reader.readBytes(objectBuffer, objectSize)
+
+    let objectReader = new BinaryReader(objectBuffer)
+
+    let success = serializable.deserialize(context, objectReader)
+    if (success == false)
+      context.warn("SerializableSerializer", "readObject", "", "Failed to deserialize object of type {0}".format(object.getTypeName()))
+
+    destroy objectReader
+    destroy objectBuffer
+
+    context.popSerializingObject()
+
+    return success ? object : NULL
+
+// ============================================================================
+init
+  registerPackageMetadata()
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  SerializationContext.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////

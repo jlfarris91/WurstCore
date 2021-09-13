@@ -1,12 +1,15 @@
 package ObjectEnumerable
 import Object
 import Func
-import Action
 import Enumerable
 
 import initlater LinkedList
 import initlater HashList
 import initlater Vector
+
+// ============================================================================
+public interface IObjectAction
+  function call(object object)
 
 // ============================================================================
 public interface IObjectEnumerator
@@ -17,163 +20,274 @@ public interface IObjectEnumerator
 // ============================================================================
 public interface IObjectEnumerable
   function iterator() returns IObjectEnumerator
+  function close()
 
 // ============================================================================
-public function IObjectEnumerable.forEach(Action1<object> action)
+public function IObjectEnumerable.forEach(IObjectAction action)
   let enumerator = this.iterator()
   while (enumerator.hasNext())
     action.call(enumerator.next())
   destroy enumerator
 
 // ============================================================================
-public function IObjectEnumerable.cast<T>(bool owns) returns IEnumerable<T>
-  return new ObjectEnumerableCast<T>(this, owns)
+public function IObjectEnumerable.cast<T>(int objectTypeId, bool owns) returns IEnumerable<T>
+  return new ObjectEnumerableCast<T>(this, objectTypeId, owns)
 
 // ============================================================================
-public function LinkedList<T>.enumerateObjects<T>(bool owns) returns IObjectEnumerable
-  return new LinkedListObjectEnumerable<T>(this, owns)
+public function LinkedList<T>.enumerateObjects<T>(int objectTypeId, bool owns) returns IObjectEnumerable
+  return new LinkedListObjectEnumerable<T>(this, objectTypeId, owns)
 
 // ============================================================================
-public function HashList<T>.enumerateObjects<T>(bool owns) returns IObjectEnumerable
-  return new HashListObjectEnumerable<T>(this, owns)
+public function HashList<T>.enumerateObjects<T>(int objectTypeId, bool owns) returns IObjectEnumerable
+  return new HashListObjectEnumerable<T>(this, objectTypeId, owns)
 
 // ============================================================================
-public function Vector<T>.enumerateObjects<T>(bool owns) returns IObjectEnumerable
-  return new VectorObjectEnumerable<T>(this, owns)
+public function Vector<T>.enumerateObjects<T>(int objectTypeId, bool owns) returns IObjectEnumerable
+  return new VectorObjectEnumerable<T>(this, objectTypeId, owns)
 
 // ============================================================================
-class ObjectEnumerableCast<T> implements IEnumerable<T>
+class ObjectEnumerableCast<T> extends IEnumerable<T>
   private IObjectEnumerable m_source
+  private int m_objectTypeId
   private bool m_owns
-  construct(IObjectEnumerable source, bool owns)
+  
+  // --------------------------------------------------------------------------
+  construct(IObjectEnumerable source, int objectTypeId, bool owns)
     m_source = source
+    m_objectTypeId = objectTypeId
     m_owns = owns
+  
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_source
+  
+  // --------------------------------------------------------------------------
   override function iterator() returns IEnumerator<T>
-    return new ObjectEnumeratorCast<T>(m_source.iterator(), m_owns)
+    return new ObjectEnumeratorCast<T>(m_source.iterator(), m_objectTypeId, m_owns)
+
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this
 
 // ============================================================================
-class ObjectEnumeratorCast<T> implements IEnumerator<T>
+class ObjectEnumeratorCast<T> extends IEnumerator<T>
   private IObjectEnumerator m_source
+  private int m_objectTypeId
   private bool m_owns
-  construct(IObjectEnumerator source, bool owns)
+  
+  // --------------------------------------------------------------------------
+  construct(IObjectEnumerator source, int objectTypeId, bool owns)
     m_source = source
+    m_objectTypeId = objectTypeId
     m_owns = owns
+  
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_source
+  
+  // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_source.hasNext()
+  
+  // --------------------------------------------------------------------------
   override function next() returns T
-    return m_source.next().cast<T>()
+    return m_source.next().cast<T>(m_objectTypeId)
+  
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this
 
 // ============================================================================
 public class LinkedListObjectEnumerable<T> implements IObjectEnumerable
   private LinkedList<T> m_source
+  private int m_objectTypeId
   private bool m_owns
-  construct (LinkedList<T> source, bool owns)
+
+  // --------------------------------------------------------------------------
+  construct (LinkedList<T> source, int objectTypeId, bool owns)
     m_source = source
+    m_objectTypeId = objectTypeId
     m_owns = owns
+
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_source
+
+  // --------------------------------------------------------------------------
   override function iterator() returns IObjectEnumerator
-    return new LinkedListObjectEnumerator<T>(m_source.iterator(), m_owns)
+    return new LinkedListObjectEnumerator<T>(m_source.iterator(), m_objectTypeId, m_owns)
+
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this
   
 // ============================================================================
 public class LinkedListObjectEnumerator<T> implements IObjectEnumerator
   private LLIterator<T> m_iterator
+  private int m_objectTypeId
   private bool m_owns
-  construct(LLIterator<T> iterator, bool owns)
+
+  // --------------------------------------------------------------------------
+  construct(LLIterator<T> iterator, int objectTypeId, bool owns)
     m_iterator = iterator
+    m_objectTypeId = objectTypeId
     m_owns = owns
+
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_iterator
+
+  // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_iterator.hasNext()
+
+  // --------------------------------------------------------------------------
   override function next() returns object
-    return toObject(toObject(m_iterator.next()))
+    return toObject(m_iterator.next(), m_objectTypeId)
+
+  // --------------------------------------------------------------------------
   override function close()
     destroy this
 
 // ============================================================================
 public class HashListObjectEnumerable<T> implements IObjectEnumerable
   private HashList<T> m_source
+  private int m_objectTypeId
   private bool m_owns
-  construct (HashList<T> source, bool owns)
+
+  // --------------------------------------------------------------------------
+  construct (HashList<T> source, int objectTypeId, bool owns)
     m_source = source
+    m_objectTypeId = objectTypeId
     m_owns = owns
+
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_source
+
+  // --------------------------------------------------------------------------
   override function iterator() returns IObjectEnumerator
-    return new HashListObjectEnumerator<T>(m_source.iterator(), m_owns)
+    return new HashListObjectEnumerator<T>(m_source.iterator(), m_objectTypeId, m_owns)
+
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this
 
 // ============================================================================
 public class HashListObjectEnumerator<T> implements IObjectEnumerator
   private HLIterator<T> m_iterator
+  private int m_objectTypeId
   private bool m_owns
-  construct(HLIterator<T> iterator, bool owns)
+
+  // --------------------------------------------------------------------------
+  construct(HLIterator<T> iterator, int objectTypeId, bool owns)
     m_iterator = iterator
+    m_objectTypeId = objectTypeId
     m_owns = owns
+
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_iterator
+
+  // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_iterator.hasNext()
+
+  // --------------------------------------------------------------------------
   override function next() returns object
-    return toObject(m_iterator.next())
+    return toObject(m_iterator.next(), m_objectTypeId)
+
+  // --------------------------------------------------------------------------
   override function close()
     destroy this
 
 // ============================================================================
 public class VectorObjectEnumerable<T> implements IObjectEnumerable
   private Vector<T> m_source
+  private int m_objectTypeId
   private bool m_owns
-  construct (Vector<T> source, bool owns)
+
+  // --------------------------------------------------------------------------
+  construct (Vector<T> source, int objectTypeId, bool owns)
     m_source = source
+    m_objectTypeId = objectTypeId
     m_owns = owns
+
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_source
+
+  // --------------------------------------------------------------------------
   override function iterator() returns IObjectEnumerator
-    return new VectorObjectEnumerator<T>(m_source.iterator(), m_owns)
+    return new VectorObjectEnumerator<T>(m_source.iterator(), m_objectTypeId, m_owns)
+
+  // --------------------------------------------------------------------------
+  override function close()
+    destroy this
 
 // ============================================================================
 public class VectorObjectEnumerator<T> implements IObjectEnumerator
   private VectorIterator<T> m_iterator
+  private int m_objectTypeId
   private bool m_owns
-  construct(VectorIterator<T> iterator, bool owns)
+
+  // --------------------------------------------------------------------------
+  construct(VectorIterator<T> iterator, int objectTypeId, bool owns)
     m_iterator = iterator
+    m_objectTypeId = objectTypeId
     m_owns = owns
+
+  // --------------------------------------------------------------------------
   ondestroy
     if (m_owns)
       destroy m_iterator
+
+  // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_iterator.hasNext()
+
+  // --------------------------------------------------------------------------
   override function next() returns object
-    return toObject(m_iterator.next())
+    return toObject(m_iterator.next(), m_objectTypeId)
+
+  // --------------------------------------------------------------------------
   override function close()
     destroy this
 
 // ============================================================================
 public class RangeObjectEnumerator<T> implements IObjectEnumerator
   private Func1<int, T> m_iterator
+  private int m_objectTypeId
   private int m_curr
   private int m_end
-  construct(Func1<int, T> iterator, int startIndex, int endIndex)
+
+  // --------------------------------------------------------------------------
+  construct(Func1<int, T> iterator, int objectTypeId, int startIndex, int endIndex)
     m_iterator = iterator
+    m_objectTypeId = objectTypeId
     m_curr = startIndex
     m_end = endIndex
+
+  // --------------------------------------------------------------------------
   ondestroy
     destroy m_iterator
+
+  // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_curr < m_end
+
+  // --------------------------------------------------------------------------
   override function next() returns object
     m_curr++
-    return toObject(m_iterator.call(m_curr))
+    return toObject(m_iterator.call(m_curr), m_objectTypeId)
+
+  // --------------------------------------------------------------------------
   override function close()
     destroy this

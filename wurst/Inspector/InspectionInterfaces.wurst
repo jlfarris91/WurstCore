@@ -1,8 +1,10 @@
 package InspectionInterfaces
 import Union
 import HashList
+import Meta
 
 // ============================================================================
+public constant int typeId_IPropertyDescriptor = Meta.registerInterface("InspectionInterfaces.IPropertyDescriptor").getTypeId()
 public interface IPropertyDescriptor
   function getName() returns string
 
@@ -16,6 +18,12 @@ public interface IPropertyDescriptor
   
   function getCategory() returns string
   function setCategory(string category)
+
+// ============================================================================
+public constant int typeId_IObjectDescriptor = Meta.registerInterface("InspectionInterfaces.IObjectDescriptor").getTypeId()
+public interface IObjectDescriptor
+  function getId() returns string
+  function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)
 
 // ============================================================================
 public class PropertyDescriptorCollection
@@ -36,8 +44,3 @@ public class PropertyDescriptorCollection
   // --------------------------------------------------------------------------
   function size() returns int
     return m_descriptors.size()
-
-// ============================================================================
-public interface IObjectDescriptor
-  function getId() returns string
-  function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)

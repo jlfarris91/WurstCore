@@ -1,0 +1,214 @@
+package BinaryReaderWriter
+import ByteBuffer
+import ChunkedString
+import Base64
+
+constant charset = "!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~ "
+constant charsetlength = charset.length()
+constant int STRING_TERMINATOR = charsetlength
+
+// ============================================================================
+function string.toCharsetInt2() returns int
+  if this.length() > 1
+    return -1
+  else
+    for i = 0 to charsetlength - 1
+      if charset.substring(i, i + 1) == this
+        return i
+    return -1
+
+// ============================================================================
+function int.toCharsetString2() returns string
+  return charset.substring(this, this + 1)
+
+// ============================================================================
+public class BinaryReader
+  private ByteBuffer m_buffer
+  
+  // --------------------------------------------------------------------------
+  construct(ByteBuffer buffer)
+    m_buffer = buffer
+
+  // --------------------------------------------------------------------------
+  function readByte() returns int
+    let value = m_buffer.readByte()
+    // Log.info("BinaryReader", "readByte", "", value.toString())
+    return value
+
+  // --------------------------------------------------------------------------
+  function readShort() returns int
+    let value = m_buffer.readShort()
+    // Log.info("BinaryReader", "readShort", "", value.toString())
+    return value
+
+  // --------------------------------------------------------------------------
+  function readInt() returns int
+    let value = m_buffer.readInt()
+    // Log.info("BinaryReader", "readInt", "", value.toString())
+    return value
+
+  // --------------------------------------------------------------------------
+  function readReal() returns real
+    let str = readString()
+    // Log.info("BinaryReader", "readReal", "", "str: " + str)
+    let value = str.toReal()
+    // Log.info("BinaryReader", "readReal", "", "value: " + value.toString())
+    return value
+
+  // --------------------------------------------------------------------------
+  function readBool() returns bool
+    let value = m_buffer.readByte() != 0
+    // Log.info("BinaryReader", "readBool", "", value.toString())
+    return value
+
+  // --------------------------------------------------------------------------
+  function readString() returns string
+    var value = ""
+    while (m_buffer.hasByte())
+      let char = m_buffer.readByte()
+      if (char == STRING_TERMINATOR)
+        break
+      value += char.toCharsetString2()
+    // Log.info("BinaryReader", "readString", "", value)
+    return value
+
+  // --------------------------------------------------------------------------
+  function readChunkedString() returns ChunkedString
+    let chunkedStr = new ChunkedString()
+    while (m_buffer.hasByte())
+      let char = m_buffer.readByte()
+      if (char == STRING_TERMINATOR)
+        break
+      chunkedStr.append(char.toCharsetString2())
+    return chunkedStr
+
+  // --------------------------------------------------------------------------
+  function readBytes(int numBytes) returns int
+    var bytesRead = 0
+    for i = 0 to numBytes - 1
+      if (m_buffer.hasByte() == false)
+        break
+      bytesRead++
+    // Log.info("BinaryReader", "readBytes", "", "Read {0} bytes".format(bytesRead.toString()))
+    return bytesRead
+
+  // --------------------------------------------------------------------------
+  function readBytes(ByteBuffer readInto, int numBytes) returns int
+    var bytesRead = 0
+    for i = 0 to numBytes - 1
+      if (m_buffer.hasByte() == false)
+        break
+      readInto.writeByte(m_buffer.readByte())
+      bytesRead++
+    // Log.info("BinaryReader", "readBytes", "", "Read {0} bytes".format(bytesRead.toString()))
+    return bytesRead
+
+// ============================================================================
+public class BinaryWriter
+  private ByteBuffer m_buffer
+  
+  // --------------------------------------------------------------------------
+  construct(ByteBuffer buffer)
+    m_buffer = buffer
+
+  // --------------------------------------------------------------------------
+  function writeByte(int value)
+    // Log.info("BinaryWriter", "writeByte", "", value.toString())
+    m_buffer.writeByte(value)
+
+  // --------------------------------------------------------------------------
+  function writeShort(int value)
+    // Log.info("BinaryWriter", "writeShort", "", value.toString())
+    m_buffer.writeShort(value)
+
+  // --------------------------------------------------------------------------
+  function write(int value)
+    // Log.info("BinaryWriter", "writeInt", "", value.toString())
+    m_buffer.writeInt(value)
+
+  // --------------------------------------------------------------------------
+  function writeInt(int value)
+    // Log.info("BinaryWriter", "writeInt", "", value.toString())
+    m_buffer.writeInt(value)
+
+  // --------------------------------------------------------------------------
+  function write(real value)
+    write(value.toString())
+
+  // --------------------------------------------------------------------------
+  function write(bool value)
+    // Log.info("BinaryWriter", "writeBool", "", value.toString())
+    m_buffer.writeByte(value ? 1 : 0)
+
+  // --------------------------------------------------------------------------
+  function write(string value)
+    // Log.info("BinaryWriter", "writeString", "", value)
+    for i = 0 to value.length() - 1
+      m_buffer.writeByte(value.charAt(i).toCharsetInt2())
+    m_buffer.writeByte(STRING_TERMINATOR)
+
+  // --------------------------------------------------------------------------
+  function write(ChunkedString value)
+    while (value.hasChunk())
+      write(value.readChunk())
+    m_buffer.writeByte(STRING_TERMINATOR)
+
+  // --------------------------------------------------------------------------
+  function write(ByteBuffer buffer)
+    write(buffer, true)
+
+  // --------------------------------------------------------------------------
+  function write(ByteBuffer buffer, bool resetRead)
+    if (resetRead)
+      buffer.resetRead()
+    while buffer.hasByte()
+      writeByte(buffer.readByte())
+
+// ============================================================================
+@test function writeReadReal()
+
+  let buffer = new ByteBuffer()
+  let writer = new BinaryWriter(buffer)
+  let reader = new BinaryReader(buffer)
+
+  writer.writeInt(999)
+  writer.write(123.456)
+  writer.write(7.89)
+
+  buffer.resetRead()
+
+  reader.readInt().assertEquals(999)
+  reader.readReal().assertEquals(123.456)
+  reader.readReal().assertEquals(7.89)
+
+// ============================================================================
+@test function base64IntegrationTest()
+  let buffer = new ByteBuffer()
+  let writer = new BinaryWriter(buffer)
+
+  let objectWriteBuffer = new ByteBuffer()
+  let objectWriter = new BinaryWriter(objectWriteBuffer)
+  objectWriter.write("LocalPlayer")
+
+  objectWriteBuffer.size().assertEquals(12)
+
+  writer.write(objectWriteBuffer.size())
+  writer.write(objectWriteBuffer)
+
+  let encoded = buffer.encodeBase64()
+
+  let decoded = encoded.decodeBase64()
+
+  let reader = new BinaryReader(decoded)
+
+  let objectReadBuffer = new ByteBuffer()
+  let objectReader = new BinaryReader(objectReadBuffer)
+
+  let size = reader.readInt()
+  size.assertEquals(objectWriteBuffer.size())
+
+  reader.readBytes(objectReadBuffer, size)
+  objectReadBuffer.size().assertEquals(size)
+
+  let str = objectReader.readString()
+  str.assertEquals("LocalPlayer")

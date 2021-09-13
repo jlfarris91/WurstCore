@@ -2,7 +2,6 @@ package CompositionManager
 import LinkedList
 import HashMap
 import IComponent
-import public Type
 import ClosureTimers
 import ErrorHandling
 
@@ -55,8 +54,8 @@ public class CompositionManager
     return true
 
   // --------------------------------------------------------------------------
-  function getComponent(typeInfo componentType) returns IComponent
-    return _typeToComponentMap.get(componentType.id)
+  function getComponent(int componentTypeId) returns IComponent
+    return _typeToComponentMap.get(componentTypeId)
 
   // --------------------------------------------------------------------------
   function iterator() returns LLIterator<IComponent>

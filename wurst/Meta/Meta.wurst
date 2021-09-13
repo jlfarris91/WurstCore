@@ -1,0 +1,431 @@
+package Meta
+import public Reflection
+import initlater Object
+import Func
+import Action
+import LinkedList
+import HashList
+import Bitwise
+import StringUtils
+import ErrorHandling
+import HashMap
+
+import public initlater MetaHandles
+
+constant int TYPE_ID_CLASS_MASK = 0xF0000000 // max 15 possible classifications
+constant int TYPE_ID_INDEX_MASK = 0x0FFFFFFF // max 268,435,455 possible types
+
+MetaIDGen g_interfaceIDGen = new MetaIDGen(TypeClassification.Interface, 1)
+MetaIDGen g_abstractClassIDGen = new MetaIDGen(TypeClassification.Class, maxTypeId()+1)
+MetaIDGen g_handleIDGen = new MetaIDGen(TypeClassification.Handle, 1)
+
+Type array g_classes
+Type array g_interfaces
+Type array g_enumerations
+Type array g_handles
+
+HashMap<string, int> g_fullyQualifiedTypeNameToTypeIdMap = new HashMap<string, int>()
+HashList<int> g_emptyInts = new HashList<int>()
+HashList<MethodInfo> g_emptyMethods = new HashList<MethodInfo>()
+HashList<PropertyInfo> g_emptyProperties = new HashList<PropertyInfo>()
+
+// ============================================================================
+class MetaIDGen
+  private int m_index = 1
+  private TypeClassification m_classification
+
+  // --------------------------------------------------------------------------
+  construct(TypeClassification classification, int start)
+    m_index = start
+    m_classification = classification
+
+  // --------------------------------------------------------------------------
+  function next() returns int
+    let id = Meta.createTypeId(m_index, m_classification)
+    m_index++
+    return id
+
+// ============================================================================
+enum TypeClassification
+  Class
+  Interface
+  Enum
+  Handle
+
+// ============================================================================
+public function TypeClassification.toString() returns string
+  switch(this)
+    case Class
+      return "Class"
+    case Interface
+      return "Interface"
+    case Enum
+      return "Enum"
+    case Handle
+      return "Handle"
+
+// ============================================================================
+public class Meta
+
+  // --------------------------------------------------------------------------
+  static function getType(int _typeId) returns Type
+    if (_typeId == 0)
+      return null
+    let typeClassification = getTypeClassification(_typeId)
+    let typeIdx = getTypeIndex(_typeId)
+    //Log.debug("getType({0}) -> class: {1} idx: {2}".format(_typeId.toString(), (typeClassification castTo int).toString(), typeIdx.toString()))
+    switch (typeClassification)
+      case Class
+        return g_classes[typeIdx]
+      case Interface
+        return g_interfaces[typeIdx]
+      case Enum
+        return g_enumerations[typeIdx]
+      case Handle
+        return g_handles[typeIdx]
+
+  // --------------------------------------------------------------------------
+  static function getType(string fullyQualifiedTypeName) returns Type
+    if (g_fullyQualifiedTypeNameToTypeIdMap.has(fullyQualifiedTypeName))
+      return getType(g_fullyQualifiedTypeNameToTypeIdMap.get(fullyQualifiedTypeName))
+    return null
+
+  // --------------------------------------------------------------------------
+  private static function registerType(Type _type)
+    if (_type == null)
+      argumentNullError("_type")
+
+    let _typeId = _type.getTypeId()
+
+    if (g_fullyQualifiedTypeNameToTypeIdMap.has(_type.getFullyQualifiedName()))
+      error("[Meta.registerType] A type has already been registered with the fully qualified type name {0}".format(_type.getFullyQualifiedName()))
+    g_fullyQualifiedTypeNameToTypeIdMap.put(_type.getFullyQualifiedName(), _typeId)
+
+    let typeClassification = _type.getClassification()
+    let typeIdx = getTypeIndex(_typeId)
+    // Log.debug("registerType({0}) -> class: {1} idx: {2}".format(_typeId.toString(), (typeClassification castTo int).toString(), typeIdx.toString()))
+    switch (typeClassification)
+      case Class
+        if (g_classes[typeIdx] != null)
+          error("[Meta.registerType] A class type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_classes[typeIdx].getFullyQualifiedName()))
+        g_classes[typeIdx] = _type
+      case Interface
+        if (g_interfaces[typeIdx] != null)
+          error("[Meta.registerType] An interface type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_interfaces[typeIdx].getFullyQualifiedName()))
+        g_interfaces[typeIdx] = _type
+      case Enum
+        if (g_enumerations[typeIdx] != null)
+          error("[Meta.registerType] An enum type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_enumerations[typeIdx].getFullyQualifiedName()))
+        g_enumerations[typeIdx] = _type
+      case Handle
+        if (g_handles[typeIdx] != null)
+          error("[Meta.registerType] A handle type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_handles[typeIdx].getFullyQualifiedName()))
+        g_handles[typeIdx] = _type
+
+  // --------------------------------------------------------------------------
+  static function getTypeClassification(int _typeId) returns TypeClassification
+    return _typeId.and32(TYPE_ID_CLASS_MASK).shiftr(28) castTo TypeClassification
+
+  // --------------------------------------------------------------------------
+  static function getTypeIndex(int _typeId) returns int
+    return _typeId.and32(TYPE_ID_INDEX_MASK)
+
+  // --------------------------------------------------------------------------
+  static function createTypeId(int _typeId, TypeClassification classification) returns int
+    return getTypeIndex(_typeId).or32((classification castTo int).shiftl(28))
+
+  // --------------------------------------------------------------------------
+  static function registerClass(int id) returns Class
+    let newClass = new Class(id)
+    Meta.registerType(newClass)
+    return newClass
+
+  // --------------------------------------------------------------------------
+  static function registerAbstractClass(string fullyQualifiedName) returns Class
+    let newClass = new Class(g_abstractClassIDGen.next(), fullyQualifiedName)
+    Meta.registerType(newClass)
+    return newClass
+
+  // --------------------------------------------------------------------------
+  static function registerInterface(string fullyQualifiedName) returns Interface
+    let newType = new Interface(g_interfaceIDGen.next(), fullyQualifiedName)
+    Meta.registerType(newType)
+    return newType
+
+  // --------------------------------------------------------------------------
+  static function registerHandle(string fullyQualifiedName, int baseId) returns Handle
+    let newType = new Handle(g_handleIDGen.next(), fullyQualifiedName)..setBase(baseId)
+    Meta.registerType(newType)
+    return newType
+
+  // --------------------------------------------------------------------------
+  static function getTypeName(int _typeId) returns string
+    let _type = getType(_typeId)
+    return _type != null ? _type.getFullyQualifiedName() : "UnknownType({0}-{1})".format(typeIdToTypeName(_typeId), _typeId.toString())
+
+// ============================================================================
+public interface ObjectToIndex
+  function call(object object) returns int
+
+// ============================================================================
+public interface ObjectFromIndex
+  function call(int index) returns object
+
+// ============================================================================
+public abstract class Type
+  protected int m_id
+  protected int m_base
+  protected string m_name
+  protected string m_fullyQualifiedName
+  protected ObjectDestructor m_destructor
+
+  ObjectToIndex objectToIndex
+  ObjectFromIndex objectFromIndex
+
+  // --------------------------------------------------------------------------
+  construct (int _typeId, string fullyQualifiedName)
+
+    if (_typeId <= 0)
+      error("[Type.construct] Argument invalid: _typeId must be greater than 0")
+
+    m_id = _typeId
+    m_fullyQualifiedName = fullyQualifiedName
+
+    let parts = fullyQualifiedName.split(".")
+    m_name = parts.size() >= 1 ? parts.get(parts.size() - 1) : fullyQualifiedName
+    destroy parts
+
+  // --------------------------------------------------------------------------
+  function getTypeId() returns int
+    return m_id
+
+  // --------------------------------------------------------------------------
+  function getClassification() returns TypeClassification
+    return Meta.getTypeClassification(m_id)
+
+  // --------------------------------------------------------------------------
+  function getName() returns string
+    return m_name
+
+  // --------------------------------------------------------------------------
+  function getFullyQualifiedName() returns string
+    return m_fullyQualifiedName
+
+  // --------------------------------------------------------------------------
+  function getBase() returns Type
+    return Meta.getType(m_base)
+
+  // --------------------------------------------------------------------------
+  function setBase(int baseTypeId)
+    m_base = baseTypeId
+
+  // --------------------------------------------------------------------------
+  function is(int otherType) returns bool
+    if (m_id == otherType or m_base == otherType)
+      return true
+    let baseType = Meta.getType(m_base)
+    return baseType != null ? baseType.is(otherType) : false
+
+  // --------------------------------------------------------------------------
+  function registerDestructor(ObjectDestructor destructor)
+    m_destructor = destructor
+
+  // --------------------------------------------------------------------------
+  function getDestructor() returns ObjectDestructor
+    return m_destructor
+
+  // --------------------------------------------------------------------------
+  function destroyObject(object object) returns bool
+    if (m_destructor != null)
+      m_destructor.call(object)
+      return true
+    else if (m_base != 0)
+      let baseType = Meta.getType(m_base)
+      if (baseType != null)
+        return baseType.destroyObject(object)
+    return false
+
+// ============================================================================
+public abstract class ConcreteType extends Type
+  private ObjectFactory m_factory
+  private ObjectFactory1 m_factory1
+
+  // --------------------------------------------------------------------------
+  construct (int _typeId, string fullyQualifiedName)
+    super(_typeId, fullyQualifiedName)
+
+  // --------------------------------------------------------------------------
+  function registerFactory(ObjectFactory factory)
+    m_factory = factory
+
+  // --------------------------------------------------------------------------
+  function getFactory() returns ObjectFactory
+    return m_factory
+
+  // --------------------------------------------------------------------------
+  function registerFactory1(ObjectFactory1 factory)
+    m_factory1 = factory
+
+  // --------------------------------------------------------------------------
+  function getFactory1() returns ObjectFactory1
+    return m_factory1
+
+  // --------------------------------------------------------------------------
+  function createObject() returns object
+    return m_factory != null ? m_factory.call() : NULL
+
+  // --------------------------------------------------------------------------
+  function createObject(object creationContext) returns object
+    return m_factory1 != null ? m_factory1.call(creationContext) : NULL
+
+// ============================================================================
+public class Class extends ConcreteType
+  private HashList<MethodInfo> m_methods
+  private HashList<PropertyInfo> m_properties
+  private HashList<int> m_interfaces
+  private bool m_isAbstract
+
+  // --------------------------------------------------------------------------
+  construct (int id)
+    super (Meta.createTypeId(id, TypeClassification.Class), typeIdToTypeName(id))
+    m_isAbstract = false
+
+  // --------------------------------------------------------------------------
+  construct (int id, string fullyQualifiedName)
+    super (Meta.createTypeId(id, TypeClassification.Class), fullyQualifiedName)
+    m_isAbstract = true
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    if (m_interfaces != null)
+      destroy m_interfaces
+      m_interfaces = null
+
+    if (m_methods != null)
+      destroy m_methods
+      m_methods = null
+
+    if (m_properties != null)
+      destroy m_properties
+      m_properties = null
+
+  // --------------------------------------------------------------------------
+  function getIsAbstract() returns bool
+    return m_isAbstract
+
+  // --------------------------------------------------------------------------
+  function registerInterface(vararg int typeIds)
+    if (m_interfaces == null)
+      m_interfaces = new HashList<int>()
+    for id in typeIds
+      if (Meta.getTypeClassification(id) != TypeClassification.Interface)
+        error("type({0}) : Type is not an interface: {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
+      // Log.info("type({0}) : Registered interface {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
+      m_interfaces.add(id)
+
+  // --------------------------------------------------------------------------
+  function getInterfaces() returns HashList<int>
+    return m_interfaces != null ? m_interfaces : g_emptyInts
+
+  // --------------------------------------------------------------------------
+  function registerMethod(MethodInfo methodInfo)
+    if (m_methods == null)
+      m_methods = new HashList<MethodInfo>()
+    m_methods.add(methodInfo)
+
+  // --------------------------------------------------------------------------
+  function getMethods() returns HashList<MethodInfo>
+    return m_methods != null ? m_methods : g_emptyMethods
+
+  // --------------------------------------------------------------------------
+  function registerProperty(PropertyInfo property)
+    if (m_properties == null)
+      m_properties = new HashList<PropertyInfo>()
+    m_properties.add(property)
+
+  // --------------------------------------------------------------------------
+  function getProperties() returns HashList<PropertyInfo>
+    return m_properties != null ? m_properties : g_emptyProperties
+
+  // --------------------------------------------------------------------------
+  override function is(int otherType) returns bool
+    if (m_id == otherType or m_base == otherType or (m_interfaces != null and m_interfaces.has(otherType)))
+      return true
+    let baseType = Meta.getType(m_base)
+    return baseType != null ? baseType.is(otherType) : false
+
+// ============================================================================
+public class Interface extends Type
+  private HashList<int> m_interfaces
+
+  // --------------------------------------------------------------------------
+  construct (int id, string fullyQualifiedName)
+    super (Meta.createTypeId(id, TypeClassification.Interface), fullyQualifiedName)
+
+  // --------------------------------------------------------------------------
+  function registerInterface(vararg int typeIds)
+    if (m_interfaces == null)
+      m_interfaces = new HashList<int>()
+    for id in typeIds
+      if (Meta.getTypeClassification(id) != TypeClassification.Interface)
+        error("type({0}) : Type is not an interface: {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
+      m_interfaces.add(id)
+
+  // --------------------------------------------------------------------------
+  function getInterfaces() returns HashList<int>
+    return m_interfaces != null ? m_interfaces : g_emptyInts
+
+  // --------------------------------------------------------------------------
+  override function is(int otherType) returns bool
+    if (m_id == otherType or m_base == otherType or (m_interfaces != null and m_interfaces.has(otherType)))
+      return true
+    let baseType = Meta.getType(m_base)
+    return baseType != null ? baseType.is(otherType) : false
+
+// ============================================================================
+public class Handle extends ConcreteType
+
+  // --------------------------------------------------------------------------
+  construct (int id, string fullyQualifiedName)
+    super (Meta.createTypeId(id, TypeClassification.Handle), fullyQualifiedName)
+
+// ============================================================================
+public class MemberInfo
+  private Type m_owner
+  private string m_name
+
+  // --------------------------------------------------------------------------
+  construct (Type owner)
+    m_owner = owner
+
+  // --------------------------------------------------------------------------
+  function getOwningType() returns Type
+    return m_owner
+
+  // --------------------------------------------------------------------------
+  function getName() returns string
+    return m_name
+
+// ============================================================================
+public class PropertyInfo extends MemberInfo
+  private Func1<ObjectRef, ObjectRef> m_getter
+  private Action2<ObjectRef, ObjectRef> m_setter
+
+  // --------------------------------------------------------------------------
+  construct (Type owner, Func1<ObjectRef, ObjectRef> getter, Action2<ObjectRef, ObjectRef> setter)
+    super(owner)
+    m_getter = getter
+    m_setter = setter
+
+  // --------------------------------------------------------------------------
+  function getValue(ObjectRef context) returns ObjectRef
+    return m_getter != null ? m_getter.call(context) : null
+
+  // --------------------------------------------------------------------------
+  function setValue(ObjectRef context, ObjectRef value)
+    if (m_setter != null)
+      m_setter.call(context, value)
+
+// ============================================================================
+public class MethodInfo

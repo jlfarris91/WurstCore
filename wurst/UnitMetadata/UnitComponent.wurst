@@ -4,10 +4,19 @@ import public initlater Component
 import Action
 import ClosureTimers
 import ErrorHandling
-
-//import Reflection
+import Meta
+import Object
 
 // ============================================================================
+public class UnitComponentCreationContext
+  IUnitMetadata owner
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(UnitComponentCreationContext.typeId)
+  /////////////////////////////////////////////////////////////////////////////
+
+// ============================================================================
+public constant int typeId_UnitComponent = UnitComponent.registerMetadata().getTypeId()
 public abstract class UnitComponent extends Component
   private IUnitMetadata m_owner
   private bool m_disableOnDeath = true
@@ -16,6 +25,14 @@ public abstract class UnitComponent extends Component
   construct(IUnitMetadata ownerUnit)
     super(ownerUnit)
     m_owner = ownerUnit
+
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata() returns Type
+    let _type = Meta.registerAbstractClass("UnitComponent.UnitComponent")..setBase(typeId_Component)
+    let _typeId = _type.getTypeId()
+    _type.registerDestructor((object object) -> destroy object.cast<UnitComponent>(_typeId))
+    return _type
+  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   override function getOwner() returns IUnitMetadata
@@ -83,9 +100,9 @@ public abstract class UnitComponent extends Component
               else
                 Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Component must be enabled")
             else
-              Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Could not convert component to type " + typeIdToTypeName(compTypeId))
+              Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Could not convert component to type " + Meta.typeIdToTypeName(compTypeId))
           else
-            Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit metadata has no component of type " + typeIdToTypeName(compTypeId))
+            Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit metadata has no component of type " + Meta.typeIdToTypeName(compTypeId))
         else
           Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit has no metadata")
       else
@@ -96,3 +113,12 @@ public abstract class UnitComponent extends Component
       destroy work
     //}
     return callback
+
+// ============================================================================
+init
+  registerPackageMetadata()
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  UnitComponentCreationContext.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////

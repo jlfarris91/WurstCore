@@ -1,33 +1,108 @@
 package Object
+import Meta
+import ErrorHandling
+import public initlater HandleObjects
 
-public tuple object(int objectHandle)
+public tuple object(int objectHandle, int objectTypeId)
 
-public constant object NULL = object(0)
+public constant object NULL = object(0, 0)
 
 // ============================================================================
-public function object.is<T>() returns bool
-  return this.cast<T>() != null
+public function object.is(int objectTypeId) returns bool
+  if (this.objectTypeId == 0)
+    return false
+  let t = Meta.getType(this.objectTypeId)
+  if (t == null)
+    error("No meta type registered for object type {0}".format(this.getTypeName()))
+  return t.is(objectTypeId)
 
 // ============================================================================
-public function object.cast<T>() returns T
+public function object.as<T>(int objectTypeId) returns T
+  if (this.objectHandle == 0 or this.objectTypeId == 0)
+    return null
+  let t = Meta.getType(this.objectTypeId)
+  if (t == null)
+    error("No meta type registered for object type {0}".format(this.getTypeName()))
+  return t.is(objectTypeId) ? this.objectHandle castTo T : null
+
+// ============================================================================
+public function object.cast<T>(int expectedTypeId) returns T
+  if (expectedTypeId == 0)
+    error("Argument invalid: expectedTypeId must be greater than 0")
+  if (this == NULL)
+    return null
+  if (this.objectTypeId == 0)
+    error("Argument invalid: object.objectTypeId must be greater than 0")
+  let t = Meta.getType(this.objectTypeId)
+  if (t == null)
+    error("No meta type registered for object type {0}".format(this.getTypeName()))
+  if (t.is(expectedTypeId) == false)
+    error("Type cast failed. Object: {0} ({1}) Expected: {2} ({3})".format(this.getTypeName(), this.objectTypeId.toString(), Meta.getTypeName(expectedTypeId), expectedTypeId.toString()))
   return this.objectHandle castTo T
 
 // ============================================================================
 public function object.isNull() returns bool
-  return this == NULL
+  return this.objectHandle == 0
 
 // ============================================================================
-public function toObject<T>(T source) returns object
-  return object(source castTo int)
+public function object.isTyped() returns bool
+  return this.objectTypeId != 0 and Meta.getType(this.objectTypeId) != null
 
 // ============================================================================
-public function fromObject<T>(object obj) returns T
-  return obj.cast<T>()
+public function object.getType() returns Type
+  return Meta.getType(this.objectTypeId)
 
 // ============================================================================
-public function objectToIndex(object typeInfo) returns int
-  return typeInfo.objectHandle
+public function object.getTypeName() returns string
+  return Meta.getTypeName(this.objectTypeId)
 
 // ============================================================================
-public function objectFromIndex(int index) returns object
-  return object(index)
+public function object.destr()
+  if (this == NULL)
+    error("Calling destroy on a NULL object")
+  if (this.isTyped() == false)
+    error("Calling destroy on a typeless object")
+  let _type = this.getType()
+  if (_type == null)
+    error("No meta type registered for object type {0}".format(this.getTypeName()))
+  let concreteType = _type castTo ConcreteType
+  if (concreteType == null)
+    error("Calling destroy on a type classification that does not support destruction: " + _type.getClassification().toString())
+  concreteType.destroyObject(this)
+
+// ============================================================================
+public function toObject<T>(T source, int objectTypeId) returns object
+  if (objectTypeId == 0)
+    error("Argument invalid: objectTypeId must be greater than 0")
+  let t = Meta.getType(objectTypeId)
+  if (t == null)
+    error("No meta type registered for object type {0}".format(Meta.getTypeName(objectTypeId)))
+  return object(source castTo int, objectTypeId)
+
+// ============================================================================
+public class ObjectRef
+  private object m_object
+
+  // --------------------------------------------------------------------------
+  construct (object object)
+    m_object = object
+
+  // --------------------------------------------------------------------------
+  function getObject() returns object
+    return m_object
+
+// ============================================================================
+public function object.ref() returns ObjectRef
+  return new ObjectRef(this)
+
+// ============================================================================
+public interface ObjectFactory
+  function call() returns object
+
+// ============================================================================
+public interface ObjectFactory1
+  function call(object arg) returns object
+
+// ============================================================================
+public interface ObjectDestructor
+  function call(object object)

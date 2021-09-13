@@ -5,34 +5,34 @@ import IComponent
 
 // ============================================================================
 public abstract class Composable implements IComposite
-  protected CompositionManager _compositionManager
+  protected CompositionManager m_compositionManager
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (_compositionManager != null)
-      destroy _compositionManager
-      _compositionManager = null
+    if (m_compositionManager != null)
+      destroy m_compositionManager
+      m_compositionManager = null
 
   // --------------------------------------------------------------------------
-  @inline
+  function getCompositionManager() returns CompositionManager
+    return m_compositionManager
+
+  // --------------------------------------------------------------------------
   override function addComponent(IComponent component) returns IComponent
     return addComponent(component, true)
 
   // --------------------------------------------------------------------------
-  @inline
   override function addComponent(IComponent component, bool startEnabled) returns IComponent
-    if (_compositionManager == null)
-      _compositionManager = new CompositionManager()
-    return _compositionManager.addComponent(component, startEnabled)
+    if (m_compositionManager == null)
+      m_compositionManager = new CompositionManager()
+    return m_compositionManager.addComponent(component, startEnabled)
    
   // --------------------------------------------------------------------------
-  @inline
   override function removeComponent(IComponent component) returns bool
-    if (_compositionManager == null)
+    if (m_compositionManager == null)
       return false
-    return _compositionManager.removeComponent(component)
+    return m_compositionManager.removeComponent(component)
 
   // --------------------------------------------------------------------------
-  @inline
-  override function getComponent(typeInfo componentType) returns IComponent
-    return _compositionManager != null ? _compositionManager.getComponent(componentType) : null
+  override function getComponent(int componentTypeId) returns IComponent
+    return m_compositionManager != null ? m_compositionManager.getComponent(componentTypeId) : null

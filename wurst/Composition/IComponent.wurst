@@ -1,7 +1,9 @@
 package IComponent
 import initlater IComposite
+import Meta
 
 // ============================================================================
+public constant int typeId_IComponent = Meta.registerInterface("IComponent.IComponent").getTypeId()
 public interface IComponent
   function getOwner() returns IComposite
   function setEnabled(bool enabled)

@@ -1,0 +1,94 @@
+package Dictionary
+import HashMap
+import HashList
+import Object
+import Meta
+
+tuple dictionaryItem(string key, object object)
+
+// ============================================================================
+public class Dictionary
+  protected IterableMap<string, int> m_data
+  protected HashMap<string, int> m_dataTypes
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_data = new IterableMap<string, int>
+    m_dataTypes = new HashMap<string, int>
+
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(Dictionary.typeId)
+    ..registerFactory(() -> toObject(new Dictionary(), Dictionary.typeId))
+    ..registerDestructor((object object) -> destroy object.cast<Dictionary>(Dictionary.typeId))
+  /////////////////////////////////////////////////////////////////////////////
+
+  // --------------------------------------------------------------------------
+  function put<TValue>(string key, TValue object, int objectTypeId)
+    m_data.put<TValue>(key, object castTo int)
+    m_dataTypes.put(key, objectTypeId)
+
+  // --------------------------------------------------------------------------
+  function put(string key, object object)
+    m_data.put(key, object.objectHandle)
+    m_dataTypes.put(key, object.objectTypeId)
+
+  // --------------------------------------------------------------------------
+  function get<TValue>(string key, TValue defaultValue) returns TValue
+    if (m_data.has(key))
+      return m_data.get(key) castTo TValue
+    return defaultValue
+
+  // --------------------------------------------------------------------------
+  function remove(string key)
+    m_data.remove(key)
+    m_dataTypes.remove(key)
+
+  // --------------------------------------------------------------------------
+  function clear()
+    m_data.flush()
+    m_dataTypes.flush()
+
+  // --------------------------------------------------------------------------
+  function size() returns int
+    return m_data.size()
+
+  // --------------------------------------------------------------------------
+  function iterator() returns DictionaryIterator
+    return new DictionaryIterator(this)
+
+// ============================================================================
+public class DictionaryIterator
+  private HLIterator<string> m_iterator
+  private Dictionary m_dictionary
+
+  // --------------------------------------------------------------------------
+  construct(Dictionary dictionary)
+    m_dictionary = dictionary
+    m_iterator = dictionary.m_data.iterator()
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_iterator.hasNext()
+
+  // --------------------------------------------------------------------------
+  function next() returns dictionaryItem
+    let curr = m_iterator.next()
+    return dictionaryItem(curr, toObject(m_dictionary.m_data.get(curr), m_dictionary.m_dataTypes.get(curr)))
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_iterator.reset()
+  
+  // --------------------------------------------------------------------------
+  function close()
+    destroy this
+
+// ============================================================================
+init
+  registerPackageMetadata()
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  Dictionary.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////

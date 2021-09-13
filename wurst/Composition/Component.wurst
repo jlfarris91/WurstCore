@@ -1,8 +1,10 @@
 package Component
 import IComponent
 import IComposite
+import Meta
 
 // ============================================================================
+public constant int typeId_Component = Meta.registerAbstractClass("Component.Component")..registerInterface(typeId_IComponent).getTypeId()
 public abstract class Component implements IComponent
   private IComposite m_owner
   private bool m_enabled

@@ -57,23 +57,19 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
     m_lostGame = value
 
   // --------------------------------------------------------------------------
-  @inline
   override function addComponent(IComponent component) returns IComponent
     return super.addComponent(component)
 
   // --------------------------------------------------------------------------
-  @inline
   override function addComponent(IComponent component, bool startEnabled) returns IComponent
     return super.addComponent(component, startEnabled)
    
   // --------------------------------------------------------------------------
-  @inline
   override function removeComponent(IComponent component) returns bool
     return super.removeComponent(component)
 
   // --------------------------------------------------------------------------
-  @inline
-  override function getComponent(typeInfo componentType) returns IComponent
+  override function getComponent(int componentType) returns IComponent
     return super.getComponent(componentType)
 
 // ============================================================================

@@ -1,0 +1,505 @@
+package Serializers
+import Serialization
+import Dictionary
+import Object
+import UnitIds
+import UnitComponent
+import Meta
+import ObjectIds
+import ByteBuffer
+import BinaryReaderWriter
+import PlayerMetadata
+import PlayerComponent
+
+// ============================================================================
+public class DictionarySerializer implements ISerializerTyped<Dictionary>
+  static constant int HEADER_CODE = 'XDCT'
+
+  // --------------------------------------------------------------------------
+  override function getHeaderCode() returns int
+    return HEADER_CODE
+  
+  // --------------------------------------------------------------------------
+  override function getVersion() returns int
+    return 0
+  
+  // --------------------------------------------------------------------------
+  override function getObjectTypeId() returns int
+    return Dictionary.typeId
+
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, object value) returns bool
+    return serialize(context, writer, value.cast<Dictionary>(Dictionary.typeId))
+
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, object value) returns bool
+    return deserialize(context, reader, value.cast<Dictionary>(Dictionary.typeId))
+  
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, Dictionary dictionary) returns bool
+    // context.debug("DictionarySerializer", "serialize", "", "start")
+
+    writer.write(dictionary.size())
+
+    for pair in dictionary
+      writer.write(pair.key)
+      if (context.writeObject(writer, pair.object) == false)
+        return false
+
+    // context.debug("DictionarySerializer", "serialize", "", "end")
+    return true
+  
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, Dictionary dictionary) returns bool
+    // context.debug("DictionarySerializer", "deserialize", "", "start")
+
+    let numberOfItems = reader.readInt()
+    // context.debug("DictionarySerializer", "serialize", "", "numberOfItems " + numberOfItems.toString())
+    
+    for i = 0 to numberOfItems - 1
+      let key = reader.readString()
+      // context.debug("DictionarySerializer", "serialize", "", "key {0} : {1} ".format(i.toString(), key))
+      let object = context.readObject(reader)
+      if (object != NULL)
+        dictionary.put(key, object)
+
+    // context.debug("DictionarySerializer", "deserialize", "", "end")
+    return true
+
+// ============================================================================
+public class GroupSerializer implements ISerializerTyped<group>
+  static constant int HEADER_CODE = 'XGRP'
+  private int m_fallbackUnitTypeId = UnitIds.peasant
+
+  // --------------------------------------------------------------------------
+  override function getHeaderCode() returns int
+    return HEADER_CODE
+  
+  // --------------------------------------------------------------------------
+  override function getVersion() returns int
+    return 0
+  
+  // --------------------------------------------------------------------------
+  override function getObjectTypeId() returns int
+    return typeId_group
+
+  // --------------------------------------------------------------------------
+  function getFallbackUnitTypeId() returns int
+    return m_fallbackUnitTypeId
+
+  // --------------------------------------------------------------------------
+  function setFallbackUnitTypeId(int value)
+    m_fallbackUnitTypeId = value
+
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, object value) returns bool
+    return serialize(context, writer, groupFromIndex(value.objectHandle))
+
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, object value) returns bool
+    return deserialize(context, reader, groupFromIndex(value.objectHandle))
+  
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, group grp) returns bool
+    // context.debug("GroupSerializer", "serialize", "", "start")
+    // context.debug("GroupSerializer", "serialize", "", "group size: " + grp.size().toString())
+
+    let unitSerializer = context.getSerializer(UnitSerializer.HEADER_CODE)
+    if (unitSerializer == null)
+      context.error("No serializer found for unit")
+      return false
+
+    if (grp.size() == 0)
+      writer.writeInt(0)
+    else
+    //{
+      let unitBuffer = new ByteBuffer()
+      let unitWriter = new BinaryWriter(unitBuffer)
+      
+      for unt in grp
+        unitWriter.write(unt.getTypeId())
+        unitWriter.write(unt.getPos().x)
+        unitWriter.write(unt.getPos().y)
+        unitWriter.write(unt.getFacingAngle().degrees())
+        if (unitSerializer.serialize(context, unitWriter, toObject(unitToIndex(unt), typeId_unit)) == false)
+          return false
+
+      writer.write(grp.size())
+      writer.write(unitSerializer.getHeaderCode())
+      writer.write(unitSerializer.getVersion())
+      writer.write(unitBuffer.size())
+      writer.write(unitBuffer)
+
+      destroy unitWriter 
+      destroy unitBuffer
+    //}    
+
+    // context.debug("GroupSerializer", "serialize", "", "end")
+    return true
+  
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, group grp) returns bool
+    // context.debug("GroupSerializer", "deserialize", "", "start")
+
+    let size = reader.readInt()
+    // context.debug("GroupSerializer", "deserialize", "", "size " + size.toString())
+
+    if (size > 0)
+    //{
+      let contextPlayer = context.getPlayer()
+
+      let unitHeaderCode = reader.readInt()
+      let unitVersion = reader.readInt()
+      let unitBufferSize = reader.readInt()
+
+      let unitSerializer = context.getSerializer(unitHeaderCode, unitVersion)
+      if (unitSerializer == null)
+        context.warn("Could not find unit deserializer h:{0} v:{1}".format(unitHeaderCode.toRawCode(), unitVersion.toString()))
+        // Read unit buffer anyway
+        reader.readBytes(unitBufferSize)
+        return false
+
+      let unitBuffer = new ByteBuffer()
+      let unitReader = new BinaryReader(unitBuffer)
+
+      reader.readBytes(unitBuffer, unitBufferSize)
+
+      for i = 0 to size - 1
+      //{
+        let unitTypeId = unitReader.readInt()
+        let unitPosX = unitReader.readReal()
+        let unitPosY = unitReader.readReal()
+        let unitFacing = unitReader.readReal().fromDeg()
+        let unitPos = vec2(unitPosX, unitPosY)
+
+        // context.debug("GroupSerializer", "deserialize", "", "u:{0} ({1}) p:{2} f:{3}".format(UnitId2String(unitTypeId), unitTypeId.toRawCode(), unitPos.toString(), unitFacing.degrees().toString()))
+        
+        var unt = createUnit(contextPlayer, unitTypeId, unitPos, unitFacing)
+        if (unt == null)
+          // context.debug("GroupSerializer", "deserialize", "", "Failed to create unit - falling back to " + m_fallbackUnitTypeId.toRawCode())
+          unt = createUnit(contextPlayer, m_fallbackUnitTypeId, unitPos, unitFacing)
+
+        if (unitSerializer.deserialize(context, unitReader, unt.toObject()) == false)
+          context.warn("GroupSerializer", "deserialize", "", "Failed to deserialize unit")
+          return false
+
+        grp.addUnit(unt)
+      //}
+
+      destroy unitReader
+      destroy unitBuffer
+    //}
+
+    // context.debug("GroupSerializer", "deserialize", "", "end")
+    return true
+
+// ============================================================================
+public class UnitSerializer implements ISerializerTyped<unit>
+  static constant int HEADER_CODE = 'XUNT'
+
+  // --------------------------------------------------------------------------
+  override function getHeaderCode() returns int
+    return HEADER_CODE
+  
+  // --------------------------------------------------------------------------
+  override function getVersion() returns int
+    return 0
+  
+  // --------------------------------------------------------------------------
+  override function getObjectTypeId() returns int
+    return typeId_unit
+
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, object value) returns bool
+    return serialize(context, writer, unitFromIndex(value.objectHandle))
+
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, object value) returns bool
+    return deserialize(context, reader, unitFromIndex(value.objectHandle))
+  
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, unit unt) returns bool
+    // context.debug("UnitSerializer", "serialize", "", "start")
+    
+    writer.write(unt.getHP())
+    writer.write(unt.getMana())
+    writer.write(unt.getXp())
+    writer.write(unt.getProperName())
+
+    // Try to serialize items
+    let itemSerializer = context.getSerializer(ItemSerializer.HEADER_CODE)
+    if (itemSerializer == null)
+      writer.writeByte(0) // item count
+      context.warn("Could not find item deserializer")
+    else
+    //{
+      let itemCount = unt.itemCount()
+      writer.writeByte(itemCount)
+      // context.debug("UnitSerializer", "serialize", "", "serializing {0} items".format(itemCount.toString()))
+
+      if (itemCount > 0)
+      //{
+        writer.write(itemSerializer.getHeaderCode())
+        writer.write(itemSerializer.getVersion())
+
+        for i = 0 to 5
+          let itm = unt.itemInSlot(i)
+          if (itm != null)
+            writer.write(itm.getTypeId())
+            if (itemSerializer.serialize(context, writer, toObject(itemToIndex(itm), typeId_item)) == false)
+              return false
+          else
+            writer.writeInt(-1)
+      //}
+    //}
+
+    let metadata = unt.getMetadata()
+    writer.write(metadata != null)
+    if (metadata != null)
+      context.writeObject(writer, toObject(metadata, metadata.typeId))
+
+    // context.debug("UnitSerializer", "serialize", "", "end")
+    return true
+  
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, unit unt) returns bool
+    // context.debug("UnitSerializer", "deserialize", "", "start")
+
+    let hp = reader.readReal()
+    let mana = reader.readReal()
+    let xp = reader.readInt()
+    let properName = reader.readString()
+    
+    // context.debug("UnitSerializer", "deserialize", "", "hp:{0} mana:{1} xp:{2} n:{3}".format(hp.toString(), mana.toString(), xp.toString(), properName))
+
+    unt.setHP(hp)
+    unt.setMana(mana)
+    unt.setXp(xp, false)
+    unt.setProperName(properName)
+
+    // Read inventory
+    let itemCount = reader.readByte()
+    // context.debug("UnitSerializer", "deserialize", "", "items: " + itemCount.toString())
+    if (itemCount > 0)
+    // {
+      let itemHeaderCode = reader.readInt()
+      let itemVersion = reader.readInt()
+
+      let itemSerializer = context.getSerializer(itemHeaderCode, itemVersion)
+      if (itemSerializer == null)
+        context.error("Could not find item deserializer h:{0} v:{1}".format(itemHeaderCode.toRawCode(), itemVersion.toString()))
+        return false
+
+      for i = 0 to 5
+        let itemTypeId = reader.readInt()
+        if (itemTypeId != -1)
+          let itm = createItem(itemTypeId, unt.getPos())
+          if (itemSerializer.deserialize(context, reader, toObject(itemToIndex(itm), typeId_item)) == false)
+            return false
+          UnitAddItem(unt, itm)
+    //}
+
+    // Read unit metadata
+    let hasMetadata = reader.readBool()
+    // context.debug("UnitSerializer", "deserialize", "", "has metadata: " + hasMetadata.toString())
+    if (hasMetadata)
+      let metadata = unt.getMetadata()
+      if (metadata == null)
+        // context.debug("UnitSerializer", "deserialize", "", "Unit has no metadata")
+      context.readObject(reader, metadata != null ? toObject(metadata, metadata.typeId) : NULL)
+
+    // context.debug("UnitSerializer", "deserialize", "", "end")
+    return true
+
+// ============================================================================
+public class ItemSerializer implements ISerializerTyped<item>
+  static constant int HEADER_CODE = 'XITM'
+
+  // --------------------------------------------------------------------------
+  override function getHeaderCode() returns int
+    return HEADER_CODE
+  
+  // --------------------------------------------------------------------------
+  override function getVersion() returns int
+    return 0
+  
+  // --------------------------------------------------------------------------
+  override function getObjectTypeId() returns int
+    return typeId_item
+
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, object value) returns bool
+    return serialize(context, writer, itemFromIndex(value.objectHandle))
+
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, object value) returns bool
+    return deserialize(context, reader, itemFromIndex(value.objectHandle))
+  
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, item itm) returns bool
+    // context.debug("ItemSerializer", "serialize", "", "start")
+    writer.write(itm.getUserData())
+    writer.writeByte(itm.getCharges())
+    // context.debug("ItemSerializer", "serialize", "", "end")
+    return true
+  
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, item itm) returns bool
+    // context.debug("ItemSerializer", "deserialize", "", "start")
+    itm.setUserData(reader.readInt())
+    itm.setCharges(reader.readByte())
+    // context.debug("ItemSerializer", "deserialize", "", "end")
+    return true
+
+// ============================================================================
+public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
+  static constant int HEADER_CODE = 'XUMT'
+
+  // --------------------------------------------------------------------------
+  override function getHeaderCode() returns int
+    return HEADER_CODE
+  
+  // --------------------------------------------------------------------------
+  override function getVersion() returns int
+    return 0
+  
+  // --------------------------------------------------------------------------
+  override function getObjectTypeId() returns int
+    return UnitMetadata.typeId
+
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, object value) returns bool
+    return serialize(context, writer, value.cast<UnitMetadata>(UnitMetadata.typeId))
+
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, object value) returns bool
+    return deserialize(context, reader, value.cast<UnitMetadata>(UnitMetadata.typeId))
+  
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, UnitMetadata unitMetadata) returns bool
+    // context.debug("UnitMetadataSerializer", "serialize", "", "start")
+    
+    let compositionManager = unitMetadata.getCompositionManager()
+    if (compositionManager == null)
+      writer.writeInt(0)
+      return true
+
+    var numSerializableComponents = 0
+    for comp in compositionManager
+      // context.debug("UnitMetadataSerializer", "serialize", "", "comp {0} ({1})".format(comp.typeId.toString(), Meta.getTypeName(comp.typeId)))
+      if (Meta.getType(comp.typeId).is(typeId_ISerializable))
+        // context.debug("UnitMetadataSerializer", "serialize", "", "^ is serializable")
+        numSerializableComponents++
+      else
+        // context.debug("UnitMetadataSerializer", "serialize", "", "^ is NOT serializable")
+
+    writer.write(numSerializableComponents)
+
+    for comp in compositionManager
+      let serializable = toObject(comp, comp.typeId).as<ISerializable>(typeId_ISerializable)
+      if (serializable != null)
+        if (context.writeObject(writer, toObject(comp, comp.typeId)) == false)
+          return false
+
+    // context.debug("UnitMetadataSerializer", "serialize", "", "end")
+    return true
+  
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, UnitMetadata unitMetadata) returns bool
+    // context.debug("UnitMetadataSerializer", "deserialize", "", "start")
+
+    let numSerializableComponents = reader.readInt()
+    
+    // context.debug("UnitMetadataSerializer", "deserialize", "", "num components: " + numSerializableComponents.toString())
+
+    let creationContext = new UnitComponentCreationContext()
+    creationContext.owner = unitMetadata
+
+    // Required to deserialize components
+    context.pushCreationContext(toObject(creationContext, UnitComponentCreationContext.typeId))
+
+    for i = 0 to numSerializableComponents-1
+      // context.debug("UnitMetadataSerializer", "deserialize", "", "reading component " + i.toString())
+      let object = context.readObject(reader)
+      if (object == NULL)
+        context.warn("Failed to read component at index " + i.toString())
+
+    context.popCreationContext()
+
+    destroy creationContext
+
+    // context.debug("UnitMetadataSerializer", "deserialize", "", "end")
+    return true
+
+// ============================================================================
+public class PlayerMetadataSerializer implements ISerializerTyped<PlayerMetadata>
+  static constant int HEADER_CODE = 'XPMT'
+
+  // --------------------------------------------------------------------------
+  override function getHeaderCode() returns int
+    return HEADER_CODE
+  
+  // --------------------------------------------------------------------------
+  override function getVersion() returns int
+    return 0
+  
+  // --------------------------------------------------------------------------
+  override function getObjectTypeId() returns int
+    return PlayerMetadata.typeId
+
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, object value) returns bool
+    return serialize(context, writer, value.cast<PlayerMetadata>(PlayerMetadata.typeId))
+
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, object value) returns bool
+    return deserialize(context, reader, value.cast<PlayerMetadata>(PlayerMetadata.typeId))
+  
+  // --------------------------------------------------------------------------
+  override function serialize(SerializationContext context, BinaryWriter writer, PlayerMetadata playerMetadata) returns bool
+    // context.debug("PlayerMetadataSerializer", "serialize", "", "start")
+    
+    let compositionManager = playerMetadata.getCompositionManager()
+    if (compositionManager == null)
+      return true
+
+    var numSerializableComponents = 0
+    for comp in compositionManager
+      let serializable = (comp castTo int) castTo ISerializable
+      if (serializable != null)
+        numSerializableComponents++
+
+    writer.write(numSerializableComponents)
+
+    for comp in compositionManager
+      let serializable = (comp castTo int) castTo ISerializable
+      if (serializable != null)
+        if (context.writeObject(writer, toObject(comp, comp.typeId)) == false)
+          return false
+
+    // context.debug("PlayerMetadataSerializer", "serialize", "", "end")
+    return true
+  
+  // --------------------------------------------------------------------------
+  override function deserialize(SerializationContext context, BinaryReader reader, PlayerMetadata playerMetadata) returns bool
+    // context.debug("PlayerMetadataSerializer", "deserialize", "", "start")
+
+    let numSerializableComponents = reader.readInt()
+
+    let creationContext = new PlayerComponentCreationContext()
+    creationContext.owner = playerMetadata
+
+    // Required to deserialize components
+    context.pushCreationContext(toObject(creationContext, PlayerComponentCreationContext.typeId))
+
+    for i = 0 to numSerializableComponents-1
+      let object = context.readObject(reader)
+      if (object == NULL)
+        context.warn("Failed to read component at index " + i.toString())
+
+    context.popCreationContext()
+
+    destroy creationContext
+
+    // context.debug("PlayerMetadataSerializer", "deserialize", "", "end")
+    return true

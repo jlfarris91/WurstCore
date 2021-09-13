@@ -1,8 +1,19 @@
 package PlayerComponent
 import PlayerMetadata
 import Composition
+import Meta
+import Object
 
 // ============================================================================
+public class PlayerComponentCreationContext
+  IPlayerMetadata owner
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(PlayerComponentCreationContext.typeId)
+  /////////////////////////////////////////////////////////////////////////////
+
+// ============================================================================
+public constant int typeId_PlayerComponent = PlayerComponent.registerMetadata().getTypeId()
 public abstract class PlayerComponent extends Component
   private IPlayerMetadata m_owner
 
@@ -11,6 +22,14 @@ public abstract class PlayerComponent extends Component
     super(owner)
     m_owner = owner
 
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata() returns Type
+    let _type = Meta.registerAbstractClass("PlayerComponent.PlayerComponent")..setBase(typeId_Component)
+    let _typeId = _type.getTypeId()
+    _type.registerDestructor((object object) -> destroy object.cast<PlayerComponent>(_typeId))
+    return _type
+  /////////////////////////////////////////////////////////////////////////////
+
   // --------------------------------------------------------------------------
   override function getOwner() returns IPlayerMetadata
     return m_owner
@@ -18,3 +37,12 @@ public abstract class PlayerComponent extends Component
   // --------------------------------------------------------------------------
   function getOwnerPlayer() returns player
     return m_owner.getPlayer()
+
+// ============================================================================
+init
+  registerPackageMetadata()
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  PlayerComponentCreationContext.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////

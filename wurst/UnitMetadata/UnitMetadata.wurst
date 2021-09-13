@@ -7,6 +7,7 @@ import initlater UnitComponent
 import UnitExtensions
 import UnitIndexer
 import Inspection
+import Meta
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
@@ -20,6 +21,7 @@ function logDebug(string message)
     Log.debug(message)
 
 // ============================================================================
+public constant int typeId_IUnitMetadata = Meta.registerInterface("UnitMetadata.IUnitMetadata")..registerInterface(typeId_IComposite, typeId_IObjectDescriptor).getTypeId()
 public interface IUnitMetadata extends IComposite, IObjectDescriptor
   function getUnit() returns unit
   function attach(unit u)
@@ -30,17 +32,17 @@ public interface IUnitMetadataFactory
   function createUnit(IUnitMetadata metadata) returns bool
 
 // ============================================================================
-public class UnitMetadata implements IUnitMetadata
+public class UnitMetadata extends Composable implements IUnitMetadata
   protected unit m_unit
-  private CompositionManager m_compositionManager
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_compositionManager != null)
-      destroy m_compositionManager
-      m_compositionManager = null
-
     m_unit = null
+
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(UnitMetadata.typeId)..registerInterface(typeId_IUnitMetadata)
+  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   @inline
@@ -144,28 +146,20 @@ public class UnitMetadata implements IUnitMetadata
     onPostUnitChanged(oldUnit, newUnit)
 
   // --------------------------------------------------------------------------
-  @inline
   override function addComponent(IComponent component) returns IComponent
     return addComponent(component, true)
 
   // --------------------------------------------------------------------------
-  @inline
   override function addComponent(IComponent component, bool startEnabled) returns IComponent
-    if (m_compositionManager == null)
-      m_compositionManager = new CompositionManager()
-    return m_compositionManager.addComponent(component, startEnabled)
+    return super.addComponent(component, startEnabled)
 
   // --------------------------------------------------------------------------
-  @inline
   override function removeComponent(IComponent component) returns bool
-    if (m_compositionManager == null)
-      return false
-    return m_compositionManager.removeComponent(component)
+    return super.removeComponent(component)
 
   // --------------------------------------------------------------------------
-  @inline
-  override function getComponent(typeInfo componentType) returns IComponent
-    return m_compositionManager != null ? m_compositionManager.getComponent(componentType) : null
+  override function getComponent(int componentTypeId) returns IComponent
+    return super.getComponent(componentTypeId)
   
   // --------------------------------------------------------------------------
   override function getId() returns string
@@ -354,6 +348,8 @@ public function isIgnoringIndexing(player p) returns bool
 
 // ============================================================================
 init
+  registerPackageMetadata()
+
   g_unitMetadataFactories = new LinkedList<IUnitMetadataFactory>()
 
   for i = 0 to 24
@@ -363,3 +359,9 @@ init
 
   onUnitIndex(() -> onUnitIndexed(getIndexingUnit()))
   onUnitDeindex(() -> onUnitDeindexed(getIndexingUnit()))
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  UnitMetadata.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////
+  
