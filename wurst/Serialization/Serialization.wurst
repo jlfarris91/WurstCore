@@ -8,6 +8,8 @@ import ObjectIds
 import ErrorHandling
 import Execute
 import BinaryReaderWriter
+import FileIO
+import Base64
 
 bool g_lastWriteSucceeded
 bool g_lastReadSucceeded
@@ -476,6 +478,53 @@ public class SerializationContext
   // --------------------------------------------------------------------------
   function debug(string className, string functionName, string id, string message)
     Log.debug(className, functionName, id, message)
+
+// ============================================================================
+public class Serialization
+
+  // --------------------------------------------------------------------------
+  static function writeObjectToFile(SerializationContext context, player forPlayer, string filePath, object object) returns bool
+
+    // Write data to a buffer
+    let buffer = new ByteBuffer()
+    let writer = new BinaryWriter(buffer)
+
+    let success = context.writeObject(writer, object)
+    if (success)
+
+      // Write it out to the file
+      let file = new File(filePath)
+      file.write(forPlayer, buffer.encodeBase64())
+      file.close()
+
+    else
+      context.error("Failed to serialize object of type " + object.getTypeName())
+
+    destroy writer
+
+    return success
+
+  // --------------------------------------------------------------------------
+  static function readObjectFromFile(SerializationContext context, player forPlayer, string filePath, object object) returns bool
+    let file = new File(filePath)
+    let buffer = file.read(forPlayer).decodeBase64()
+    file.close()
+
+    let reader = new BinaryReader(buffer)
+    
+    if (not buffer.hasByte())
+      destroy reader
+      destroy buffer
+      return false
+
+    let success = context.readObject(reader, object)
+    if (success == false)
+      context.error("Failed to deserialize object of type " + object.getTypeName())
+
+    destroy reader
+    destroy buffer
+
+    return success
 
 // ============================================================================
 class SerializableSerializer
