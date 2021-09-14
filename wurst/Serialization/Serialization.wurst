@@ -144,8 +144,7 @@ public class SerializationContext
     if (serializer == null)
       argumentNullError("serializer")
 
-    m_objectStack.push(new ObjectRef(object))
-    m_objectVersionStack.push(serializer.getVersion())
+    pushSerializingObject(object, serializer.getVersion())
 
     let objectBuffer = new ByteBuffer()
     let objectWriter = new BinaryWriter(objectBuffer)
@@ -155,15 +154,19 @@ public class SerializationContext
       writer.write(serializer.getHeaderCode())
       writer.write(serializer.getVersion())
       writer.write(objectBuffer.size())
+
+      debug("SerializationContext", "writeObject_impl", "", "h:{0} ({1}) v:{2} s:{3}".format(
+        serializer.getHeaderCode().toRawCode(),
+        serializer.getHeaderCode().toString(),
+        serializer.getVersion().toString(),
+        objectBuffer.size().toString()))
+
       writer.write(objectBuffer)
-    else
-      writer.writeInt(0)
 
     destroy objectWriter
     destroy objectBuffer
 
-    destroy m_objectStack.pop()
-    m_objectVersionStack.pop()
+    popSerializingObject()
 
     return success
 
@@ -179,15 +182,25 @@ public class SerializationContext
     let objectBuffer = new ByteBuffer()
     let objectWriter = new BinaryWriter(objectBuffer)
 
+    pushSerializingObject(object, object.cast<ISerializable>(typeId_ISerializable).getVersion())
+
     let success = m_serializableSerializer.writeObject(this, objectWriter, object)
+
+    popSerializingObject()
+
     if (success)
       // Write out header info for this serializer
       writer.write(m_serializableSerializer.getHeaderCode())
       writer.write(m_serializableSerializer.getVersion())
       writer.write(objectBuffer.size())
+
+      debug("SerializationContext", "writeSerializableObject_impl", "", "h:{0} ({1}) v:{2} s:{3}".format(
+        m_serializableSerializer.getHeaderCode().toRawCode(),
+        m_serializableSerializer.getHeaderCode().toString(),
+        m_serializableSerializer.getVersion().toString(),
+        objectBuffer.size().toString()))
+
       writer.write(objectBuffer)
-    else
-      writer.writeInt(0)
 
     destroy objectWriter
     destroy objectBuffer
@@ -214,7 +227,7 @@ public class SerializationContext
     let objectVersion = reader.readInt()
     let objectSize = reader.readInt()
 
-    // info("SerializationContext", "readObject_impl", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), objectSize.toString()))
+    debug("SerializationContext", "readObject_impl", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), objectSize.toString()))
 
     // Special processor for ISerializable objects
     if (headerCode == m_serializableSerializer.getHeaderCode())
@@ -224,7 +237,7 @@ public class SerializationContext
     if (serializer == null)
       warn("SerializationContext", "readObject_impl", "","Could not find serializer for object h:{0} v:{1}".format(headerCode.toRawCode(), objectVersion.toString()))
       // Read passed the object that we can't deserialize
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return NULL
 
     let objectTypeId = serializer.getObjectTypeId()
@@ -233,7 +246,7 @@ public class SerializationContext
     if (object == NULL)
       error("SerializationContext", "readObject_impl", "", "Could not construct object of type " + Meta.getTypeName(objectTypeId))
       // Read passed the object that we can't deserialize
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return NULL
 
     if (readObject(reader, object, objectVersion, objectSize, serializer) == false)
@@ -259,11 +272,11 @@ public class SerializationContext
     let objectVersion = reader.readInt()
     let objectSize = reader.readInt()
 
-    // info("SerializationContext", "readObject_impl2", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), size.toString()))
+    debug("SerializationContext", "readObject_impl2", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), objectSize.toString()))
 
     if (object == NULL)
       warn("SerializationContext", "readObject_impl2", "", "Object was NULL")
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return false
 
     // Special processor for ISerializable objects
@@ -274,7 +287,7 @@ public class SerializationContext
     if (serializer == null)
       warn("SerializationContext", "readObject_impl2", "", "Could not find serializer for object h:{0} v:{1}".format(headerCode.toRawCode(), objectVersion.toString()))
       // Read passed the object that we can't deserialize
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return false
 
     let serializedObjectTypeId = serializer.getObjectTypeId()
@@ -295,8 +308,9 @@ public class SerializationContext
     pushSerializingObject(object, objectVersion)
 
     let objectBuffer = new ByteBuffer()
-    reader.readBytes(objectBuffer, size)
+    reader.readBytes(objectBuffer, size).assertEquals(size)
 
+    objectBuffer.seek(0, true)
     let objectReader = new BinaryReader(objectBuffer)
 
     let success = serializer.deserialize(this, objectReader, object)
@@ -320,7 +334,8 @@ public class SerializationContext
   // TODO: load correct version of SerializableSerializer based on _objectVersion
   private function readSerializableObject_impl(BinaryReader reader, int _objectVersion, int objectSize) returns object
     let objectBuffer = new ByteBuffer()
-    reader.readBytes(objectBuffer, objectSize)
+    reader.readBytes(objectBuffer, objectSize).assertEquals(objectSize)
+    objectBuffer.seek(0, true)
     let objectReader = new BinaryReader(objectBuffer)
     let object = m_serializableSerializer.readObject(this, objectReader)
     destroy objectReader
@@ -337,7 +352,8 @@ public class SerializationContext
   // TODO: load correct version of SerializableSerializer based on _objectVersion
   private function readSerializableObject_impl(BinaryReader reader, object object, int _objectVersion, int objectSize) returns bool
     let objectBuffer = new ByteBuffer()
-    reader.readBytes(objectBuffer, objectSize)
+    reader.readBytes(objectBuffer, objectSize).assertEquals(objectSize)
+    objectBuffer.seek(0, true)
     let objectReader = new BinaryReader(objectBuffer)
     let success = m_serializableSerializer.readObject(this, objectReader, object)
     destroy objectReader
@@ -516,7 +532,7 @@ public class SerializationContext
 // ============================================================================
 public class Serialization
 
-  @configurable static constant bool DEBUGGING_ENABLED = true
+  @configurable static constant bool DEBUGGING_ENABLED = false
 
   // --------------------------------------------------------------------------
   static function writeObjectToFile(SerializationContext context, string filePath, object object) returns bool
@@ -590,6 +606,10 @@ class SerializableSerializer
     writer.write(objectType.getFullyQualifiedName())
     writer.write(serializable.getVersion())
 
+    context.debug("SerializableSerializer", "writeObject", "", "t:{0} v:{1}".format(
+      objectType.getFullyQualifiedName(),
+      serializable.getVersion().toString()))
+
     context.pushSerializingObject(object, serializable.getVersion())
 
     let objectBuffer = new ByteBuffer()
@@ -598,9 +618,11 @@ class SerializableSerializer
     let success = serializable.serialize(context, objectWriter)
     if (success)
       writer.write(objectBuffer.size())
+      context.debug("SerializableSerializer", "writeObject", "", "size:{0}".format(objectBuffer.size().toString()))
       writer.write(objectBuffer)
     else
       writer.writeInt(0)
+      context.debug("SerializableSerializer", "writeObject", "", "size:0")
 
     destroy objectWriter
     destroy objectBuffer
@@ -625,26 +647,27 @@ class SerializableSerializer
 
     if (objectType.is(typeId_ISerializable) == false)
       context.warn("SerializableSerializer", "readObject", "", "Expected object to implement ISerializable: " + objectTypeName)
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return NULL
 
     let object = context.createObject(objectType)
     if (object == NULL)
       context.warn("SerializableSerializer", "readObject", "", "Failed to construct object of type: " + objectTypeName)
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return NULL
 
     let serializable = object.cast<ISerializable>(typeId_ISerializable)
     if (serializable == null)
       context.warn("SerializableSerializer", "readObject", "", "Type says it implements ISerializable but cast failed: " + objectTypeName)
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return NULL
 
     context.pushSerializingObject(object, objectVersion)
 
     let objectBuffer = new ByteBuffer()
-    reader.readBytes(objectBuffer, objectSize)
+    reader.readBytes(objectBuffer, objectSize).assertEquals(objectSize)
 
+    objectBuffer.seek(0, true)
     let objectReader = new BinaryReader(objectBuffer)
 
     let success = serializable.deserialize(context, objectReader)
@@ -669,20 +692,21 @@ class SerializableSerializer
 
     if (Meta.is(object.objectTypeId, typeId_ISerializable) == false)
       context.warn("SerializableSerializer", "readObject", "", "Expected object to implement ISerializable: " + objectTypeName)
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return false
 
     let serializable = object.cast<ISerializable>(typeId_ISerializable)
     if (serializable == null)
       context.warn("SerializableSerializer", "readObject2", "", "Type says it implements ISerializable but cast failed: " + objectTypeName)
-      reader.readBytes(objectSize)
+      reader.readBytes(objectSize).assertEquals(objectSize)
       return false
 
     context.pushSerializingObject(object, objectVersion)
 
     let objectBuffer = new ByteBuffer()
-    reader.readBytes(objectBuffer, objectSize)
+    reader.readBytes(objectBuffer, objectSize).assertEquals(objectSize)
 
+    objectBuffer.seek(0, true)
     let objectReader = new BinaryReader(objectBuffer)
 
     let success = serializable.deserialize(context, objectReader)

@@ -39,12 +39,16 @@ public class DictionarySerializer implements ISerializerTyped<Dictionary>
   override function serialize(SerializationContext context, BinaryWriter writer, Dictionary dictionary) returns bool
     context.debug("DictionarySerializer", "serialize", "", "start")
 
+    context.debug("DictionarySerializer", "serialize", "", "size " + dictionary.size().toString())
     writer.write(dictionary.size())
 
-    for pair in dictionary
-      writer.write(pair.key)
-      if (context.writeObject(writer, pair.object) == false)
-        return false
+    if (dictionary.size() > 0)
+    //{
+      for pair in dictionary
+        writer.write(pair.key)
+        if (context.writeObject(writer, pair.object) == false)
+          return false
+    //}
 
     context.debug("DictionarySerializer", "serialize", "", "end")
     return true
@@ -54,11 +58,11 @@ public class DictionarySerializer implements ISerializerTyped<Dictionary>
     context.debug("DictionarySerializer", "deserialize", "", "start")
 
     let numberOfItems = reader.readInt()
-    context.debug("DictionarySerializer", "serialize", "", "numberOfItems " + numberOfItems.toString())
+    context.debug("DictionarySerializer", "deserialize", "", "size " + numberOfItems.toString())
     
     for i = 0 to numberOfItems - 1
       let key = reader.readString()
-      context.debug("DictionarySerializer", "serialize", "", "key {0} : {1} ".format(i.toString(), key))
+      context.debug("DictionarySerializer", "deserialize", "", "key {0} : {1} ".format(i.toString(), key))
       let object = context.readObject(reader)
       if (object != NULL)
         dictionary.put(key, object)
@@ -163,6 +167,7 @@ public class GroupSerializer implements ISerializerTyped<group>
       let unitReader = new BinaryReader(unitBuffer)
 
       reader.readBytes(unitBuffer, unitBufferSize)
+      unitBuffer.seek(0, true)
 
       for i = 0 to size - 1
       //{
@@ -386,12 +391,9 @@ public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
 
     var numSerializableComponents = 0
     for comp in compositionManager
-      context.debug("UnitMetadataSerializer", "serialize", "", "comp {0} ({1})".format(comp.typeId.toString(), Meta.getTypeName(comp.typeId)))
       if (Meta.is(comp.typeId, typeId_ISerializable))
-        context.debug("UnitMetadataSerializer", "serialize", "", "^ is serializable")
         numSerializableComponents++
       else
-        context.debug("UnitMetadataSerializer", "serialize", "", "^ is NOT serializable")
 
     writer.write(numSerializableComponents)
 
@@ -399,6 +401,7 @@ public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
     //{
       for comp in compositionManager
         if (Meta.is(comp.typeId, typeId_ISerializable))
+          context.debug("UnitMetadataSerializer", "serialize", "", "comp {0} ({1})".format(comp.typeId.toString(), Meta.getTypeName(comp.typeId)))
           if (context.writeObject(writer, toObject(comp, comp.typeId)) == false)
             return false
     //}
@@ -423,7 +426,6 @@ public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
       context.pushCreationContext(toObject(creationContext, UnitComponentCreationContext.typeId))
 
       for i = 0 to numSerializableComponents-1
-        context.debug("UnitMetadataSerializer", "deserialize", "", "reading component " + i.toString())
         let object = context.readObject(reader)
         if (object == NULL)
           context.warn("Failed to read component at index " + i.toString())

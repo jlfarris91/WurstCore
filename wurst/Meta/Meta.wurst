@@ -67,7 +67,7 @@ public function TypeClassification.toString() returns string
 // ============================================================================
 public class Meta
 
-  @configurable static bool DEBUGGING_ENABLED = true
+  @configurable static bool DEBUGGING_ENABLED = false
 
   // --------------------------------------------------------------------------
   static function getType(int _typeId) returns Type

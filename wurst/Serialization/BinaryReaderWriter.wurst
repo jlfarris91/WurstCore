@@ -32,33 +32,32 @@ public class BinaryReader
   // --------------------------------------------------------------------------
   function readByte() returns int
     let value = m_buffer.readByte()
-    // Log.info("BinaryReader", "readByte", "", value.toString())
+    // Log.debug("BinaryReader", "readByte", "", value.toString())
     return value
 
   // --------------------------------------------------------------------------
   function readShort() returns int
     let value = m_buffer.readShort()
-    // Log.info("BinaryReader", "readShort", "", value.toString())
+    // Log.debug("BinaryReader", "readShort", "", value.toString())
     return value
 
   // --------------------------------------------------------------------------
   function readInt() returns int
     let value = m_buffer.readInt()
-    // Log.info("BinaryReader", "readInt", "", value.toString())
+    // Log.debug("BinaryReader", "readInt", "", value.toString())
     return value
 
   // --------------------------------------------------------------------------
   function readReal() returns real
     let str = readString()
-    // Log.info("BinaryReader", "readReal", "", "str: " + str)
     let value = str.toReal()
-    // Log.info("BinaryReader", "readReal", "", "value: " + value.toString())
+    // Log.debug("BinaryReader", "readReal", "", "value: " + value.toString())
     return value
 
   // --------------------------------------------------------------------------
   function readBool() returns bool
     let value = m_buffer.readByte() != 0
-    // Log.info("BinaryReader", "readBool", "", value.toString())
+    // Log.debug("BinaryReader", "readBool", "", value.toString())
     return value
 
   // --------------------------------------------------------------------------
@@ -69,7 +68,7 @@ public class BinaryReader
       if (char == STRING_TERMINATOR)
         break
       value += char.toCharsetString2()
-    // Log.info("BinaryReader", "readString", "", value)
+    // Log.debug("BinaryReader", "readString", "", value)
     return value
 
   // --------------------------------------------------------------------------
@@ -84,23 +83,27 @@ public class BinaryReader
 
   // --------------------------------------------------------------------------
   function readBytes(int numBytes) returns int
+    if (m_buffer.size() == 0)
+      return 0
     var bytesRead = 0
     for i = 0 to numBytes - 1
       if (m_buffer.hasByte() == false)
         break
       bytesRead++
-    // Log.info("BinaryReader", "readBytes", "", "Read {0} bytes".format(bytesRead.toString()))
+    // Log.debug("BinaryReader", "readBytes", "", "read {0} bytes".format(bytesRead.toString()))
     return bytesRead
 
   // --------------------------------------------------------------------------
   function readBytes(ByteBuffer readInto, int numBytes) returns int
+    if (m_buffer.size() == 0)
+      return 0
     var bytesRead = 0
     for i = 0 to numBytes - 1
       if (m_buffer.hasByte() == false)
         break
       readInto.writeByte(m_buffer.readByte())
       bytesRead++
-    // Log.info("BinaryReader", "readBytes", "", "Read {0} bytes".format(bytesRead.toString()))
+    // Log.debug("BinaryReader", "readBytes", "", "read {0} bytes".format(bytesRead.toString()))
     return bytesRead
 
 // ============================================================================
@@ -113,22 +116,22 @@ public class BinaryWriter
 
   // --------------------------------------------------------------------------
   function writeByte(int value)
-    // Log.info("BinaryWriter", "writeByte", "", value.toString())
+    // Log.debug("BinaryWriter", "writeByte", "", value.toString())
     m_buffer.writeByte(value)
 
   // --------------------------------------------------------------------------
   function writeShort(int value)
-    // Log.info("BinaryWriter", "writeShort", "", value.toString())
+    // Log.debug("BinaryWriter", "writeShort", "", value.toString())
     m_buffer.writeShort(value)
 
   // --------------------------------------------------------------------------
   function write(int value)
-    // Log.info("BinaryWriter", "writeInt", "", value.toString())
+    // Log.debug("BinaryWriter", "writeInt", "", value.toString())
     m_buffer.writeInt(value)
 
   // --------------------------------------------------------------------------
   function writeInt(int value)
-    // Log.info("BinaryWriter", "writeInt", "", value.toString())
+    // Log.debug("BinaryWriter", "writeInt", "", value.toString())
     m_buffer.writeInt(value)
 
   // --------------------------------------------------------------------------
@@ -137,12 +140,12 @@ public class BinaryWriter
 
   // --------------------------------------------------------------------------
   function write(bool value)
-    // Log.info("BinaryWriter", "writeBool", "", value.toString())
+    // Log.debug("BinaryWriter", "writeBool", "", value.toString())
     m_buffer.writeByte(value ? 1 : 0)
 
   // --------------------------------------------------------------------------
   function write(string value)
-    // Log.info("BinaryWriter", "writeString", "", value)
+    // Log.debug("BinaryWriter", "writeString", "", value)
     for i = 0 to value.length() - 1
       m_buffer.writeByte(value.charAt(i).toCharsetInt2())
     m_buffer.writeByte(STRING_TERMINATOR)
@@ -154,15 +157,22 @@ public class BinaryWriter
     m_buffer.writeByte(STRING_TERMINATOR)
 
   // --------------------------------------------------------------------------
-  function write(ByteBuffer buffer)
-    write(buffer, true)
+  function write(ByteBuffer buffer) returns int
+    return write(buffer, true)
 
   // --------------------------------------------------------------------------
-  function write(ByteBuffer buffer, bool resetRead)
+  function write(ByteBuffer buffer, bool resetRead) returns int
+    if (buffer.size() == 0)
+      // Log.debug("BinaryWriter", "writeBytes", "", "0")
+      return 0
     if (resetRead)
-      buffer.resetRead()
+      buffer.seek(0, true)
+    var bytesWritten = 0
     while buffer.hasByte()
-      writeByte(buffer.readByte())
+      m_buffer.writeByte(buffer.readByte())
+      bytesWritten++
+    // Log.debug("BinaryWriter", "writeBytes", "", bytesWritten.toString())
+    return bytesWritten
 
 // ============================================================================
 @test function writeReadReal()
@@ -175,7 +185,7 @@ public class BinaryWriter
   writer.write(123.456)
   writer.write(7.89)
 
-  buffer.resetRead()
+  buffer.seek(0, true)
 
   reader.readInt().assertEquals(999)
   reader.readReal().assertEquals(123.456)
@@ -210,5 +220,21 @@ public class BinaryWriter
   reader.readBytes(objectReadBuffer, size)
   objectReadBuffer.size().assertEquals(size)
 
+  objectReadBuffer.seek(0, true)
+
   let str = objectReader.readString()
   str.assertEquals("LocalPlayer")
+
+@test function readwriteBytes()
+
+  let buffer = new ByteBuffer()
+
+  for i = 1 to 4
+    buffer.writeByte(i)
+
+  buffer.seek(0, true)
+
+  let buffer2 = new ByteBuffer()
+  let writer = new BinaryWriter(buffer2)
+
+  writer.write(buffer, true).assertEquals(4)  
