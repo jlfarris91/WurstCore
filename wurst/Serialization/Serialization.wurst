@@ -257,20 +257,24 @@ public class SerializationContext
 
     let headerCode = reader.readInt()
     let objectVersion = reader.readInt()
-    let size = reader.readInt()
+    let objectSize = reader.readInt()
 
     // info("SerializationContext", "readObject_impl2", "", "h:{0} ({1}) v:{2} s:{3}".format(headerCode.toRawCode(), headerCode.toString(), objectVersion.toString(), size.toString()))
 
     if (object == NULL)
       warn("SerializationContext", "readObject_impl2", "", "Object was NULL")
-      reader.readBytes(size)
+      reader.readBytes(objectSize)
       return false
+
+    // Special processor for ISerializable objects
+    if (headerCode == m_serializableSerializer.getHeaderCode())
+      return readSerializableObject(reader, object, objectVersion, objectSize)
 
     let serializer = getSerializer(headerCode, objectVersion)
     if (serializer == null)
       warn("SerializationContext", "readObject_impl2", "", "Could not find serializer for object h:{0} v:{1}".format(headerCode.toRawCode(), objectVersion.toString()))
       // Read passed the object that we can't deserialize
-      reader.readBytes(size)
+      reader.readBytes(objectSize)
       return false
 
     let serializedObjectTypeId = serializer.getObjectTypeId()
@@ -283,7 +287,7 @@ public class SerializationContext
         objectVersion.toString(),
         serializedObjectTypeId.toString()))
 
-    return readObject(reader, object, objectVersion, size, serializer)
+    return readObject(reader, object, objectVersion, objectSize, serializer)
 
   // --------------------------------------------------------------------------
   private function readObject(BinaryReader reader, object object, int objectVersion, int size, ISerializer serializer) returns bool
@@ -307,12 +311,13 @@ public class SerializationContext
     return success
 
   // --------------------------------------------------------------------------
-  private function readSerializableObject(BinaryReader reader, int _objectVersion, int objectSize) returns object
+  private function readSerializableObject(BinaryReader reader, int objectVersion, int objectSize) returns object
     execute() () ->
-      g_lastReadObject = readSerializableObject_impl(reader, _objectVersion, objectSize)
+      g_lastReadObject = readSerializableObject_impl(reader, objectVersion, objectSize)
     return g_lastReadObject
 
   // --------------------------------------------------------------------------
+  // TODO: load correct version of SerializableSerializer based on _objectVersion
   private function readSerializableObject_impl(BinaryReader reader, int _objectVersion, int objectSize) returns object
     let objectBuffer = new ByteBuffer()
     reader.readBytes(objectBuffer, objectSize)
@@ -323,7 +328,25 @@ public class SerializationContext
     return object
 
   // --------------------------------------------------------------------------
+  private function readSerializableObject(BinaryReader reader, object object, int objectVersion, int objectSize) returns bool
+    execute() () ->
+      g_lastReadSucceeded = readSerializableObject_impl(reader, object, objectVersion, objectSize)
+    return g_lastReadSucceeded
+
+  // --------------------------------------------------------------------------
+  // TODO: load correct version of SerializableSerializer based on _objectVersion
+  private function readSerializableObject_impl(BinaryReader reader, object object, int _objectVersion, int objectSize) returns bool
+    let objectBuffer = new ByteBuffer()
+    reader.readBytes(objectBuffer, objectSize)
+    let objectReader = new BinaryReader(objectBuffer)
+    let success = m_serializableSerializer.readObject(this, objectReader, object)
+    destroy objectReader
+    destroy objectBuffer
+    return success
+
+  // --------------------------------------------------------------------------
   function registerSerializer(ISerializer serializer)
+    debug("SerializationContext", "registerSerializer", "", "{0} h:{1} v:{2} o:{3}".format(typeIdToTypeName(serializer.typeId), serializer.getHeaderCode().toRawCode(), serializer.getVersion().toString(), serializer.getObjectTypeId().toString()))
     let headerCode = serializer.getHeaderCode()
     LinkedList<ISerializer> serializers = m_serializerMap.get(headerCode)
     if (serializers == null)
@@ -365,9 +388,12 @@ public class SerializationContext
       return getSerializer(SerializableSerializer.HEADER_CODE, objectVersion)
 
     if (not m_objectTypeToHeaderCodeMap.has(object.objectTypeId))
+      debug("SerializationContext", "getSerializerForObject", "", "No matching header code for object type " + object.getTypeName())
       return null
 
-    return getSerializer(m_objectTypeToHeaderCodeMap.get(object.objectTypeId), objectVersion)
+    let headerCode = m_objectTypeToHeaderCodeMap.get(object.objectTypeId)
+    debug("SerializationContext", "getSerializerForObject", "", "Matching header code for object type " + object.getTypeName() + " is " + headerCode.toRawCode())
+    return getSerializer(headerCode, objectVersion)
 
   // --------------------------------------------------------------------------
   function registerFactory(int objectTypeId, ObjectFactory1 factory)
@@ -449,38 +475,48 @@ public class SerializationContext
 
   // --------------------------------------------------------------------------
   function error(string message)
-    Log.error(message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.error(message)
 
   // --------------------------------------------------------------------------
   function error(string className, string functionName, string id, string message)
-    Log.error(className, functionName, id, message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.error(className, functionName, id, message)
 
   // --------------------------------------------------------------------------
   function warn(string message)
-    Log.warn(message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.warn(message)
 
   // --------------------------------------------------------------------------
   function warn(string className, string functionName, string id, string message)
-    Log.warn(className, functionName, id, message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.warn(className, functionName, id, message)
 
   // --------------------------------------------------------------------------
   function info(string message)
-    Log.info(message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.info(message)
 
   // --------------------------------------------------------------------------
   function info(string className, string functionName, string id, string message)
-    Log.info(className, functionName, id, message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.info(className, functionName, id, message)
 
   // --------------------------------------------------------------------------
   function debug(string message)
-    Log.debug(message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.debug(message)
 
   // --------------------------------------------------------------------------
   function debug(string className, string functionName, string id, string message)
-    Log.debug(className, functionName, id, message)
+    if (Serialization.DEBUGGING_ENABLED)
+      Log.debug(className, functionName, id, message)
 
 // ============================================================================
 public class Serialization
+
+  @configurable static constant bool DEBUGGING_ENABLED = true
 
   // --------------------------------------------------------------------------
   static function writeObjectToFile(SerializationContext context, string filePath, object object) returns bool
@@ -580,7 +616,7 @@ class SerializableSerializer
     let objectVersion = reader.readInt()
     let objectSize = reader.readInt()
 
-    // context.debug("SerializableSerializer", "readObject", "", "t:{0} v:{1} s:{2}".format(objectTypeName, objectVersion.toString(), objectSize.toString()))
+    context.debug("SerializableSerializer", "readObject", "", "t:{0} v:{1} s:{2}".format(objectTypeName, objectVersion.toString(), objectSize.toString()))
     
     let objectType = Meta.getType(objectTypeName)
     if (objectType == null)
@@ -621,6 +657,44 @@ class SerializableSerializer
     context.popSerializingObject()
 
     return success ? object : NULL
+
+  // --------------------------------------------------------------------------
+  function readObject(SerializationContext context, BinaryReader reader, object object) returns bool
+
+    let objectTypeName = reader.readString()
+    let objectVersion = reader.readInt()
+    let objectSize = reader.readInt()
+
+    context.debug("SerializableSerializer", "readObject2", "", "t:{0} v:{1} s:{2}".format(objectTypeName, objectVersion.toString(), objectSize.toString()))
+
+    if (Meta.is(object.objectTypeId, typeId_ISerializable) == false)
+      context.warn("SerializableSerializer", "readObject", "", "Expected object to implement ISerializable: " + objectTypeName)
+      reader.readBytes(objectSize)
+      return false
+
+    let serializable = object.cast<ISerializable>(typeId_ISerializable)
+    if (serializable == null)
+      context.warn("SerializableSerializer", "readObject2", "", "Type says it implements ISerializable but cast failed: " + objectTypeName)
+      reader.readBytes(objectSize)
+      return false
+
+    context.pushSerializingObject(object, objectVersion)
+
+    let objectBuffer = new ByteBuffer()
+    reader.readBytes(objectBuffer, objectSize)
+
+    let objectReader = new BinaryReader(objectBuffer)
+
+    let success = serializable.deserialize(context, objectReader)
+    if (success == false)
+      context.warn("SerializableSerializer", "readObject2", "", "Failed to deserialize object of type {0}".format(object.getTypeName()))
+
+    destroy objectReader
+    destroy objectBuffer
+
+    context.popSerializingObject()
+
+    return success
 
 // ============================================================================
 init

@@ -2,9 +2,10 @@ package Composable
 import IComposite
 import CompositionManager
 import IComponent
+import Meta
 
 // ============================================================================
-public abstract class Composable implements IComposite
+public class Composable implements IComposite
   protected CompositionManager m_compositionManager
 
   // --------------------------------------------------------------------------
@@ -12,6 +13,11 @@ public abstract class Composable implements IComposite
     if (m_compositionManager != null)
       destroy m_compositionManager
       m_compositionManager = null
+
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(Composable.typeId)..registerInterface(typeId_IComposite)
+  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   function getCompositionManager() returns CompositionManager
@@ -36,3 +42,12 @@ public abstract class Composable implements IComposite
   // --------------------------------------------------------------------------
   override function getComponent(int componentTypeId) returns IComponent
     return m_compositionManager != null ? m_compositionManager.getComponent(componentTypeId) : null
+
+// ============================================================================
+init
+  registerPackageMetadata()
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  Composable.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////

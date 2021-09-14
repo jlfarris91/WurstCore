@@ -8,36 +8,32 @@ public tuple object(int objectHandle, int objectTypeId)
 public constant object NULL = object(0, 0)
 
 // ============================================================================
-public function object.is(int objectTypeId) returns bool
-  if (this.objectTypeId == 0)
-    return false
-  let t = Meta.getType(this.objectTypeId)
-  if (t == null)
-    error("No meta type registered for object type {0}".format(this.getTypeName()))
-  return t.is(objectTypeId)
+public function object.is(int expectedTypeId) returns bool
+  return Meta.is(this.objectTypeId, expectedTypeId)
 
 // ============================================================================
-public function object.as<T>(int objectTypeId) returns T
-  if (this.objectHandle == 0 or this.objectTypeId == 0)
-    return null
-  let t = Meta.getType(this.objectTypeId)
-  if (t == null)
-    error("No meta type registered for object type {0}".format(this.getTypeName()))
-  return t.is(objectTypeId) ? this.objectHandle castTo T : null
+/** Attempts to cast the object to the given type T. Unlike cast<T> this method
+    will not throw an error if the cast cannot be completed successfully.
+    Null is returned if:
+    1) no metadata has been registered for expectedTypeId or object.objectTypeId
+    2) object.objectTypeId is not a part of the inheritence chain of expectedTypeId
+*/
+public function object.as<T>(int expectedTypeId) returns T
+  return Meta.is(this.objectTypeId, expectedTypeId) ? this.objectHandle castTo T : null
 
 // ============================================================================
 public function object.cast<T>(int expectedTypeId) returns T
   if (expectedTypeId == 0)
-    error("Argument invalid: expectedTypeId must be greater than 0")
+    error("[object.cast] Argument invalid: expectedTypeId must be greater than 0")
   if (this == NULL)
     return null
   if (this.objectTypeId == 0)
-    error("Argument invalid: object.objectTypeId must be greater than 0")
-  let t = Meta.getType(this.objectTypeId)
-  if (t == null)
-    error("No meta type registered for object type {0}".format(this.getTypeName()))
-  if (t.is(expectedTypeId) == false)
-    error("Type cast failed. Object: {0} ({1}) Expected: {2} ({3})".format(this.getTypeName(), this.objectTypeId.toString(), Meta.getTypeName(expectedTypeId), expectedTypeId.toString()))
+    error("[object.cast] Argument invalid: object.objectTypeId must be greater than 0")
+  let metaType = Meta.getType(this.objectTypeId)
+  if (metaType == null)
+    error("[object.cast] No meta type registered for object type {0}".format(this.getTypeName()))
+  if (metaType.is(expectedTypeId) == false)
+    error("[object.cast] Type cast failed. Object: {0} ({1}) Expected: {2} ({3})".format(this.getTypeName(), this.objectTypeId.toString(), Meta.getTypeName(expectedTypeId), expectedTypeId.toString()))
   return this.objectHandle castTo T
 
 // ============================================================================

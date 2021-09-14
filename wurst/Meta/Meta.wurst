@@ -67,6 +67,8 @@ public function TypeClassification.toString() returns string
 // ============================================================================
 public class Meta
 
+  @configurable static bool DEBUGGING_ENABLED = true
+
   // --------------------------------------------------------------------------
   static function getType(int _typeId) returns Type
     if (_typeId == 0)
@@ -89,6 +91,20 @@ public class Meta
     if (g_fullyQualifiedTypeNameToTypeIdMap.has(fullyQualifiedTypeName))
       return getType(g_fullyQualifiedTypeNameToTypeIdMap.get(fullyQualifiedTypeName))
     return null
+
+  // --------------------------------------------------------------------------
+  static function is(int derivedTypeId, int baseTypeId) returns bool
+    if (derivedTypeId == 0 or baseTypeId == 0)
+      return false
+    let childObjectType = getType(derivedTypeId)
+    if (Meta.DEBUGGING_ENABLED)
+    //{
+      if (childObjectType == null)
+        Log.debug("Meta", "is", "", "No meta type registered for derived type {0}".format(Meta.getTypeName(derivedTypeId)))
+      if (getType(baseTypeId) == null)
+        Log.debug("Meta", "is", "", "No meta type registered for base type {0}".format(Meta.getTypeName(baseTypeId)))
+    //}
+    return childObjectType != null and childObjectType.is(baseTypeId)
 
   // --------------------------------------------------------------------------
   private static function registerType(Type _type)

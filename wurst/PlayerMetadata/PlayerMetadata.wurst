@@ -3,14 +3,21 @@ import HashMap
 import Composition
 import public initlater PlayerMetadataExtensions
 import ColorUtility
+import Meta
 
 HashMap<player, IPlayerMetadata> g_PlayerMetadata
 
 // ============================================================================
+public constant int typeId_IPlayerMetadata = Meta.registerInterface("PlayerMetadata.IPlayerMetadata")..registerInterface(typeId_IComposite).getTypeId()
 public interface IPlayerMetadata extends IComposite
   function getPlayer() returns player
   function getDisplayName() returns string
   function setDisplayName(string displayName)
+  function resetDisplayName()
+  function getHasLeftGame() returns bool
+  function setHasLeftGame(bool value)
+  function getHasLostGame() returns bool
+  function setHasLostGame(bool value)
 
 // ============================================================================
 public class PlayerMetadata extends Composable implements IPlayerMetadata
@@ -23,6 +30,11 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   construct(player p)
     this.m_player = p
     this.setDisplayName(p.getName())
+
+  /////////////////////////////////////////////////////////////////////////////
+  protected static function registerMetadata()
+    Meta.registerClass(PlayerMetadata.typeId)..setBase(Composable.typeId)..registerInterface(typeId_IPlayerMetadata)
+  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   override function getPlayer() returns player
@@ -37,23 +49,23 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
     m_displayName = displayName
 
   // --------------------------------------------------------------------------
-  function resetDisplayName()
+  override function resetDisplayName()
     setDisplayName(m_player.getName())
 
   // --------------------------------------------------------------------------
-  function getHasLeftGame() returns bool
+  override function getHasLeftGame() returns bool
     return m_leftGame
 
   // --------------------------------------------------------------------------
-  function setHasLeftGame(bool value)
+  override function setHasLeftGame(bool value)
     m_leftGame = value
 
   // --------------------------------------------------------------------------
-  function getHasLostGame() returns bool
+  override function getHasLostGame() returns bool
     return m_lostGame
 
   // --------------------------------------------------------------------------
-  function setHasLostGame(bool value)
+  override function setHasLostGame(bool value)
     m_lostGame = value
 
   // --------------------------------------------------------------------------
@@ -111,4 +123,11 @@ public function unregisterPlayerMetadata(IPlayerMetadata playerMetadata)
 
 // ============================================================================
 init
+  registerPackageMetadata()
+
   g_PlayerMetadata = new HashMap<player, IPlayerMetadata>()
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata()
+  PlayerMetadata.registerMetadata()
+///////////////////////////////////////////////////////////////////////////////
