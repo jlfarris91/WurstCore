@@ -31,7 +31,7 @@ public function getHoldingUnit(unit loadedUnit) returns unit
 
 // ============================================================================
 function raiseUnitUnloadedEvent(unit _unit)
-  Log.info("Unit " + _unit.getName() + " unloaded from unit " + getHoldingUnit(_unit).getName())
+  Log.debug("Unit " + _unit.getName() + " unloaded from unit " + getHoldingUnit(_unit).getName())
   g_unloadedUnit = _unit
   g_unitUnloadedTrigger.evaluate()
   g_unloadedUnit = null
@@ -41,7 +41,7 @@ function onUnitLoaded()
   let loadedUnit = GetLoadedUnit()
   let loadingUnit = GetTriggerUnit()
   g_loadedUnits.put(loadedUnit, loadingUnit)
-  Log.info("Unit " + loadedUnit.getName() + " loaded into unit " + loadingUnit.getName())
+  Log.debug("Unit " + loadedUnit.getName() + " loaded into unit " + loadingUnit.getName())
 
 // ============================================================================
 function onUnitEnterMap()

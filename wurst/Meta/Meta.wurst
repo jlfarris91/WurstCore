@@ -337,7 +337,7 @@ public class Class extends ConcreteType
     for id in typeIds
       if (Meta.getTypeClassification(id) != TypeClassification.Interface)
         error("type({0}) : Type is not an interface: {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
-      // Log.info("type({0}) : Registered interface {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
+      // Log.debug("type({0}) : Registered interface {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
       m_interfaces.add(id)
 
   // --------------------------------------------------------------------------

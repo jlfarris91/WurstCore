@@ -47,53 +47,6 @@ public class StringBuilder implements IStringBuilder
     return m_string
 
 // ============================================================================
-public class LogStringBuilder implements IStringBuilder
-  private StringBuilder m_sb
-
-  // --------------------------------------------------------------------------
-  construct()
-    m_sb = new StringBuilder()
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy m_sb
-    m_sb = null
-
-  // --------------------------------------------------------------------------
-  override function append(string str) returns IStringBuilder
-    m_sb.append(str)
-    return this
-
-  // --------------------------------------------------------------------------
-  override function appendLine() returns IStringBuilder
-    m_sb.appendLine()
-    Log.info(m_sb.toString())
-    m_sb.reset()
-    return this
-    
-  // --------------------------------------------------------------------------
-  override function appendLine(string str) returns IStringBuilder
-    m_sb.appendLine(str)
-    Log.info(m_sb.toString())
-    m_sb.reset()
-    return this
-  
-  // --------------------------------------------------------------------------
-  override function reset() returns IStringBuilder
-    m_sb.reset()
-    return this
-
-  // --------------------------------------------------------------------------
-  override function toString() returns string
-    return m_sb.toString()
-
-  // --------------------------------------------------------------------------
-  function toStringAndDestroy() returns string
-    let str = toString()
-    destroy this
-    return str
-
-// ============================================================================
 public function IStringBuilder.toStringAndDestroy() returns string
   let str = this.toString()
   destroy this

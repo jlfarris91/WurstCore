@@ -186,7 +186,7 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   override function setValue(int context, Union value) returns bool
     if (m_setter != null)
-      Log.info("IntPropertyDescriptor", "setValue", "", "value + " + value.getInt().toString() + " for context " + context.toString())
+      Log.debug("IntPropertyDescriptor", "setValue", "", "value + " + value.getInt().toString() + " for context " + context.toString())
       m_setter.call(resolveContext(context), value.getInt())
       return true
     return false
