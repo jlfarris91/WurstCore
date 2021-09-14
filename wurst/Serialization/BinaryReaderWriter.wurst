@@ -50,6 +50,7 @@ public class BinaryReader
   // --------------------------------------------------------------------------
   function readReal() returns real
     let str = readString()
+    // Log.debug("BinaryReader", "readReal", "", "str: " + str)
     let value = str.toReal()
     // Log.debug("BinaryReader", "readReal", "", "value: " + value.toString())
     return value
