@@ -1,0 +1,16 @@
+package Debouncer
+import Action
+
+// ============================================================================
+public class Debouncer
+  private timer m_timer = CreateTimer()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_timer.destr()
+
+  // --------------------------------------------------------------------------
+  function debounce(Action action, real interval)
+    if (m_timer.getRemaining() == 0)
+      action.call()
+    m_timer.start(interval, null)
