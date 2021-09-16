@@ -1,4 +1,26 @@
 package VectorExtensions
+import StringUtils
 
 public function vec2.toString2() returns string
   return "[" + this.x.toString() + ", " + this.y.toString() + "]"
+
+/** Expects a string format of "[X.X, X.X]" but the brackets are optional */
+public function string.toVec2() returns vec2
+  var value = ZERO2
+  let parts = this.trim("[").trim("]").split(",")
+  if (parts.size() == 2)
+    value.x = parts.get(0).trim(" ").toReal()
+    value.y = parts.get(1).trim(" ").toReal()
+  destroy parts
+  return value
+
+@test function parseVector()
+  "[12.34, 56.78]".toVec2().assertEquals(vec2(12.34, 56.78))
+  "[ 12.34 , 56.78 ]".toVec2().assertEquals(vec2(12.34, 56.78))
+  "[ 12.34 ,56.78]".toVec2().assertEquals(vec2(12.34, 56.78))
+  "[12.34,56.78]".toVec2().assertEquals(vec2(12.34, 56.78))
+  "12.34,56.78".toVec2().assertEquals(vec2(12.34, 56.78))
+  " 12.34, 56.78".toVec2().assertEquals(vec2(12.34, 56.78))
+  "12.34, 56.78".toVec2().assertEquals(vec2(12.34, 56.78))
+  " 12.34,56.78".toVec2().assertEquals(vec2(12.34, 56.78))
+  "12.34, 56.78".toVec2().assertEquals(vec2(12.34, 56.78))

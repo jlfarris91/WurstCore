@@ -35,3 +35,12 @@ public abstract class Action3<TArg1, TArg2, TArg3>
   function getDestroyAfterUse() returns bool
     return m_destroyAfterUse
   abstract function call(TArg1 arg1, TArg2 arg2, TArg3 arg3)
+
+// ============================================================================
+public abstract class Vec2Action
+  private bool m_destroyAfterUse = true
+  function setDestroyAfterUse(bool value)
+    m_destroyAfterUse = value  
+  function getDestroyAfterUse() returns bool
+    return m_destroyAfterUse
+  abstract function call(vec2 arg)

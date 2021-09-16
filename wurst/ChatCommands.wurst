@@ -773,9 +773,12 @@ function parsePlayerChatString()
     printPartialMatchingCommands(cmd.command, p)
   
   else if (not replayingLastCommand)
-    g_lastChatCommand = cmd
+  //{
+    if (g_lastChatCommand.args != null)
+      destroy g_lastChatCommand.args
 
-  destroy cmd.args
+    g_lastChatCommand = cmd
+  //}
 
 // ============================================================================
 public class ChatCommandDefinitionComparator implements Comparator<ChatCommandDefinition>
