@@ -14,6 +14,10 @@ public abstract class Component implements IComponent
     m_owner = owner
 
   // --------------------------------------------------------------------------
+  ondestroy
+    setEnabled(false)
+
+  // --------------------------------------------------------------------------
   override function getOwner() returns IComposite
     return m_owner
 

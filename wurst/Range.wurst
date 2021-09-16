@@ -62,6 +62,18 @@ public function rangeInt.grow(int value) returns rangeInt
   return rangeInt(this.min - value, this.max + value)
 
 // ============================================================================
+public function rangeReal.scale(real scale01) returns rangeReal
+  let center = this.getMid()
+  let lengthScaled = this.getLength() * scale01
+  return rangeReal(center - lengthScaled, center + lengthScaled)
+
+// ============================================================================
+public function rangeInt.scale(real scale01) returns rangeInt
+  let center = this.getMid()
+  let lengthScaled = (this.getLength() * scale01).floor()
+  return rangeInt(center - lengthScaled, center + lengthScaled)
+
+// ============================================================================
 public function rangeReal.toString() returns string
   return "{0}-{1}".format(this.min.toString(), this.max.toString())
 
