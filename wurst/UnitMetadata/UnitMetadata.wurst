@@ -63,7 +63,8 @@ public class UnitMetadata extends Composable implements IUnitMetadata
       logDebug("Attempting to attach to a deindexed unit : " + unitToAttachTo.getName())
       return
 
-    detach()
+    if (m_unit != null)
+      detach()
 
     // The new unit was indexed so we should assign the metadata
     g_unitMetadatas[newIndex] = this
@@ -74,17 +75,17 @@ public class UnitMetadata extends Composable implements IUnitMetadata
   // --------------------------------------------------------------------------
   private function detach()
 
-    let currentUnit = getUnit()
-    if (currentUnit == null)
+    if (m_unit == null)
       return
 
-    let currentIndex = currentUnit.getIndex()
+    let currentIndex = m_unit.getIndex()
     if (currentIndex == 0)
       error("Current unit has no index")
       return
 
     g_unitMetadatas[currentIndex] = null
-    logDebug("[UnitMetadata.detach] Detached from " + currentUnit.getName())
+    m_unit = null
+    logDebug("[UnitMetadata.detach] Detached from " + m_unit.getName())
 
   // --------------------------------------------------------------------------
   function onKilled()
