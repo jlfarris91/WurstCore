@@ -37,7 +37,7 @@ public class UnitMetadata extends Composable implements IUnitMetadata
   // --------------------------------------------------------------------------
   ondestroy
     if (m_unit != null)
-      detach()
+      detachAndNullifyUnit()
 
   /////////////////////////////////////////////////////////////////////////////
   protected static function registerMetadata()
@@ -84,8 +84,12 @@ public class UnitMetadata extends Composable implements IUnitMetadata
       return
 
     g_unitMetadatas[currentIndex] = null
-    m_unit = null
     logDebug("[UnitMetadata.detach] Detached from " + m_unit.getName())
+
+  // --------------------------------------------------------------------------
+  private function detachAndNullifyUnit()
+    detach()
+    setUnit(null)
 
   // --------------------------------------------------------------------------
   function onKilled()
@@ -117,7 +121,13 @@ public class UnitMetadata extends Composable implements IUnitMetadata
     //}
 
     m_unit = newUnit
-    // Log.info("oldUnit: " + unitToIndex(oldUnit).toString() + " newUnit: " + unitToIndex(newUnit).toString())
+    logDebug("oldUnit: " + unitToIndex(oldUnit).toString() + " newUnit: " + unitToIndex(newUnit).toString())
+    
+    if (m_compositionManager != null)
+      for comp in m_compositionManager
+        let unitComp = comp castTo UnitComponent
+        if (unitComp != null)
+          unitComp.onUnitChanged(oldUnit, newUnit)
 
     // Now that the backing field for getUnit() has changed, re-enable any
     // components that were enabled with the old unit, also alert them
@@ -126,10 +136,6 @@ public class UnitMetadata extends Composable implements IUnitMetadata
       for comp in enabledComponents
         if (comp != null and newUnit != null)
           comp.setEnabled(true)
-        let unitComp = comp castTo UnitComponent
-        if (unitComp != null)
-          unitComp.onUnitChanged(oldUnit, newUnit)
-
       destroy enabledComponents
     //}
 
