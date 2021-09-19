@@ -205,6 +205,6 @@ public abstract class Runnable implements IRunnable, IProgress
     m_error = null
 
   // --------------------------------------------------------------------------
-  protected function log(string funcName, string message)
+  private function log(string funcName, string message)
     if (g_enableRunnableLogging)
       Log.debug(typeIdToTypeName(((this castTo int) castTo IRunnable).typeId), funcName, (this castTo int).toString(), message)
