@@ -1,5 +1,7 @@
 package GroupExtensions
 
+group g_workingGroup = CreateGroup()
+
 // ============================================================================
 public function group.getClosestUnit(vec2 pos) returns unit
   var closestDistSq = REAL_MAX
@@ -10,3 +12,15 @@ public function group.getClosestUnit(vec2 pos) returns unit
       closestDistSq = distSq
       closestUnit = _unit
   return closestUnit
+
+// ============================================================================
+/** Removes any "ghost" units that have been removed from the game but not from the group
+    https://www.hiveworkshop.com/threads/removing-phantom-units-from-a-unit-group.327042/
+*/
+public function group.refresh()
+  g_workingGroup.clear()
+  g_workingGroup.addGroup(this)
+  this.clear()
+  this.addGroup(g_workingGroup)
+  g_workingGroup.clear()
+  
