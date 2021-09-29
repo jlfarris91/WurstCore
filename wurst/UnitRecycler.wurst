@@ -295,7 +295,6 @@ public class UnitRecycler
     if (m_generationMap.has(_unit))
       generation = m_generationMap.get(_unit)
     m_generationMap.put(_unit, generation + 1)
-    
 
   // --------------------------------------------------------------------------
   private function getNextAvailableUnit() returns unit

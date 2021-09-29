@@ -1,5 +1,6 @@
 package TargetUtility
 import GroupUtils
+import GroupExtensions
 
 // --------------------------------------------------------------------------
 public function getNearestUnit(vec2 pos, real range, code filterFunc) returns unit
@@ -39,14 +40,3 @@ public function getNearestUnitOfPlayer(player _player, vec2 pos, conditionfunc f
 public function getNearestUnitOfPlayer(player _player, vec2 pos, conditionfunc filter, group _group) returns unit
   _group.enumUnitsOfPlayer(_player, filter)
   return _group.getClosestUnit(pos)
-
-// --------------------------------------------------------------------------
-public function group.getClosestUnit(vec2 pos) returns unit
-  var shortestDistance = REAL_MAX
-  unit target = null
-  for _unit in this
-    let distance = _unit.getPos().distanceToSq(pos)
-    if (distance < shortestDistance)
-      target = _unit
-      shortestDistance = distance
-  return target

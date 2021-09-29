@@ -33,6 +33,14 @@ public function bounds.toWorldPos(vec2 localPos) returns vec2
   return localPos + this.min
 
 // ============================================================================
+public function bounds.getRandomPoint() returns vec2
+  return vec2(GetRandomReal(this.min.x, this.max.x), GetRandomReal(this.min.y, this.max.y))
+
+// ============================================================================
+public function bounds.getHalfExtents() returns vec2
+  return this.size() / 2
+
+// ============================================================================
 public function bounds.toString() returns string
   return "(min: {0}, max: {1})".format(this.min.toString(), this.max.toString())
 

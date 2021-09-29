@@ -67,6 +67,10 @@ public class Grid implements IGrid
     return getCellFromLocalPos(localPos)
 
   // --------------------------------------------------------------------------
+  function getCell(int index) returns cell
+    return cell(index, _width, _height)
+
+  // --------------------------------------------------------------------------
   override function getIndex(cell cell) returns int
     return cell.toIndex(_width, _height)
 
@@ -104,7 +108,7 @@ public class Grid implements IGrid
   private function getCellFromLocalPos(vec2 localPos) returns cell
     let x = clamp(R2I(localPos.x / _cellSize.x), 0, _width - 1)
     let y = clamp(R2I(localPos.y / _cellSize.y), 0, _height - 1)    
-    return cell(x, y)
+    return cell(y, x)
 
 // ============================================================================
 public function cell.toIndex(int width, int height) returns int
@@ -122,7 +126,7 @@ public function cell.toString() returns string
 public function cell(int index, int width, int height) returns cell
   if (index < 0 or index >= width*height)
     error("Argument out of range: index")
-  return cell(index mod width, index div height)
+  return cell(index div width, index mod width)
 
 // ============================================================================
 public function span.toString() returns string

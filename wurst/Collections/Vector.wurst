@@ -150,6 +150,12 @@ public function Vector<T>.forEach<T>(Action1<T> action)
     destroy action
 
 // ============================================================================
+public function Vector<T>.getRandom<T>() returns T
+  if (this.isEmpty())
+    return null
+  return this.getItem(GetRandomInt(0, this.getCount() - 1))
+
+// ============================================================================
 public function Vector<T>.getRandomUnique<T>(int count) returns Vector<T>
   let clone = this.clone()
   let output = new Vector<T>()
