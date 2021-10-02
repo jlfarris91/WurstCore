@@ -1,813 +1,813 @@
-package Linq
-import Enumerable
-import Predicate
-import Func
-import ErrorHandling
-import IEqualityComparer
-import LinkedList
-import HashList
+// package Linq
+// import Enumerable
+// import Predicate
+// import Func
+// import ErrorHandling
+// import IEqualityComparer
+// import LinkedList
+// import HashList
 
-// ============================================================================
-/** Applies an accumulator function over a sequence. The specified seed value is used as the initial accumulator value, and the specified function is used to select the result value. */
-public function IEnumerable<TSource>.aggregate<TSource, TAccumulate, TResult>(TAccumulate seed, Func2<TAccumulate, TSource, TAccumulate> func, Func1<TAccumulate, TResult> resultSelector) returns TResult
-  if (func == null)
-    argumentNullError("func")
-  if (resultSelector == null)
-    argumentNullError("resultSelector")
+// // ============================================================================
+// /** Applies an accumulator function over a sequence. The specified seed value is used as the initial accumulator value, and the specified function is used to select the result value. */
+// public function IEnumerable<TSource>.aggregate<TSource, TAccumulate, TResult>(TAccumulate seed, Func2<TAccumulate, TSource, TAccumulate> func, Func1<TAccumulate, TResult> resultSelector) returns TResult
+//   if (func == null)
+//     argumentNullError("func")
+//   if (resultSelector == null)
+//     argumentNullError("resultSelector")
   
-  let iter = this.iterator()
-  var accumulate = seed
+//   let iter = this.iterator()
+//   var accumulate = seed
   
-  while (iter.hasNext())
-    accumulate = func.call(accumulate, iter.next())
+//   while (iter.hasNext())
+//     accumulate = func.call(accumulate, iter.next())
   
-  let result = resultSelector.call(accumulate)
+//   let result = resultSelector.call(accumulate)
   
-  destroy iter
-  destroy func
-  destroy resultSelector
+//   destroy iter
+//   destroy func
+//   destroy resultSelector
 
-  return result
+//   return result
 
-// ============================================================================
-/** Applies an accumulator function over a sequence. The specified seed value is used as the initial accumulator value. */
-public function IEnumerable<TSource>.aggregate<TSource, TAccumulate>(TAccumulate seed, Func2<TAccumulate, TSource, TAccumulate> func) returns TAccumulate
-  if (func == null)
-    argumentNullError("func")
+// // ============================================================================
+// /** Applies an accumulator function over a sequence. The specified seed value is used as the initial accumulator value. */
+// public function IEnumerable<TSource>.aggregate<TSource, TAccumulate>(TAccumulate seed, Func2<TAccumulate, TSource, TAccumulate> func) returns TAccumulate
+//   if (func == null)
+//     argumentNullError("func")
   
-  let iter = this.iterator()
-  var result = seed
+//   let iter = this.iterator()
+//   var result = seed
   
-  while (iter.hasNext())
-    result = func.call(result, iter.next())
+//   while (iter.hasNext())
+//     result = func.call(result, iter.next())
   
-  destroy iter
-  destroy func
+//   destroy iter
+//   destroy func
 
-  return result
+//   return result
 
-// ============================================================================
-/** Applies an accumulator function over a sequence. */
-public function IEnumerable<TSource>.aggregate<TSource>(Func2<TSource, TSource, TSource> func) returns TSource
-  if (func == null)
-    argumentNullError("func")
+// // ============================================================================
+// /** Applies an accumulator function over a sequence. */
+// public function IEnumerable<TSource>.aggregate<TSource>(Func2<TSource, TSource, TSource> func) returns TSource
+//   if (func == null)
+//     argumentNullError("func")
   
-  let iter = this.iterator()
+//   let iter = this.iterator()
 
-  if (not iter.hasNext())
-    error("Sequence contains no elements.")
+//   if (not iter.hasNext())
+//     error("Sequence contains no elements.")
 
-  var result = iter.next()
+//   var result = iter.next()
   
-  while (iter.hasNext())
-    result = func.call(result, iter.next())
+//   while (iter.hasNext())
+//     result = func.call(result, iter.next())
   
-  destroy iter
-  destroy func
+//   destroy iter
+//   destroy func
 
-  return result
+//   return result
 
-// ============================================================================
-/** Determines whether all elements of a sequence satisfy a condition. */
-public function IEnumerable<TSource>.all<TSource>(Predicate<TSource> predicate) returns bool
-  let iter = this.iterator()
-  var result = true
-  while (iter.hasNext())
-    if (predicate.call(iter.next()) == false)
-      result = false
-      break
-  destroy iter
-  destroy predicate
-  return result
+// // ============================================================================
+// /** Determines whether all elements of a sequence satisfy a condition. */
+// public function IEnumerable<TSource>.all<TSource>(Predicate<TSource> predicate) returns bool
+//   let iter = this.iterator()
+//   var result = true
+//   while (iter.hasNext())
+//     if (predicate.call(iter.next()) == false)
+//       result = false
+//       break
+//   destroy iter
+//   destroy predicate
+//   return result
 
-// ============================================================================
-/** Determines whether the sequence contains any elements. */
-public function IEnumerable<TSource>.any<TSource>() returns bool
-  let iter = this.iterator()
-  let result = iter.hasNext()
-  destroy iter
-  return result
+// // ============================================================================
+// /** Determines whether the sequence contains any elements. */
+// public function IEnumerable<TSource>.any<TSource>() returns bool
+//   let iter = this.iterator()
+//   let result = iter.hasNext()
+//   destroy iter
+//   return result
 
-// ============================================================================
-/** Determines whether any element of a sequence exists or satisfies a condition. */
-public function IEnumerable<TSource>.any<TSource>(Predicate<TSource> predicate) returns bool
-  let iter = this.iterator()
-  var result = false
-  while (iter.hasNext())
-    if (predicate.call(iter.next()) == true)
-      result = true
-      break
-  destroy iter
-  destroy predicate
-  return result
+// // ============================================================================
+// /** Determines whether any element of a sequence exists or satisfies a condition. */
+// public function IEnumerable<TSource>.any<TSource>(Predicate<TSource> predicate) returns bool
+//   let iter = this.iterator()
+//   var result = false
+//   while (iter.hasNext())
+//     if (predicate.call(iter.next()) == true)
+//       result = true
+//       break
+//   destroy iter
+//   destroy predicate
+//   return result
 
-// ============================================================================
-/** Computes the average of a sequence of integer values. */
-public function IEnumerable<int>.average() returns int
-  let iter = this.iterator()
-  var count = 0
-  var result = 0
-  while iter.hasNext()
-    result += iter.next()
-    count++
-  if (count == 0)
-    error("Sequence has no elements")
-  result = R2I(result / count)
-  destroy iter
-  return result
+// // ============================================================================
+// /** Computes the average of a sequence of integer values. */
+// public function IEnumerable<int>.average() returns int
+//   let iter = this.iterator()
+//   var count = 0
+//   var result = 0
+//   while iter.hasNext()
+//     result += iter.next()
+//     count++
+//   if (count == 0)
+//     error("Sequence has no elements")
+//   result = R2I(result / count)
+//   destroy iter
+//   return result
 
-// ============================================================================
-/** Computes the average of a sequence of real values. */
-public function IEnumerable<real>.average() returns real
-  let iter = this.iterator()
-  var count = 0
-  var result = 0.0
-  while iter.hasNext()
-    result += iter.next()
-    count++
-  if (count == 0)
-    error("Sequence has no elements")
-  result = result / count
-  destroy iter
-  return result
+// // ============================================================================
+// /** Computes the average of a sequence of real values. */
+// public function IEnumerable<real>.average() returns real
+//   let iter = this.iterator()
+//   var count = 0
+//   var result = 0.0
+//   while iter.hasNext()
+//     result += iter.next()
+//     count++
+//   if (count == 0)
+//     error("Sequence has no elements")
+//   result = result / count
+//   destroy iter
+//   return result
 
-// ============================================================================
-/** Computes the average of a sequence of integer values that are obtained by invoking a transform function on each element of the input sequence. */
-public function IEnumerable<TSource>.average<TSource>(Func1<TSource, int> selector) returns int
-  let iter = this.iterator()
-  var count = 0
-  var result = 0
-  while iter.hasNext()
-    result += selector.call(iter.next())
-    count++
-  if (count == 0)
-    error("Sequence has no elements")
-  result = R2I(result / count)
-  destroy iter
-  destroy selector
-  return result
+// // ============================================================================
+// /** Computes the average of a sequence of integer values that are obtained by invoking a transform function on each element of the input sequence. */
+// public function IEnumerable<TSource>.average<TSource>(Func1<TSource, int> selector) returns int
+//   let iter = this.iterator()
+//   var count = 0
+//   var result = 0
+//   while iter.hasNext()
+//     result += selector.call(iter.next())
+//     count++
+//   if (count == 0)
+//     error("Sequence has no elements")
+//   result = R2I(result / count)
+//   destroy iter
+//   destroy selector
+//   return result
 
-// ============================================================================
-/** Computes the average of a sequence of real values that are obtained by invoking a transform function on each element of the input sequence. */
-public function IEnumerable<TSource>.average<TSource>(Func1<TSource, real> selector) returns real
-  let iter = this.iterator()
-  var count = 0
-  var result = 0.0
-  while iter.hasNext()
-    result += selector.call(iter.next())
-    count++
-  if (count == 0)
-    error("Sequence has no elements")
-  result = result / count
-  destroy iter
-  destroy selector
-  return result
+// // ============================================================================
+// /** Computes the average of a sequence of real values that are obtained by invoking a transform function on each element of the input sequence. */
+// public function IEnumerable<TSource>.average<TSource>(Func1<TSource, real> selector) returns real
+//   let iter = this.iterator()
+//   var count = 0
+//   var result = 0.0
+//   while iter.hasNext()
+//     result += selector.call(iter.next())
+//     count++
+//   if (count == 0)
+//     error("Sequence has no elements")
+//   result = result / count
+//   destroy iter
+//   destroy selector
+//   return result
 
-// ============================================================================
-/** Determines whether a sequence contains a specified element by using the default equality comparer. */
-public function IEnumerable<TSource>.contains<TSource>(TSource value) returns bool
-  let iter = this.iterator()
-  var result = false
-  while (iter.hasNext())
-    if (iter.next() == value)
-      result = true
-      break
-  destroy iter
-  return result
+// // ============================================================================
+// /** Determines whether a sequence contains a specified element by using the default equality comparer. */
+// public function IEnumerable<TSource>.contains<TSource>(TSource value) returns bool
+//   let iter = this.iterator()
+//   var result = false
+//   while (iter.hasNext())
+//     if (iter.next() == value)
+//       result = true
+//       break
+//   destroy iter
+//   return result
 
-// ============================================================================
-/** Determines whether a sequence contains a specified element by using a specified IEqualityComparer<T>. */
-public function IEnumerable<TSource>.contains<TSource>(TSource value, IEqualityComparer<TSource> comparer) returns bool
-  if (comparer == null)
-    argumentNullError("comparer")
-  let iter = this.iterator()
-  var result = false
-  while (iter.hasNext())
-    if (comparer.equals(iter.next(), value))
-      result = true
-      break
-  destroy iter
-  destroy comparer
-  return result
+// // ============================================================================
+// /** Determines whether a sequence contains a specified element by using a specified IEqualityComparer<T>. */
+// public function IEnumerable<TSource>.contains<TSource>(TSource value, IEqualityComparer<TSource> comparer) returns bool
+//   if (comparer == null)
+//     argumentNullError("comparer")
+//   let iter = this.iterator()
+//   var result = false
+//   while (iter.hasNext())
+//     if (comparer.equals(iter.next(), value))
+//       result = true
+//       break
+//   destroy iter
+//   destroy comparer
+//   return result
 
-// ============================================================================
-/** Returns the number of elements in a sequence. */
-public function IEnumerable<TSource>.count<TSource>() returns int
-  let iter = this.iterator()
-  var result = 0
-  while iter.hasNext()
-    result++
-  destroy iter
-  return result
+// // ============================================================================
+// /** Returns the number of elements in a sequence. */
+// public function IEnumerable<TSource>.count<TSource>() returns int
+//   let iter = this.iterator()
+//   var result = 0
+//   while iter.hasNext()
+//     result++
+//   destroy iter
+//   return result
 
-// ============================================================================
-/** Returns a number that represents how many elements in the specified sequence satisfy a condition. */
-public function IEnumerable<TSource>.count<TSource>(Predicate<TSource> predicate) returns int
-  if (predicate == null)
-    argumentNullError("predicate")
-  let iter = this.iterator()
-  var result = 0
-  while iter.hasNext()
-    if (predicate.call(iter.next()))
-      result++
-  destroy iter
-  destroy predicate
-  return result
+// // ============================================================================
+// /** Returns a number that represents how many elements in the specified sequence satisfy a condition. */
+// public function IEnumerable<TSource>.count<TSource>(Predicate<TSource> predicate) returns int
+//   if (predicate == null)
+//     argumentNullError("predicate")
+//   let iter = this.iterator()
+//   var result = 0
+//   while iter.hasNext()
+//     if (predicate.call(iter.next()))
+//       result++
+//   destroy iter
+//   destroy predicate
+//   return result
 
-// ============================================================================
-/** Returns the elements of the specified sequence or the specified value in a singleton collection if the sequence is empty. */
-public function IEnumerable<TSource>.defaultIfEmpty<TSource>(TSource defaultValue) returns IEnumerable<TSource>
-  let iter = this.iterator()
-  IEnumerable<TSource> result
-  if (not iter.hasNext())
-    result = new SingleElementEnumerable(defaultValue)
-  else
-    result = new EnumerableAdapter(this)
-  destroy iter
-  return result
+// // ============================================================================
+// /** Returns the elements of the specified sequence or the specified value in a singleton collection if the sequence is empty. */
+// public function IEnumerable<TSource>.defaultIfEmpty<TSource>(TSource defaultValue) returns IEnumerable<TSource>
+//   let iter = this.iterator()
+//   IEnumerable<TSource> result
+//   if (not iter.hasNext())
+//     result = new SingleElementEnumerable(defaultValue)
+//   else
+//     result = new EnumerableAdapter(this)
+//   destroy iter
+//   return result
 
-// ============================================================================
-/** Returns distinct elements from a sequence by using the default equality comparer to compare values. */
-public function IEnumerable<TSource>.distinct<TSource>() returns IEnumerable<TSource>
-  let result = new LinkedList<TSource>()
-  let hashSet = new HashList<TSource>()
+// // ============================================================================
+// /** Returns distinct elements from a sequence by using the default equality comparer to compare values. */
+// public function IEnumerable<TSource>.distinct<TSource>() returns IEnumerable<TSource>
+//   let result = new LinkedList<TSource>()
+//   let hashSet = new HashList<TSource>()
 
-  this.forEach() (TSource elem) ->
-    if (not hashSet.has(elem))
-      hashSet.add(elem)
-      result.add(elem)
+//   this.forEach() (TSource elem) ->
+//     if (not hashSet.has(elem))
+//       hashSet.add(elem)
+//       result.add(elem)
 
-  destroy hashSet
+//   destroy hashSet
   
-  return result.enumerate(true)
+//   return result.enumerate(true)
 
-// ============================================================================
-public function IEnumerable<TSource>.elementAt<TSource>(int index) returns TSource
-  let iter = this.iterator()
-  var i = 0
-  TSource result = 0 castTo TSource
-  while (iter.hasNext())
-    if (i == index)
-      result = iter.next()
-      break
-    i++
-  if (i != index)
-    error("Argument 'index' was out of range")
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<TSource>.elementAt<TSource>(int index) returns TSource
+//   let iter = this.iterator()
+//   var i = 0
+//   TSource result = 0 castTo TSource
+//   while (iter.hasNext())
+//     if (i == index)
+//       result = iter.next()
+//       break
+//     i++
+//   if (i != index)
+//     error("Argument 'index' was out of range")
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.first<TSource>() returns TSource
-  let iter = this.iterator()
-  if (not iter.hasNext())
-    error("Sequence contains no elements.")
-  let result = iter.next()
-  destroy iter
-  return result  
+// // ============================================================================
+// public function IEnumerable<TSource>.first<TSource>() returns TSource
+//   let iter = this.iterator()
+//   if (not iter.hasNext())
+//     error("Sequence contains no elements.")
+//   let result = iter.next()
+//   destroy iter
+//   return result  
 
-// ============================================================================
-public function IEnumerable<TSource>.firstOrDefault<TSource>() returns TSource
-  return this.firstOrDefault(null)
+// // ============================================================================
+// public function IEnumerable<TSource>.firstOrDefault<TSource>() returns TSource
+//   return this.firstOrDefault(null)
 
-// ============================================================================
-public function IEnumerable<TSource>.firstOrDefault<TSource>(TSource defaultValue) returns TSource
-  let iter = this.iterator()
-  TSource result = defaultValue
-  if (not iter.hasNext())
-    result = iter.next()
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<TSource>.firstOrDefault<TSource>(TSource defaultValue) returns TSource
+//   let iter = this.iterator()
+//   TSource result = defaultValue
+//   if (not iter.hasNext())
+//     result = iter.next()
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.last<TSource>() returns TSource
-  let iter = this.iterator()
-  if (not iter.hasNext())
-    error("Sequence contains no elements.")
-  TSource result = null
-  while (iter.hasNext())
-    result = iter.next()
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<TSource>.last<TSource>() returns TSource
+//   let iter = this.iterator()
+//   if (not iter.hasNext())
+//     error("Sequence contains no elements.")
+//   TSource result = null
+//   while (iter.hasNext())
+//     result = iter.next()
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.lastOrDefault<TSource>() returns TSource
-  return this.lastOrDefault(null)
+// // ============================================================================
+// public function IEnumerable<TSource>.lastOrDefault<TSource>() returns TSource
+//   return this.lastOrDefault(null)
 
-// ============================================================================
-public function IEnumerable<TSource>.lastOrDefault<TSource>(TSource defaultValue) returns TSource
-  let iter = this.iterator()
-  TSource result = defaultValue
-  while (iter.hasNext())
-    result = iter.next()
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<TSource>.lastOrDefault<TSource>(TSource defaultValue) returns TSource
+//   let iter = this.iterator()
+//   TSource result = defaultValue
+//   while (iter.hasNext())
+//     result = iter.next()
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.min<TSource>(Func1<TSource, int> selector) returns TSource
-  let iter = this.iterator()
-  var min = INT_MAX
-  var result = 0 castTo TSource
-  var hasElements = false
+// // ============================================================================
+// public function IEnumerable<TSource>.min<TSource>(Func1<TSource, int> selector) returns TSource
+//   let iter = this.iterator()
+//   var min = INT_MAX
+//   var result = 0 castTo TSource
+//   var hasElements = false
   
-  while (iter.hasNext())
-    hasElements = true
-    let element = iter.next()
-    let value = selector.call(element)
-    if (value < min)
-      min = value
-      result = element
+//   while (iter.hasNext())
+//     hasElements = true
+//     let element = iter.next()
+//     let value = selector.call(element)
+//     if (value < min)
+//       min = value
+//       result = element
 
-  if (not hasElements)
-    error("Sequence contains no elements.")
+//   if (not hasElements)
+//     error("Sequence contains no elements.")
 
-  destroy iter
-  destroy selector
+//   destroy iter
+//   destroy selector
 
-  return result
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.min<TSource>(Func1<TSource, real> selector) returns TSource
-  let iter = this.iterator()
-  var min = REAL_MAX
-  var result = 0 castTo TSource
-  var hasElements = false
+// // ============================================================================
+// public function IEnumerable<TSource>.min<TSource>(Func1<TSource, real> selector) returns TSource
+//   let iter = this.iterator()
+//   var min = REAL_MAX
+//   var result = 0 castTo TSource
+//   var hasElements = false
   
-  while (iter.hasNext())
-    hasElements = true
-    let element = iter.next()
-    let value = selector.call(element)
-    if (value < min)
-      min = value
-      result = element
+//   while (iter.hasNext())
+//     hasElements = true
+//     let element = iter.next()
+//     let value = selector.call(element)
+//     if (value < min)
+//       min = value
+//       result = element
 
-  if (not hasElements)
-    error("Sequence contains no elements.")
+//   if (not hasElements)
+//     error("Sequence contains no elements.")
 
-  destroy iter
-  destroy selector
+//   destroy iter
+//   destroy selector
 
-  return result
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.max<TSource>(Func1<TSource, int> selector) returns TSource
-  let iter = this.iterator()
-  var max = INT_MIN
-  var result = 0 castTo TSource
-  var hasElements = false
+// // ============================================================================
+// public function IEnumerable<TSource>.max<TSource>(Func1<TSource, int> selector) returns TSource
+//   let iter = this.iterator()
+//   var max = INT_MIN
+//   var result = 0 castTo TSource
+//   var hasElements = false
   
-  while (iter.hasNext())
-    hasElements = true
-    let element = iter.next()
-    let value = selector.call(element)
-    if (value > max)
-      max = value
-      result = element
+//   while (iter.hasNext())
+//     hasElements = true
+//     let element = iter.next()
+//     let value = selector.call(element)
+//     if (value > max)
+//       max = value
+//       result = element
 
-  if (not hasElements)
-    error("Sequence contains no elements.")
+//   if (not hasElements)
+//     error("Sequence contains no elements.")
 
-  destroy iter
-  destroy selector
+//   destroy iter
+//   destroy selector
 
-  return result
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.max<TSource>(Func1<TSource, real> selector) returns TSource
-  let iter = this.iterator()
-  var max = REAL_MIN
-  var result = 0 castTo TSource
-  var hasElements = false
+// // ============================================================================
+// public function IEnumerable<TSource>.max<TSource>(Func1<TSource, real> selector) returns TSource
+//   let iter = this.iterator()
+//   var max = REAL_MIN
+//   var result = 0 castTo TSource
+//   var hasElements = false
   
-  while (iter.hasNext())
-    hasElements = true
-    let element = iter.next()
-    let value = selector.call(element)
-    if (value > max)
-      max = value
-      result = element
+//   while (iter.hasNext())
+//     hasElements = true
+//     let element = iter.next()
+//     let value = selector.call(element)
+//     if (value > max)
+//       max = value
+//       result = element
 
-  if (not hasElements)
-    error("Sequence contains no elements.")
+//   if (not hasElements)
+//     error("Sequence contains no elements.")
 
-  destroy iter
-  destroy selector
+//   destroy iter
+//   destroy selector
 
-  return result
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.select<TSource, TResult>(Func1<TSource, TResult> selector) returns IEnumerable<TResult>
-  return new TransformEnumerable(this, selector)
+// // ============================================================================
+// public function IEnumerable<TSource>.select<TSource, TResult>(Func1<TSource, TResult> selector) returns IEnumerable<TResult>
+//   return new TransformEnumerable(this, selector)
 
-// ============================================================================
-public function IEnumerable<TSource>.selectMany<TSource, TResult>(Func1<TSource, IEnumerable<TResult>> selector) returns IEnumerable<TResult>
-  return new TransformManyEnumerable(this, selector)
+// // ============================================================================
+// public function IEnumerable<TSource>.selectMany<TSource, TResult>(Func1<TSource, IEnumerable<TResult>> selector) returns IEnumerable<TResult>
+//   return new TransformManyEnumerable(this, selector)
 
-// ============================================================================
-public function IEnumerable<TSource>.single<TSource>() returns TSource
-  let iter = this.iterator()
-  if (not iter.hasNext())
-    error("Sequence contains no elements.")
-  let result = iter.next()
-  if (iter.hasNext())
-    error("Sequence contains more than one element.")
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<TSource>.single<TSource>() returns TSource
+//   let iter = this.iterator()
+//   if (not iter.hasNext())
+//     error("Sequence contains no elements.")
+//   let result = iter.next()
+//   if (iter.hasNext())
+//     error("Sequence contains more than one element.")
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.singleOrDefault<TSource>() returns TSource
-  return this.singleOrDefault(null)
+// // ============================================================================
+// public function IEnumerable<TSource>.singleOrDefault<TSource>() returns TSource
+//   return this.singleOrDefault(null)
 
-// ============================================================================
-public function IEnumerable<TSource>.singleOrDefault<TSource>(TSource defaultValue) returns TSource
-  let iter = this.iterator()
-  // If sequence has no elements return defaultValue
-  TSource result = defaultValue
-  // If sequence has one element return it
-  if (iter.hasNext())
-    result = iter.next()
-  // If sequence has more than one element return defaultValue
-  if (iter.hasNext())
-    result = defaultValue
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<TSource>.singleOrDefault<TSource>(TSource defaultValue) returns TSource
+//   let iter = this.iterator()
+//   // If sequence has no elements return defaultValue
+//   TSource result = defaultValue
+//   // If sequence has one element return it
+//   if (iter.hasNext())
+//     result = iter.next()
+//   // If sequence has more than one element return defaultValue
+//   if (iter.hasNext())
+//     result = defaultValue
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.skipN<TSource>(int count) returns IEnumerable<TSource>
-  return new SkipEnumerable(this, count)
+// // ============================================================================
+// public function IEnumerable<TSource>.skipN<TSource>(int count) returns IEnumerable<TSource>
+//   return new SkipEnumerable(this, count)
 
-// ============================================================================
-public function IEnumerable<int>.sum() returns int
-  let iter = this.iterator()
-  var result = 0
-  while iter.hasNext()
-    result += iter.next()
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<int>.sum() returns int
+//   let iter = this.iterator()
+//   var result = 0
+//   while iter.hasNext()
+//     result += iter.next()
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<real>.sum() returns real
-  let iter = this.iterator()
-  var result = 0.0
-  while iter.hasNext()
-    result += iter.next()
-  destroy iter
-  return result
+// // ============================================================================
+// public function IEnumerable<real>.sum() returns real
+//   let iter = this.iterator()
+//   var result = 0.0
+//   while iter.hasNext()
+//     result += iter.next()
+//   destroy iter
+//   return result
 
-// ============================================================================
-public function IEnumerable<TSource>.take<TSource>(int count) returns IEnumerable<TSource>
-  return new SkipEnumerable(this, count)
+// // ============================================================================
+// public function IEnumerable<TSource>.take<TSource>(int count) returns IEnumerable<TSource>
+//   return new SkipEnumerable(this, count)
 
-// ============================================================================
-public function IEnumerable<TSource>.where<TSource>(Predicate<TSource> predicate) returns IEnumerable<TSource>
-  return new PredicateEnumerable(this, predicate)
+// // ============================================================================
+// public function IEnumerable<TSource>.where<TSource>(Predicate<TSource> predicate) returns IEnumerable<TSource>
+//   return new PredicateEnumerable(this, predicate)
 
-// ============================================================================
-/*
-
-
-
-
-        Linq Enumerable implementations
+// // ============================================================================
+// /*
 
 
 
 
-*/
-// ============================================================================
+//         Linq Enumerable implementations
 
-// ============================================================================
-class EmptyEnumerable<T> implements IEnumerable<T>
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<T>
-    return new EmptyEnumerator<T>()
 
-// ============================================================================
-class EmptyEnumerator<T> implements IEnumerator<T>
 
-  // --------------------------------------------------------------------------
-  override function hasNext() returns bool
-    return false
 
-  // --------------------------------------------------------------------------
-  override function next() returns T
-    return null
+// */
+// // ============================================================================
 
-// ============================================================================
-class SingleElementEnumerable<T> implements IEnumerable<T>
-  private T _element
+// // ============================================================================
+// class EmptyEnumerable<T> implements IEnumerable<T>
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<T>
+//     return new EmptyEnumerator<T>()
 
-  // --------------------------------------------------------------------------
-  construct(T element)
-    _element = element
+// // ============================================================================
+// class EmptyEnumerator<T> implements IEnumerator<T>
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<T>
-    return new SingleElementEnumerator<T>(_element)
+//   // --------------------------------------------------------------------------
+//   override function hasNext() returns bool
+//     return false
 
-// ============================================================================
-class SingleElementEnumerator<T> implements IEnumerator<T>
-  private T _element
-  private bool _done
+//   // --------------------------------------------------------------------------
+//   override function next() returns T
+//     return null
 
-  // --------------------------------------------------------------------------
-  construct (T element)
-    _element = element
-    _done = false
+// // ============================================================================
+// class SingleElementEnumerable<T> implements IEnumerable<T>
+//   private T _element
 
-  // --------------------------------------------------------------------------
-  override function hasNext() returns bool
-    return not _done
+//   // --------------------------------------------------------------------------
+//   construct(T element)
+//     _element = element
 
-  // --------------------------------------------------------------------------
-  override function next() returns T
-    if (_done)
-      return null
-    _done = true
-    return _element
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<T>
+//     return new SingleElementEnumerator<T>(_element)
 
-// ============================================================================
-class EnumerableAdapter<T> implements IEnumerable<T>
-  private IEnumerable<T> _child
+// // ============================================================================
+// class SingleElementEnumerator<T> implements IEnumerator<T>
+//   private T _element
+//   private bool _done
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerable<T> child)
-    _child = child
+//   // --------------------------------------------------------------------------
+//   construct (T element)
+//     _element = element
+//     _done = false
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
+//   // --------------------------------------------------------------------------
+//   override function hasNext() returns bool
+//     return not _done
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<T>
-    return _child.iterator()
+//   // --------------------------------------------------------------------------
+//   override function next() returns T
+//     if (_done)
+//       return null
+//     _done = true
+//     return _element
 
-// ============================================================================
-class TransformEnumerable<TSource, TResult> implements IEnumerable<TResult>
-  protected IEnumerable<TSource> _child
-  private Func1<TSource, TResult> _transform
+// // ============================================================================
+// class EnumerableAdapter<T> implements IEnumerable<T>
+//   private IEnumerable<T> _child
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerable<TSource> child, Func1<TSource, TResult> transform)
-    if (child == null)
-      argumentNullError("child")
-    if (transform == null)
-      argumentNullError("transform")
-    _child = child
-    _transform = transform
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerable<T> child)
+//     _child = child
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
-    destroy _transform
-    _transform = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<TResult>
-    return new TransformEnumerator(_child.iterator(), _transform)
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<T>
+//     return _child.iterator()
 
-// ============================================================================
-class TransformEnumerator<TSource, TResult> implements IEnumerator<TResult>
-  protected IEnumerator<TSource> _child
-  private Func1<TSource, TResult> _transform
+// // ============================================================================
+// class TransformEnumerable<TSource, TResult> implements IEnumerable<TResult>
+//   protected IEnumerable<TSource> _child
+//   private Func1<TSource, TResult> _transform
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerator<TSource> child, Func1<TSource, TResult> transform)
-    if (child == null)
-      argumentNullError("child")
-    if (transform == null)
-      argumentNullError("transform")
-    _child = child
-    _transform = transform
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerable<TSource> child, Func1<TSource, TResult> transform)
+//     if (child == null)
+//       argumentNullError("child")
+//     if (transform == null)
+//       argumentNullError("transform")
+//     _child = child
+//     _transform = transform
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
-    _transform = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
+//     destroy _transform
+//     _transform = null
 
-  // --------------------------------------------------------------------------
-  override function hasNext() returns bool
-    return _child.hasNext()
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<TResult>
+//     return new TransformEnumerator(_child.iterator(), _transform)
 
-  // --------------------------------------------------------------------------
-  override function next() returns TResult
-    return _transform.call(_child.next())
+// // ============================================================================
+// class TransformEnumerator<TSource, TResult> implements IEnumerator<TResult>
+//   protected IEnumerator<TSource> _child
+//   private Func1<TSource, TResult> _transform
 
-// ============================================================================
-class TransformManyEnumerable<TSource, TResult> implements IEnumerable<TResult>
-  protected IEnumerable<TSource> _child
-  private Func1<TSource, IEnumerable<TResult>> _transform
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerator<TSource> child, Func1<TSource, TResult> transform)
+//     if (child == null)
+//       argumentNullError("child")
+//     if (transform == null)
+//       argumentNullError("transform")
+//     _child = child
+//     _transform = transform
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerable<TSource> child, Func1<TSource, IEnumerable<TResult>> transform)
-    if (child == null)
-      argumentNullError("child")
-    if (transform == null)
-      argumentNullError("transform")
-    _child = child
-    _transform = transform
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
+//     _transform = null
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
-    destroy _transform
-    _transform = null
+//   // --------------------------------------------------------------------------
+//   override function hasNext() returns bool
+//     return _child.hasNext()
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<TResult>
-    return new TransformManyEnumerator(_child.iterator(), _transform)
+//   // --------------------------------------------------------------------------
+//   override function next() returns TResult
+//     return _transform.call(_child.next())
+
+// // ============================================================================
+// class TransformManyEnumerable<TSource, TResult> implements IEnumerable<TResult>
+//   protected IEnumerable<TSource> _child
+//   private Func1<TSource, IEnumerable<TResult>> _transform
+
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerable<TSource> child, Func1<TSource, IEnumerable<TResult>> transform)
+//     if (child == null)
+//       argumentNullError("child")
+//     if (transform == null)
+//       argumentNullError("transform")
+//     _child = child
+//     _transform = transform
+
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
+//     destroy _transform
+//     _transform = null
+
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<TResult>
+//     return new TransformManyEnumerator(_child.iterator(), _transform)
     
-// ============================================================================
-class TransformManyEnumerator<TSource, TResult> implements IEnumerator<TResult>
-  protected IEnumerator<TSource> _child
-  private Func1<TSource, IEnumerable<TResult>> _transform
-  private IEnumerable<TResult> _currentEnumerable
-  private IEnumerator<TResult> _currentEnumerator
+// // ============================================================================
+// class TransformManyEnumerator<TSource, TResult> implements IEnumerator<TResult>
+//   protected IEnumerator<TSource> _child
+//   private Func1<TSource, IEnumerable<TResult>> _transform
+//   private IEnumerable<TResult> _currentEnumerable
+//   private IEnumerator<TResult> _currentEnumerator
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerator<TSource> child, Func1<TSource, IEnumerable<TResult>> transform)
-    if (child == null)
-      argumentNullError("child")
-    if (transform == null)
-      argumentNullError("transform")
-    _child = child
-    _transform = transform
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerator<TSource> child, Func1<TSource, IEnumerable<TResult>> transform)
+//     if (child == null)
+//       argumentNullError("child")
+//     if (transform == null)
+//       argumentNullError("transform")
+//     _child = child
+//     _transform = transform
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
-    _transform = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
+//     _transform = null
 
-    if (_currentEnumerator != null)
-      destroy _currentEnumerator
-      _currentEnumerator = null
+//     if (_currentEnumerator != null)
+//       destroy _currentEnumerator
+//       _currentEnumerator = null
 
-    if (_currentEnumerable != null)
-      destroy _currentEnumerable
-      _currentEnumerable = null
+//     if (_currentEnumerable != null)
+//       destroy _currentEnumerable
+//       _currentEnumerable = null
 
-  // --------------------------------------------------------------------------
-  override function hasNext() returns bool
-    if (_currentEnumerator != null)
-      if (_currentEnumerator.hasNext())
-        return true
-      else
-        destroy _currentEnumerator
-        _currentEnumerator = null
-        destroy _currentEnumerable    
-        _currentEnumerable = null
+//   // --------------------------------------------------------------------------
+//   override function hasNext() returns bool
+//     if (_currentEnumerator != null)
+//       if (_currentEnumerator.hasNext())
+//         return true
+//       else
+//         destroy _currentEnumerator
+//         _currentEnumerator = null
+//         destroy _currentEnumerable    
+//         _currentEnumerable = null
 
-    while (_child.hasNext())
-      _currentEnumerable = _transform.call(_child.next())
-      if (_currentEnumerable == null)
-        error("Cannot enumerate null object")
-      _currentEnumerator = _currentEnumerable.iterator()
-      if (_currentEnumerator.hasNext())
-        break
+//     while (_child.hasNext())
+//       _currentEnumerable = _transform.call(_child.next())
+//       if (_currentEnumerable == null)
+//         error("Cannot enumerate null object")
+//       _currentEnumerator = _currentEnumerable.iterator()
+//       if (_currentEnumerator.hasNext())
+//         break
 
-    return _currentEnumerator != null and _currentEnumerator.hasNext()
+//     return _currentEnumerator != null and _currentEnumerator.hasNext()
 
-  // --------------------------------------------------------------------------
-  override function next() returns TResult
-    return _currentEnumerator.next()
+//   // --------------------------------------------------------------------------
+//   override function next() returns TResult
+//     return _currentEnumerator.next()
 
-// ============================================================================
-class SkipEnumerable<T> implements IEnumerable<T>
-  private IEnumerable<T> _child
-  private int _count
+// // ============================================================================
+// class SkipEnumerable<T> implements IEnumerable<T>
+//   private IEnumerable<T> _child
+//   private int _count
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerable<T> child, int count)
-    _child = child
-    _count = count
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerable<T> child, int count)
+//     _child = child
+//     _count = count
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<T>
-    let iter = _child.iterator()
-    let index = 0
-    while (iter.hasNext() and index < _count)
-      iter.next()
-    return iter
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<T>
+//     let iter = _child.iterator()
+//     let index = 0
+//     while (iter.hasNext() and index < _count)
+//       iter.next()
+//     return iter
 
-// ============================================================================
-class TakeEnumerable<T> implements IEnumerable<T>
-  private IEnumerable<T> _child
-  private int _count
+// // ============================================================================
+// class TakeEnumerable<T> implements IEnumerable<T>
+//   private IEnumerable<T> _child
+//   private int _count
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerable<T> child, int count)
-    _child = child
-    _count = count
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerable<T> child, int count)
+//     _child = child
+//     _count = count
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<T>
-    return new TakeEnumerator(_child.iterator(), _count)
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<T>
+//     return new TakeEnumerator(_child.iterator(), _count)
 
-// ============================================================================
-class TakeEnumerator<TSource> implements IEnumerator<TSource>
-  protected IEnumerator<TSource> _child
-  private int _count
-  private int _index
+// // ============================================================================
+// class TakeEnumerator<TSource> implements IEnumerator<TSource>
+//   protected IEnumerator<TSource> _child
+//   private int _count
+//   private int _index
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerator<TSource> child, int count)
-    if (child == null)
-      argumentNullError("child")
-    _child = child
-    _count = count
-    _index = 0
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerator<TSource> child, int count)
+//     if (child == null)
+//       argumentNullError("child")
+//     _child = child
+//     _count = count
+//     _index = 0
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
 
-  // --------------------------------------------------------------------------
-  override function hasNext() returns bool
-    if (_index >= _count)
-      return false
-    return _child.hasNext()
+//   // --------------------------------------------------------------------------
+//   override function hasNext() returns bool
+//     if (_index >= _count)
+//       return false
+//     return _child.hasNext()
 
-  // --------------------------------------------------------------------------
-  override function next() returns TSource
-    if (_index >= _count)
-      return null
-    _index++
-    return _child.next()
+//   // --------------------------------------------------------------------------
+//   override function next() returns TSource
+//     if (_index >= _count)
+//       return null
+//     _index++
+//     return _child.next()
     
-// ============================================================================
-class PredicateEnumerable<TSource> implements IEnumerable<TSource>
-  private IEnumerable<TSource> _child
-  private Predicate<TSource> _predicate
+// // ============================================================================
+// class PredicateEnumerable<TSource> implements IEnumerable<TSource>
+//   private IEnumerable<TSource> _child
+//   private Predicate<TSource> _predicate
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerable<TSource> child, Predicate<TSource> predicate)
-    if (child == null)
-      argumentNullError("child")
-    if (predicate == null)
-      argumentNullError("predicate")
-    _child = child
-    _predicate = predicate
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerable<TSource> child, Predicate<TSource> predicate)
+//     if (child == null)
+//       argumentNullError("child")
+//     if (predicate == null)
+//       argumentNullError("predicate")
+//     _child = child
+//     _predicate = predicate
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
-    destroy _predicate
-    _predicate = null
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
+//     destroy _predicate
+//     _predicate = null
 
-  // --------------------------------------------------------------------------
-  override function iterator() returns IEnumerator<TSource>
-    return new PredicateEnumerator(_child.iterator(), _predicate)
+//   // --------------------------------------------------------------------------
+//   override function iterator() returns IEnumerator<TSource>
+//     return new PredicateEnumerator(_child.iterator(), _predicate)
     
-// ============================================================================
-class PredicateEnumerator<TSource> implements IEnumerator<TSource>
-  private IEnumerator<TSource> _child
-  private Predicate<TSource> _predicate
-  private TSource _next
+// // ============================================================================
+// class PredicateEnumerator<TSource> implements IEnumerator<TSource>
+//   private IEnumerator<TSource> _child
+//   private Predicate<TSource> _predicate
+//   private TSource _next
 
-  // --------------------------------------------------------------------------
-  construct(IEnumerator<TSource> child, Predicate<TSource> predicate)
-    if (child == null)
-      argumentNullError("child")
-    if (predicate == null)
-      argumentNullError("predicate")
-    _child = child
-    _predicate = predicate
-    _next = 0 castTo TSource
+//   // --------------------------------------------------------------------------
+//   construct(IEnumerator<TSource> child, Predicate<TSource> predicate)
+//     if (child == null)
+//       argumentNullError("child")
+//     if (predicate == null)
+//       argumentNullError("predicate")
+//     _child = child
+//     _predicate = predicate
+//     _next = 0 castTo TSource
 
-  // --------------------------------------------------------------------------
-  ondestroy
-    destroy _child
-    _child = null
-    _predicate = null
-    _next = 0 castTo TSource
+//   // --------------------------------------------------------------------------
+//   ondestroy
+//     destroy _child
+//     _child = null
+//     _predicate = null
+//     _next = 0 castTo TSource
 
-  // --------------------------------------------------------------------------
-  override function hasNext() returns bool
-    var retVal = false
-    while (_child.hasNext())
-      let next = _child.next()
-      if (_predicate.call(next))
-        _next = next
-        retVal = true
-        break
-    return retVal
+//   // --------------------------------------------------------------------------
+//   override function hasNext() returns bool
+//     var retVal = false
+//     while (_child.hasNext())
+//       let next = _child.next()
+//       if (_predicate.call(next))
+//         _next = next
+//         retVal = true
+//         break
+//     return retVal
 
-  // --------------------------------------------------------------------------
-  override function next() returns TSource
-    return _next
+//   // --------------------------------------------------------------------------
+//   override function next() returns TSource
+//     return _next

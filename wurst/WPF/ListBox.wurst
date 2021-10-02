@@ -10,7 +10,7 @@ import Range
 // ============================================================================
 public class ListBox extends Panel
   private LayoutOrientation m_orientation = LayoutOrientation.TOPTOBOTTOM
-  private Vector<object> m_itemsSource
+  private Vector<ObjectRef> m_itemsSource
   private FrameTemplate m_itemFrameTemplate
   private Frame m_scrollBar
   private Vector<Frame> m_itemFrames
@@ -53,11 +53,11 @@ public class ListBox extends Panel
       m_needsRebuild = true
 
   // --------------------------------------------------------------------------
-  function getItemsSource() returns Vector<object>
+  function getItemsSource() returns Vector<ObjectRef>
     return m_itemsSource
 
   // --------------------------------------------------------------------------
-  function setItemsSource(Vector<object> itemsSource)
+  function setItemsSource(Vector<ObjectRef> itemsSource)
     if (m_itemsSource != itemsSource)
       m_itemsSource = itemsSource
       onItemSourceChanged()
@@ -88,7 +88,7 @@ public class ListBox extends Panel
       ..setWidth(0.012)
       ..setHeight(0.012)
       ..initialize()
-      ..hide()
+      ..setVisibility(FrameVisibility.HIDDEN)
     addLogicalChild(m_scrollBar)
   
   // --------------------------------------------------------------------------
@@ -246,7 +246,7 @@ public class ListBox extends Panel
       invalidateMeasure()
       invalidateArrange()
       updateViewport()
-      m_scrollBar.setIsVisible(m_showScrollbar)
+      m_scrollBar.setVisibility(m_showScrollbar ? FrameVisibility.VISIBLE : FrameVisibility.COLLAPSED)
       m_scrollingBackdrop.setVisible(m_showScrollbar)
 
   // --------------------------------------------------------------------------
@@ -260,10 +260,10 @@ public class ListBox extends Panel
       let childFrame = m_itemFrames.getItem(i)
       let itemIndex = viewportStart + i
       if (itemIndex < itemSourceCount)
-        childFrame.setDataContext(m_itemsSource.getItem(itemIndex))
-        childFrame.show()
+        childFrame.setDataContext(m_itemsSource.getItem(itemIndex).getObject())
+        childFrame.setVisibility(FrameVisibility.VISIBLE)
       else
-        childFrame.hide()
+        childFrame.setVisibility(FrameVisibility.COLLAPSED)
 
   // --------------------------------------------------------------------------
   private function onMouseWheel()
