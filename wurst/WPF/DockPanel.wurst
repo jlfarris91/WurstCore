@@ -1,0 +1,97 @@
+package DockPanel
+import Panel
+import DockLayout
+import Layout
+import Frame
+
+constant DOCK_FILL = Dock.FILL castTo int
+constant DOCK_LEFT = Dock.LEFT castTo int
+constant DOCK_RIGHT = Dock.RIGHT castTo int
+constant DOCK_BOTTOM = Dock.BOTTOM castTo int
+constant DOCK_TOP = Dock.TOP castTo int
+
+// ============================================================================
+public class DockPanel extends Panel
+  private DockLayout m_layout = new DockLayout()
+  private vec2 array[5] m_measuredDockSizes
+
+  // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+
+    let panelArea = rectr(ZERO2, availableSize)
+
+    m_layout.reset(panelArea)
+
+    m_measuredDockSizes[DOCK_FILL] = ZERO2
+    m_measuredDockSizes[DOCK_LEFT] = ZERO2
+    m_measuredDockSizes[DOCK_RIGHT] = ZERO2
+    m_measuredDockSizes[DOCK_BOTTOM] = ZERO2
+    m_measuredDockSizes[DOCK_TOP] = ZERO2
+
+    for child in m_children
+    //{
+      child.measure(availableSize)
+      if (child.getVisibility() != FrameVisibility.COLLAPSED)
+      //{
+        let dock = child.getDock()
+        let childDesiredSize = child.getDesiredSize()
+        switch (dock)
+          case FILL
+            m_measuredDockSizes[DOCK_FILL].x = max(m_measuredDockSizes[DOCK_FILL].x, childDesiredSize.x)
+            m_measuredDockSizes[DOCK_FILL].y = max(m_measuredDockSizes[DOCK_FILL].y, childDesiredSize.y)
+          case LEFT
+            m_measuredDockSizes[DOCK_LEFT].x = max(m_measuredDockSizes[DOCK_LEFT].x, childDesiredSize.x)
+          case RIGHT
+            m_measuredDockSizes[DOCK_RIGHT].x = max(m_measuredDockSizes[DOCK_RIGHT].x, childDesiredSize.x)
+          case BOTTOM
+            m_measuredDockSizes[DOCK_BOTTOM].y = max(m_measuredDockSizes[DOCK_BOTTOM].y, childDesiredSize.y)
+          case TOP
+            m_measuredDockSizes[DOCK_TOP].y = max(m_measuredDockSizes[DOCK_TOP].y, childDesiredSize.y)
+      //}
+    //}
+
+    let availableFillSpaceX = max(availableSize.x - (m_measuredDockSizes[DOCK_LEFT].x + m_measuredDockSizes[DOCK_RIGHT].x), 0)
+    m_measuredDockSizes[DOCK_FILL].x = max(min(m_measuredDockSizes[DOCK_FILL].x, availableFillSpaceX), 0)
+
+    let availableFillSpaceY = max(availableSize.y - (m_measuredDockSizes[DOCK_BOTTOM].y + m_measuredDockSizes[DOCK_TOP].y), 0)
+    m_measuredDockSizes[DOCK_FILL].y = max(min(m_measuredDockSizes[DOCK_FILL].y, availableFillSpaceY), 0)
+
+    let desiredDockPanelSizeX = m_measuredDockSizes[DOCK_LEFT].x + m_measuredDockSizes[DOCK_RIGHT].x + m_measuredDockSizes[DOCK_FILL].x
+    let desiredDockPanelSizeY = m_measuredDockSizes[DOCK_BOTTOM].y + m_measuredDockSizes[DOCK_TOP].y + m_measuredDockSizes[DOCK_FILL].y
+
+    return vec2(desiredDockPanelSizeX, desiredDockPanelSizeY)
+
+  // --------------------------------------------------------------------------
+  override function arrangeOverride(vec2 arrangeSize) returns vec2
+
+    let left = m_measuredDockSizes[DOCK_LEFT].x
+    let right = m_measuredDockSizes[DOCK_LEFT].x
+    let bottom = m_measuredDockSizes[DOCK_BOTTOM].y
+    let top = m_measuredDockSizes[DOCK_TOP].y
+
+    let rectPanel = rectr(ZERO2, arrangeSize)
+    let rectLeft = rectPanel.setRight(left)
+    let rectRight = rectPanel.setLeft(rectPanel.right() - right)
+    let rectBottom = rectPanel.setTop(bottom)
+    let rectTop = rectPanel.setBottom(rectPanel.top() - top)
+    let rectFill = rectPanel.setBottomLeft(vec2(left, bottom)).setTopRight(vec2(right, top))
+
+    for child in m_children
+    //{
+      let dock = child.getDock()
+      switch (dock)
+        case FILL
+          child.arrange(rectFill)
+        case LEFT
+          child.arrange(rectLeft)
+        case RIGHT
+          child.arrange(rectRight)
+        case BOTTOM
+          child.arrange(rectBottom)
+        case TOP
+          child.arrange(rectTop)      
+    //}
+    
+    return arrangeSize
+
+  

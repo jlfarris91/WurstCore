@@ -55,6 +55,7 @@ public class Frame
 
   private player m_player
   private bool m_initialized
+  private framepointtype m_origin = FRAMEPOINT_BOTTOMLEFT
   private vec2 m_size
   private vec2 m_desiredSize
   private vec2 m_minSize = vec2(0.001, 0.001)
@@ -144,7 +145,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function initializeRoot(rectr area)
-    let pos = area.bottomLeft()
+    let pos = area.getFramePoint(m_origin)
     let size = area.size()
     initialize()
     setLocalPos(pos)
@@ -316,7 +317,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getLocalPos() returns vec2
-    return m_finalRect.bottomLeft()
+    return m_finalRect.getFramePointOffset(m_origin)
 
   // --------------------------------------------------------------------------
   function setLocalPos(vec2 pos)
@@ -405,12 +406,18 @@ public class Frame
     m_handle.clearFocus()
 
   // --------------------------------------------------------------------------
+  function setOrigin(framepointtype value)
+    if (m_origin != value)
+      m_origin = value
+      invalidateArrange()
+
+  // --------------------------------------------------------------------------
   private function updateFramePositionAndSize()
     m_handle.clearAllPoints()
     if (m_parent != null)
-      m_handle.setPoint(FRAMEPOINT_BOTTOMLEFT, m_parent.m_handle, FRAMEPOINT_BOTTOMLEFT, m_finalRect.bottomLeft())
+      m_handle.setPoint(m_origin, m_parent.m_handle, m_origin, m_finalRect.getFramePointOffset(m_origin))
     else
-      m_handle.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, m_finalRect.bottomLeft())
+      m_handle.setAbsPoint(m_origin, m_finalRect.getFramePointOffset(m_origin))
     m_handle.setWidth(m_finalRect.width)
     m_handle.setHeight(m_finalRect.height)
 
@@ -552,8 +559,10 @@ public class Frame
 
     m_finalRect = finalRect
 
-    m_finalRect.x += m_margin.left
-    m_finalRect.y += m_margin.bottom
+    let marginOffset = m_margin.getFramePointOffset(m_origin)
+
+    m_finalRect.x += marginOffset.x
+    m_finalRect.y += marginOffset.y
     m_finalRect.width = finalSize.x
     m_finalRect.height = finalSize.y
 
@@ -653,3 +662,66 @@ public class FrameTemplate implements IFrameTemplate
     if (m_initializer != null)
       m_initializer.call(frame)
     return frame
+
+// ============================================================================
+function rectr.getFramePoint(framepointtype value) returns vec2
+  if (value == FRAMEPOINT_LEFT)
+    return vec2(this.left(), 0)
+  if (value == FRAMEPOINT_RIGHT)
+    return vec2(this.right(), 0)
+  if (value == FRAMEPOINT_BOTTOM)
+    return vec2(0, this.bottom())
+  if (value == FRAMEPOINT_TOP)
+    return vec2(0, this.top())
+  if (value == FRAMEPOINT_BOTTOMLEFT)
+    return this.bottomLeft()
+  if (value == FRAMEPOINT_BOTTOMRIGHT)
+    return this.bottomRight()
+  if (value == FRAMEPOINT_TOPLEFT)
+    return this.topLeft()
+  if (value == FRAMEPOINT_TOPRIGHT)
+    return this.topRight()
+  else
+    return this.center()
+
+// ============================================================================
+function rectr.getFramePointOffset(framepointtype value) returns vec2
+  if (value == FRAMEPOINT_LEFT)
+    return vec2(this.x, 0)
+  if (value == FRAMEPOINT_RIGHT)
+    return vec2(-this.x, 0)
+  if (value == FRAMEPOINT_BOTTOM)
+    return vec2(0, this.y)
+  if (value == FRAMEPOINT_TOP)
+    return vec2(0, -this.y)
+  if (value == FRAMEPOINT_BOTTOMLEFT)
+    return vec2(this.x, this.y)
+  if (value == FRAMEPOINT_BOTTOMRIGHT)
+    return vec2(-this.x, this.y)
+  if (value == FRAMEPOINT_TOPLEFT)
+    return vec2(this.x, -this.y)
+  if (value == FRAMEPOINT_TOPRIGHT)
+    return vec2(-this.x, -this.y)
+  else
+    return this.center()
+
+// ============================================================================
+function thickness.getFramePointOffset(framepointtype value) returns vec2
+  if (value == FRAMEPOINT_LEFT)
+    return vec2(this.left, 0)
+  if (value == FRAMEPOINT_RIGHT)
+    return vec2(-this.right, 0)
+  if (value == FRAMEPOINT_BOTTOM)
+    return vec2(0, this.bottom)
+  if (value == FRAMEPOINT_TOP)
+    return vec2(0, -this.top)
+  if (value == FRAMEPOINT_BOTTOMLEFT)
+    return vec2(this.left, this.bottom)
+  if (value == FRAMEPOINT_BOTTOMRIGHT)
+    return vec2(-this.right, this.bottom)
+  if (value == FRAMEPOINT_TOPLEFT)
+    return vec2(this.left, -this.top)
+  if (value == FRAMEPOINT_TOPRIGHT)
+    return vec2(-this.right, -this.top)
+  else
+    return ZERO2

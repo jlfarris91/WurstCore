@@ -1,0 +1,26 @@
+package WrapPanel
+import Panel
+import Layout
+
+// ============================================================================
+public class WrapPanel extends Panel
+  private LayoutOrientation m_orientation
+
+  // --------------------------------------------------------------------------
+  function getLayoutOrientation() returns LayoutOrientation
+    return m_orientation
+
+  // --------------------------------------------------------------------------
+  function setLayoutOrientation(LayoutOrientation value)
+    if (m_orientation != value)
+      m_orientation = value
+      invalidateArrange()
+
+
+  // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+    return availableSize
+
+  // --------------------------------------------------------------------------
+  override function arrangeOverride(vec2 arrangeSize) returns vec2
+    return arrangeSize

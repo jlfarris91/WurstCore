@@ -105,6 +105,12 @@ public class Grid implements IGrid
     return span(min, max)
 
   // --------------------------------------------------------------------------
+  function getArea(bounds bounds) returns span
+    let min = getCell(bounds.min)
+    let max = getCell(bounds.max)
+    return span(min, max)
+
+  // --------------------------------------------------------------------------
   private function getCellFromLocalPos(vec2 localPos) returns cell
     let x = clamp(R2I(localPos.x / _cellSize.x), 0, _width - 1)
     let y = clamp(R2I(localPos.y / _cellSize.y), 0, _height - 1)    

@@ -11,6 +11,14 @@ public function rectr(vec2 pos, vec2 size) returns rectr
   return rectr(pos.x, pos.y, size.x, size.y)
 
 // ============================================================================
+public function rectrFromExtents(real minX, real minY, real maxX, real maxY) returns rectr
+  return rectr(minX, minY, maxX - minX, maxY - minY)
+
+// ============================================================================
+public function rectrFromExtents(vec2 min, vec2 max) returns rectr
+  return rectr(min.x, min.y, max.x - min.x, max.y - min.y)
+
+// ============================================================================
 public function thickness(real all) returns thickness
   return thickness(all, all, all, all)
 
@@ -77,6 +85,38 @@ public function rectr.bottomLeft() returns vec2
 // ============================================================================
 public function rectr.bottomRight() returns vec2
   return vec2(this.right(), this.bottom())
+  
+// ============================================================================
+public function rectr.setLeft(real value) returns rectr
+  return rectr(value, this.y, this.width + (this.x - value), this.height)
+  
+// ============================================================================
+public function rectr.setRight(real value) returns rectr
+  return rectr(this.x, this.y, value - this.x, this.height)
+  
+// ============================================================================
+public function rectr.setBottom(real value) returns rectr
+  return rectr(this.x, value, this.width, this.height + (this.y - value))
+  
+// ============================================================================
+public function rectr.setTop(real value) returns rectr
+  return rectr(this.x, this.y, this.width, value - this.y)
+
+// ============================================================================
+public function rectr.setTopLeft(vec2 value) returns rectr
+  return this.setLeft(value.x).setTop(value.y)
+
+// ============================================================================
+public function rectr.setTopRight(vec2 value) returns rectr
+  return this.setRight(value.x).setTop(value.y)
+
+// ============================================================================
+public function rectr.setBottomLeft(vec2 value) returns rectr
+  return this.setLeft(value.x).setBottom(value.y)
+
+// ============================================================================
+public function rectr.setBottomRight(vec2 value) returns rectr
+  return this.setRight(value.x).setBottom(value.y)
 
 // ============================================================================
 public function rectr.center() returns vec2
@@ -171,3 +211,27 @@ public enum HorizontalLayoutOrientation
 public enum VerticalLayoutOrientation
   BOTTOMTOTOP
   TOPTOBOTTOM
+
+@test function rectr_setLeft()
+  let area = rectrFromExtents(-10, -10, 10, 10)
+  let edited = area.setLeft(5)
+  edited.left().assertEquals(5)
+  edited.right().assertEquals(10)
+
+@test function rectr_setRight()
+  let area = rectrFromExtents(-10, -10, 10, 10)
+  let edited = area.setRight(5)
+  edited.left().assertEquals(-10)
+  edited.right().assertEquals(5)
+
+@test function rectr_setBottom()
+  let area = rectrFromExtents(-10, -10, 10, 10)
+  let edited = area.setBottom(5)
+  edited.bottom().assertEquals(5)
+  edited.top().assertEquals(10)
+
+@test function rectr_setTop()
+  let area = rectrFromExtents(-10, -10, 10, 10)
+  let edited = area.setTop(5)
+  edited.bottom().assertEquals(-10)
+  edited.top().assertEquals(5)

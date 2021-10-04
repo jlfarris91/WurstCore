@@ -1,9 +1,9 @@
-package WrapLayout
+// package WrapLayout
 // import Layout
 // import Frame
 
 // // ============================================================================
-// public class WrapLayout implements IFrameLayout
+// public class WrapLayout
 //   private rectr m_area
 //   private vec2 m_spacing = ZERO2
 //   private vec2 m_layoutPos = ZERO2
@@ -56,31 +56,31 @@ package WrapLayout
 //     return m_size.y
 
 //   // --------------------------------------------------------------------------
-//   override function reset(rectr area)
+//   function reset(rectr area)
 //     m_area = area
 //     m_size = ZERO2
     
 //     // Remember that x/y frame of reference is bottom left
 //     switch (m_horizontalOrientation)
 //       case LEFTTORIGHT      
-//         m_layoutPos.x = m_area.left
+//         m_layoutPos.x = m_area.left()
 //         m_layoutDir.x = 1
 //       case RIGHTTOLEFT
-//         m_layoutPos.x = m_area.right
+//         m_layoutPos.x = m_area.right()
 //         m_layoutDir.x = -1
 
 //     switch (m_verticalOrientation)
 //       case BOTTOMTOTOP
-//         m_layoutPos.y = m_area.bottom
+//         m_layoutPos.y = m_area.bottom()
 //         m_layoutDir.y = 1
 //       case TOPTOBOTTOM
-//         m_layoutPos.y = m_area.top
+//         m_layoutPos.y = m_area.top()
 //         m_layoutDir.y = -1
 
 //     m_layoutPosStart = m_layoutPos
 
 //   // --------------------------------------------------------------------------
-//   override function layoutNextFrame(Frame frame)
+//   function arrangeFrame(Frame frame)
 
 //     switch (m_orientation)
 //       case HORIZONTAL

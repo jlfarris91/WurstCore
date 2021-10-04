@@ -7,6 +7,10 @@ public constant bounds playableBounds = bounds(playableMin, playableMax)
 public constant bounds mapBounds = bounds(boundMin, boundMax)
 
 // ============================================================================
+public function bounds(vec2 pos, real radius) returns bounds
+  return bounds(pos - vec2(radius, radius), pos + vec2(radius, radius))
+
+// ============================================================================
 @inline
 public function bounds.center() returns vec2
   return (this.min + this.max) / 2.0
@@ -21,6 +25,14 @@ public function bounds.size() returns vec2
 public function bounds.contains(vec2 pos) returns bool
   return pos.x >= this.min.x and pos.x <= this.max.x and
          pos.y >= this.min.y and pos.y <= this.max.y
+
+// ============================================================================
+public function bounds.grow(real scale) returns bounds
+  let center = this.center()
+  let size = this.size() * scale
+  let min = center - size / 2
+  let max = center + size / 2
+  return bounds(min, max)
 
 // ============================================================================
 @inline
