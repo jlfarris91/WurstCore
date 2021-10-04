@@ -5,6 +5,7 @@ import initlater Layout
 import Math
 import Object
 import FramehandleExtensions
+import Execute
 
 // ============================================================================
 public interface IFrameFactory
@@ -58,7 +59,6 @@ public class Frame
   private vec2 m_desiredSize
   private vec2 m_minSize = vec2(0.001, 0.001)
   private vec2 m_maxSize = INF2
-  private vec2 m_localPos
   private rangeReal m_minMax
   private textaligntype m_textHorzAlign
   private textaligntype m_textVertAlign
@@ -66,6 +66,7 @@ public class Frame
   private thickness m_padding = ZEROTHICK
   private object m_dataContext = NULL
   private FrameVisibility m_visibility = FrameVisibility.VISIBLE
+  private bool m_fitToChildren
 
   private bool m_neverMeasured = true
   private rectr m_finalRect = ZERORECTR
@@ -138,7 +139,22 @@ public class Frame
   function initialize()
     if (m_initialized)
       return
+    onInitialize()
     m_initialized = true
+
+  // --------------------------------------------------------------------------
+  function initializeRoot(rectr area)
+    let pos = area.bottomLeft()
+    let size = area.size()
+    initialize()
+    setLocalPos(pos)
+    setSize(size)
+    execute() () ->
+      arrange(area)
+
+  // --------------------------------------------------------------------------
+  protected function onInitialize()
+    skip
 
   // --------------------------------------------------------------------------
   private function construct_initialize()
@@ -147,24 +163,42 @@ public class Frame
     m_handle.clearAllPoints()
 
   // --------------------------------------------------------------------------
+  function getFitToChildren() returns bool
+    return m_fitToChildren
+
+  // --------------------------------------------------------------------------
+  function setFitToChildren(bool value)
+    if (m_fitToChildren != value)
+      m_fitToChildren = value
+      invalidateArrange()
+
+  // --------------------------------------------------------------------------
   function getVisibility() returns FrameVisibility
     return m_visibility
 
   // --------------------------------------------------------------------------
   function setVisibility(FrameVisibility value)
-    if (m_visibility == value)
+    if (m_initialized and m_visibility == value)
       return
     let prevValue = m_visibility
     m_visibility = value
     if (m_parent != null and (value == COLLAPSED or prevValue == COLLAPSED))
       m_parent.invalidateArrange()
     if (value == VISIBLE)
-      show()
+      showInternal()
     else
-      hide()
+      hideInternal()
 
   // --------------------------------------------------------------------------
-  private function show()
+  function show()
+    setVisibility(FrameVisibility.VISIBLE)
+
+  // --------------------------------------------------------------------------
+  function hide()
+    setVisibility(FrameVisibility.COLLAPSED)
+
+  // --------------------------------------------------------------------------
+  private function showInternal()
     if (not m_initialized)
       initialize()
     if (m_player != null)
@@ -173,7 +207,7 @@ public class Frame
       m_handle.show()
     
   // --------------------------------------------------------------------------
-  private function hide()
+  private function hideInternal()
     if (m_player != null)
       m_handle.hide(m_player)
     else
@@ -236,8 +270,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function setWidth(real width)
-    m_size.x = width
-    invalidateMeasure()
+    setSize(vec2(width, m_size.y))
 
   // --------------------------------------------------------------------------
   function getHeight() returns real
@@ -245,8 +278,7 @@ public class Frame
   
   // --------------------------------------------------------------------------
   function setHeight(real height)
-    m_size.y = height
-    invalidateMeasure()
+    setSize(vec2(m_size.x, height))
 
   // --------------------------------------------------------------------------
   function getSize() returns vec2
@@ -254,8 +286,9 @@ public class Frame
   
   // --------------------------------------------------------------------------
   function setSize(vec2 size)
-    m_size = size
-    invalidateMeasure()
+    if (m_size != size)
+      m_size = size
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function getDesiredSize() returns vec2
@@ -302,7 +335,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getArea() returns rectr
-    return rectr(m_localPos.x, m_localPos.y, m_size.x, m_size.y)
+    return rectr(m_finalRect.x, m_finalRect.y, m_size.x, m_size.y)
 
   // --------------------------------------------------------------------------
   function getAbsArea() returns rectr
@@ -333,23 +366,21 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function setMargin(real value)
-    m_margin = thickness(value, value, value, value)
-    invalidateMeasure()
+    setMargin(thickness(value, value, value, value))
 
   // --------------------------------------------------------------------------
   function setMargin(vec2 value)
-    m_margin = thickness(value.x, value.y, value.x, value.y)
-    invalidateMeasure()
+    setMargin(thickness(value.x, value.y, value.x, value.y))
 
   // --------------------------------------------------------------------------
   function setMargin(real left, real bottom, real right, real top)
-    m_margin = thickness(left, bottom, right, top)
-    invalidateMeasure()
+    setMargin(thickness(left, bottom, right, top))
 
   // --------------------------------------------------------------------------
   function setMargin(thickness value)
-    m_margin = value
-    invalidateMeasure()
+    if (m_margin != value)
+      m_margin = value
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function getPadding() returns thickness
@@ -357,18 +388,17 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function setPadding(real value)
-    m_padding = thickness(value, value, value, value)
-    invalidateMeasure()
+    setPadding(thickness(value, value, value, value))
 
   // --------------------------------------------------------------------------
   function setPadding(vec2 value)
-    m_padding = thickness(value.x, value.y, value.x, value.y)
-    invalidateMeasure()
+    setPadding(thickness(value.x, value.y, value.x, value.y))
 
   // --------------------------------------------------------------------------
   function setPadding(thickness value)
-    m_padding = value
-    invalidateMeasure()
+    if (m_padding != value)
+      m_padding = value
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function clearFocus()
@@ -413,22 +443,25 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function invalidateMeasure()
-    if (getNeverMeasured())
+    if (not getIsInitialized() or getNeverMeasured())
       return
-    invalidateArrange()
     measure(m_previousConstraint)
+    invalidateArrange()
 
   // --------------------------------------------------------------------------
   function invalidateArrange()
-    if (getNeverMeasured())
+    if (not getIsInitialized() or getNeverMeasured())
       return
     arrange(m_previousArrangeRect)
 
   // --------------------------------------------------------------------------
   function measure(vec2 availableSize)
     
-    if (not getIsInitialized() or getIsBeingMeasured())
+    if (getIsBeingMeasured())
       return
+
+    if (not getIsInitialized())
+      initialize()
 
     m_isBeingMeasured++
     m_previousConstraint = availableSize
@@ -454,8 +487,11 @@ public class Frame
   // --------------------------------------------------------------------------
   function arrange(rectr arrangeRect)
     
-    if (not getIsInitialized() or getIsBeingArranged())
+    if (getIsBeingArranged())
       return
+
+    if (not getIsInitialized())
+      initialize()
 
     m_isBeingArranged++
     m_previousArrangeRect = arrangeRect
@@ -507,10 +543,13 @@ public class Frame
 
     // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 4 : " + arrangeSize.toString())
 
-    let finalSize = arrangeOverride(arrangeSize)
+    var finalSize = arrangeOverride(arrangeSize)
     
     // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalSize : " + finalSize.toString())
-    
+
+    if (m_fitToChildren)
+      finalSize = getDesiredSize()
+
     m_finalRect = finalRect
 
     m_finalRect.x += m_margin.left

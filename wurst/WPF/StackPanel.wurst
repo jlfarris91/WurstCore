@@ -67,6 +67,7 @@ public class StackPanel extends Panel
           prevChildSize = childDesiredSize.y
           childRect.height = prevChildSize
           childRect.width = max(arrangeSize.x, childDesiredSize.x)
+        child.arrange(childRect)
     //}
 
     return arrangeSize

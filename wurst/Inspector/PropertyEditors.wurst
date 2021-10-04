@@ -147,8 +147,8 @@ public class IntEditor extends PropertyEditor
     super("IntEditorTemplate", GAME_UI)
 
   // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
+  override function onInitialize()
+    super.onInitialize()
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
@@ -250,8 +250,8 @@ public class StringEditor extends PropertyEditor
     super("StringEditorTemplate", GAME_UI)
 
   // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
+  override function onInitialize()
+    super.onInitialize()
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
@@ -343,8 +343,8 @@ public class RealEditor extends PropertyEditor
     super("RealEditorTemplate", GAME_UI)
 
   // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
+  override function onInitialize()
+    super.onInitialize()
     
     m_editBox = createFrame(
       "GLUEEDITBOX",

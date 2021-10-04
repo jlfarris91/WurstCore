@@ -7,8 +7,16 @@ public constant rectr ZERORECTR = rectr(0,0,0,0)
 public constant thickness ZEROTHICK = thickness(0,0,0,0)
 
 // ============================================================================
-public function rectrFromPosSize(vec2 pos, vec2 size) returns rectr
+public function rectr(vec2 pos, vec2 size) returns rectr
   return rectr(pos.x, pos.y, size.x, size.y)
+
+// ============================================================================
+public function thickness(real all) returns thickness
+  return thickness(all, all, all, all)
+
+// ============================================================================
+public function thickness(real x, real y) returns thickness
+  return thickness(x, y, x, y)
 
 // ============================================================================
 public function thickness.width() returns real
@@ -105,6 +113,30 @@ public function rectr.translate(vec2 pos) returns rectr
 // ============================================================================
 public function rectr.translate(real x, real y) returns rectr
   return rectr(this.x + x, this.y + y, this.width, this.height)
+
+// ============================================================================
+/**
+  Converts an absolute X-coordinate to one that is locally relative to the area.
+  The origin of the rectr is assumed to be the bottom left.
+*/
+public function rectr.toLocalX(real absX) returns real
+  return absX - this.left()
+
+// ============================================================================
+/**
+  Converts an absolute Y-coordinate to one that is locally relative to the area.
+  The origin of the rectr is assumed to be the bottom left.
+*/
+public function rectr.toLocalY(real absY) returns real
+  return absY - this.bottom()
+
+// ============================================================================
+/**
+  Converts an absolute XY-coordinate to one that is locally relative to the area.
+  The origin of the rectr is assumed to be the bottom left.
+*/
+public function rectr.toLocalPos(vec2 absPos) returns vec2
+  return absPos - this.bottomLeft()
 
 // ============================================================================
 public enum Orientation

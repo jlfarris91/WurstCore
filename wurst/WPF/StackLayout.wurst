@@ -67,28 +67,31 @@ public class StackLayout
     // Add spacing if not the first frame
     switch (m_orientation)
       case LEFTTORIGHT | RIGHTTOLEFT
-        m_layoutPos.x += m_layoutPos.x == m_layoutPosStart.x ? 0 : m_layoutDir.x * m_spacing.x
+        m_layoutPos.x += (m_layoutPos.x == m_layoutPosStart.x) ? 0 : m_layoutDir.x * m_spacing.x
       case TOPTOBOTTOM | BOTTOMTOTOP
-        m_layoutPos.y += m_layoutPos.y == m_layoutPosStart.y ? 0 : m_layoutDir.y * m_spacing.y
+        m_layoutPos.y += (m_layoutPos.y == m_layoutPosStart.y) ? 0 : m_layoutDir.y * m_spacing.y
 
+    // Absolute if no parent is provided, otherwise local to the parent
+    var frameAbsPos = m_layoutPos
+
+    // Always local space
     var frameSize = vec2(frame.getWidth(), frame.getHeight())
-    var localPos = m_layoutPos
 
     // Remember that x/y frame of reference is bottom left
     switch (m_orientation)
       case LEFTTORIGHT | RIGHTTOLEFT
-        localPos.y = m_area.bottom()
+        frameAbsPos.y = m_area.bottom()
         frameSize.y = m_area.height
       case BOTTOMTOTOP | TOPTOBOTTOM
-        localPos.x = m_area.left()
+        frameAbsPos.x = m_area.left()
         frameSize.x = m_area.width
 
     // Actually update the frame
     frame.clearAllPoints()
     if (parent != null)
-      frame.setPoint(FRAMEPOINT_BOTTOMLEFT, parent, FRAMEPOINT_BOTTOMLEFT, localPos)
+      frame.setPoint(FRAMEPOINT_BOTTOMLEFT, parent, FRAMEPOINT_BOTTOMLEFT, m_area.toLocalPos(frameAbsPos))
     else
-      frame.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, localPos)
+      frame.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, frameAbsPos)
 
     frame.setWidth(frameSize.x)
     frame.setHeight(frameSize.y)

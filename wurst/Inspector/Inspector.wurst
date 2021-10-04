@@ -94,8 +94,8 @@ public class InspectorEditorRow extends InspectorRow
       m_editors.get(key).refresh()
 
   // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
+  override function onInitialize()
+    super.onInitialize()
 
     m_gridPanel = new GridPanel()
     m_gridPanel.addColumnDefinition(new ColumnDefinition(GridSizeMode.PROPORTIONAL, 1))
@@ -121,14 +121,14 @@ public class InspectorEditorRow extends InspectorRow
     if (m_activeEditor != editor)
       deactivateActiveEditor()
       m_activeEditor = editor
-      m_activeEditor..setContext(m_descriptor, m_contexts)..show()
+      m_activeEditor..setContext(m_descriptor, m_contexts)..setVisibility(FrameVisibility.VISIBLE)
       return true
     return false
 
   // --------------------------------------------------------------------------
   private function deactivateActiveEditor()
     if (m_activeEditor != null)
-      m_activeEditor..hide()..setContext(null, null)
+      m_activeEditor..setVisibility(FrameVisibility.COLLAPSED)..setContext(null, null)
       m_activeEditor = null
 
 // ============================================================================
@@ -136,11 +136,11 @@ public class PropertyEditorFactory implements IPropertyEditorFactory
   override function createEditor(IPropertyDescriptor descriptor) returns PropertyEditor
     switch (descriptor.getEditorType())
       case "int"
-        return new IntEditor()..initialize()..hide()
+        return new IntEditor()..initialize()..setVisibility(FrameVisibility.COLLAPSED)
       case "real"
-        return new RealEditor()..initialize()..hide()
+        return new RealEditor()..initialize()..setVisibility(FrameVisibility.COLLAPSED)
       case "string"
-        return new StringEditor()..initialize()..hide()
+        return new StringEditor()..initialize()..setVisibility(FrameVisibility.COLLAPSED)
     return null
 
 // ============================================================================
@@ -185,8 +185,8 @@ public class InspectorFrame extends Frame
     // destroy m_dockPanelLayout
 
   // --------------------------------------------------------------------------
-  override function initialize()
-    super.initialize()
+  override function onInitialize()
+    super.onInitialize()
 
     let titleFrameHandle = createFrame("FRAME", "TitleFrame", GAME_UI, "", 0)
     m_titleContainer = new Frame(titleFrameHandle)
@@ -206,7 +206,7 @@ public class InspectorFrame extends Frame
     m_scrollBar = new Frame(scrollBarHandle)
       ..setWidth(0.012)
       // ..setDock(Dock.RIGHT)
-      ..show()
+      ..setVisibility(FrameVisibility.VISIBLE)
     addLogicalChild(m_scrollBar)
 
     rebuild()
@@ -286,7 +286,7 @@ public class InspectorFrame extends Frame
     let area = getLocalArea()
 
     let numRows = getMaxNumberOfRows(m_itemHeight, area.height)
-    let spacing = getSpacing(m_itemHeight, area.height)
+    // let spacing = getSpacing(m_itemHeight, area.height)
 
     if (numRows == m_numRows)
       return
@@ -318,7 +318,7 @@ public class InspectorFrame extends Frame
   private function addEditorRow() returns InspectorEditorRow
     let row = new InspectorEditorRow(m_propertyEditorFactory)
     ..initialize()
-    ..show()
+    ..setVisibility(FrameVisibility.VISIBLE)
     addLogicalChild(row)
     m_rows.add(row)
     return row
@@ -336,10 +336,10 @@ public class InspectorFrame extends Frame
     return (totalHeight / rowHeight).floor()
 
   // --------------------------------------------------------------------------
-  private static function getSpacing(real rowHeight, real totalHeight) returns real
-    let rowsAbs = totalHeight / rowHeight
-    let rowsFloor = rowsAbs.floor()
-    return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
+  // private static function getSpacing(real rowHeight, real totalHeight) returns real
+  //   let rowsAbs = totalHeight / rowHeight
+  //   let rowsFloor = rowsAbs.floor()
+  //   return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
 
 // ============================================================================
 public class Inspector
