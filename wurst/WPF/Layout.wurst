@@ -119,6 +119,10 @@ public function rectr.setBottomRight(vec2 value) returns rectr
   return this.setRight(value.x).setBottom(value.y)
 
 // ============================================================================
+public function rectr.setCenter(vec2 pos) returns rectr
+  return rectr(pos.x - this.width / 2, pos.y - this.height / 2, this.width, this.height)
+
+// ============================================================================
 public function rectr.center() returns vec2
   return vec2(this.x + this.width / 2.0, this.y + this.height / 2.0)
 

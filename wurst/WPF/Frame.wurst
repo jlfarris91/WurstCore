@@ -33,9 +33,9 @@ public enum VerticalLayoutMode
 
 // ============================================================================
 public enum FrameVisibility
+  COLLAPSED
   VISIBLE
   HIDDEN
-  COLLAPSED
 
 public function FrameVisibility.toString() returns string
   switch (this)
@@ -70,7 +70,7 @@ public class Frame
   private bool m_fitToChildren
 
   private bool m_neverMeasured = true
-  private rectr m_finalRect = ZERORECTR
+  private rectr m_finalRectBL = ZERORECTR
 
   private HorizontalLayoutMode m_horizontalLayoutMode = STRETCH
   private VerticalLayoutMode m_verticalLayoutMode = STRETCH
@@ -145,13 +145,15 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function initializeRoot(rectr area)
-    let pos = area.getFramePoint(m_origin)
-    let size = area.size()
+    setFinalRect(area)
     initialize()
-    setLocalPos(pos)
-    setSize(size)
     execute() () ->
       arrange(area)
+
+  // --------------------------------------------------------------------------
+  function initializeRoot(rectr area, framepointtype origin)
+    m_origin = origin
+    initializeRoot(area)
 
   // --------------------------------------------------------------------------
   protected function onInitialize()
@@ -317,14 +319,16 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getLocalPos() returns vec2
-    return m_finalRect.getFramePointOffset(m_origin)
+    return getIsRootFrame()
+           ? m_finalRectBL.getFramePoint(m_origin)
+           : m_finalRectBL.bottomLeft()
 
   // --------------------------------------------------------------------------
   function setLocalPos(vec2 pos)
-    // TODO: setting local position directly should probably not be a thing
-    m_finalRect.x = pos.x
-    m_finalRect.y = pos.y
-    updateFramePositionAndSize()
+    let finalRectValue = getIsRootFrame()
+                         ? m_finalRectBL.setFramePoint(m_origin, pos)
+                         : m_finalRectBL.setBottomLeft(pos)
+    setFinalRect(finalRectValue)
 
   // --------------------------------------------------------------------------
   function getAbsPos() returns vec2
@@ -336,7 +340,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getArea() returns rectr
-    return rectr(m_finalRect.x, m_finalRect.y, m_size.x, m_size.y)
+    return m_finalRectBL
 
   // --------------------------------------------------------------------------
   function getAbsArea() returns rectr
@@ -406,20 +410,26 @@ public class Frame
     m_handle.clearFocus()
 
   // --------------------------------------------------------------------------
+  /** Origin vlaue is only respected by root frames currently
+      TODO: add support for child frames */
   function setOrigin(framepointtype value)
     if (m_origin != value)
       m_origin = value
       invalidateArrange()
 
   // --------------------------------------------------------------------------
+  function getIsRootFrame() returns bool
+    return m_parent == null
+
+  // --------------------------------------------------------------------------
   private function updateFramePositionAndSize()
     m_handle.clearAllPoints()
-    if (m_parent != null)
-      m_handle.setPoint(m_origin, m_parent.m_handle, m_origin, m_finalRect.getFramePointOffset(m_origin))
+    if (getIsRootFrame())
+      m_handle.setAbsPoint(m_origin, m_finalRectBL.getFramePoint(m_origin))
     else
-      m_handle.setAbsPoint(m_origin, m_finalRect.getFramePointOffset(m_origin))
-    m_handle.setWidth(m_finalRect.width)
-    m_handle.setHeight(m_finalRect.height)
+      m_handle.setPoint(FRAMEPOINT_BOTTOMLEFT, m_parent.m_handle, FRAMEPOINT_BOTTOMLEFT, m_finalRectBL.bottomLeft())
+    m_handle.setWidth(m_finalRectBL.width)
+    m_handle.setHeight(m_finalRectBL.height)
 
   // --------------------------------------------------------------------------
   function addLogicalChild(Frame frame)
@@ -557,16 +567,19 @@ public class Frame
     if (m_fitToChildren)
       finalSize = getDesiredSize()
 
-    m_finalRect = finalRect
+    let offset = getIsRootFrame()
+                 ? m_margin.getFramePointOffset(m_origin)
+                 : vec2(m_margin.left, m_margin.bottom)
 
-    let marginOffset = m_margin.getFramePointOffset(m_origin)
+    let finalRect2 = rectr(finalRect.x + offset.x, finalRect.y + offset.y, finalSize.x, finalSize.y)
+    setFinalRect(finalRect2)
 
-    m_finalRect.x += marginOffset.x
-    m_finalRect.y += marginOffset.y
-    m_finalRect.width = finalSize.x
-    m_finalRect.height = finalSize.y
-
-    updateFramePositionAndSize()
+  // --------------------------------------------------------------------------
+  private function setFinalRect(rectr value)
+    let finalRectValue = getIsRootFrame() ? value.toBottomLeftBase(m_origin) : value
+    if (m_finalRectBL != finalRectValue)
+      m_finalRectBL = finalRectValue
+      updateFramePositionAndSize()
 
   // --------------------------------------------------------------------------
   protected function arrangeOverride(vec2 arrangeSize) returns vec2
@@ -685,6 +698,27 @@ function rectr.getFramePoint(framepointtype value) returns vec2
     return this.center()
 
 // ============================================================================
+function rectr.setFramePoint(framepointtype value, vec2 pos) returns rectr
+  if (value == FRAMEPOINT_LEFT)
+    return this.setLeft(pos.x)
+  if (value == FRAMEPOINT_RIGHT)
+    return this.setRight(pos.x)
+  if (value == FRAMEPOINT_BOTTOM)
+    return this.setBottom(pos.y)
+  if (value == FRAMEPOINT_TOP)
+    return this.setBottom(pos.y)
+  if (value == FRAMEPOINT_BOTTOMLEFT)
+    return this.setBottomLeft(pos)
+  if (value == FRAMEPOINT_BOTTOMRIGHT)
+    return this.setBottomRight(pos)
+  if (value == FRAMEPOINT_TOPLEFT)
+    return this.setTopLeft(pos)
+  if (value == FRAMEPOINT_TOPRIGHT)
+    return this.setTopRight(pos)
+  else
+    return this.setCenter(pos)
+
+// ============================================================================
 function rectr.getFramePointOffset(framepointtype value) returns vec2
   if (value == FRAMEPOINT_LEFT)
     return vec2(this.x, 0)
@@ -704,6 +738,30 @@ function rectr.getFramePointOffset(framepointtype value) returns vec2
     return vec2(-this.x, -this.y)
   else
     return this.center()
+
+// ============================================================================
+/** Converts a rectr with the pos relative to the given frameepointtype
+    into a rectr where the pos is relative to FRAMEPOINT_BOTTOMLEFT
+ */
+function rectr.toBottomLeftBase(framepointtype value) returns rectr
+  if (value == FRAMEPOINT_LEFT)
+    return rectr(this.x, 0, this.width, this.height)
+  if (value == FRAMEPOINT_RIGHT)
+    return rectr(this.x - this.width, 0, this.width, this.height)
+  if (value == FRAMEPOINT_BOTTOM)
+    return rectr(0, this.y, this.width, this.height)
+  if (value == FRAMEPOINT_TOP)
+    return rectr(0, this.y - this.height, this.width, this.height)
+  if (value == FRAMEPOINT_BOTTOMLEFT)
+    return rectr(this.x, this.y, this.width, this.height)
+  if (value == FRAMEPOINT_BOTTOMRIGHT)
+    return rectr(this.x - this.width, this.y, this.width, this.height)
+  if (value == FRAMEPOINT_TOPLEFT)
+    return rectr(this.x, this.y - this.height, this.width, this.height)
+  if (value == FRAMEPOINT_TOPRIGHT)
+    return rectr(this.x - this.width, this.y - this.height, this.width, this.height)
+  else
+    return rectr(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height)
 
 // ============================================================================
 function thickness.getFramePointOffset(framepointtype value) returns vec2
