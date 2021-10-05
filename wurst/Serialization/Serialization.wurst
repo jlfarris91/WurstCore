@@ -43,9 +43,9 @@ public class SerializationContext
   private HashMap<int, ObjectFactory1> m_objectTypeToFactoryMap
   private HashMap<int, ObjectDestructor> m_objectTypeToDestructorMap
   private player m_player
-  private LinkedList<ObjectRef> m_objectStack
+  private LinkedList<Object> m_objectStack
   private LinkedList<int> m_objectVersionStack
-  private LinkedList<ObjectRef> m_creationContexts
+  private LinkedList<Object> m_creationContexts
   private SerializableSerializer m_serializableSerializer
 
   // --------------------------------------------------------------------------
@@ -55,9 +55,9 @@ public class SerializationContext
     m_objectTypeToHeaderCodeMap = new HashMap<int, int>()
     m_objectTypeToFactoryMap = new HashMap<int, ObjectFactory1>()
     m_objectTypeToDestructorMap = new HashMap<int, ObjectDestructor>()
-    m_objectStack = new LinkedList<ObjectRef>()
+    m_objectStack = new LinkedList<Object>()
     m_objectVersionStack = new LinkedList<int>()
-    m_creationContexts = new LinkedList<ObjectRef>()
+    m_creationContexts = new LinkedList<Object>()
     
     m_serializableSerializer = new SerializableSerializer()
 
@@ -478,7 +478,7 @@ public class SerializationContext
 
   // --------------------------------------------------------------------------
   function pushCreationContext(object object)
-    m_creationContexts.push(new ObjectRef(object))
+    m_creationContexts.push(new Object(object))
 
   // --------------------------------------------------------------------------
   function popCreationContext()

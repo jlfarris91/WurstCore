@@ -1,10 +1,8 @@
 package GridPanel
 import Panel
 import HashMap
-import Frame
 import Vector
 import Math
-import Layout
 import LinkedList
 
 HashMap<Frame, int> m_frameToColumnMap = new HashMap<Frame, int>()
@@ -161,9 +159,10 @@ public class GridPanel extends Panel
     for childFrame in m_children
       let row = getRowClamped(childFrame)
       let col = getColumnClamped(childFrame)
-      let colDef = m_columnDefinitions.get(col)
-      let rowDef = m_rowDefinitions.get(row)
-      if (colDef.getSizeMode() == AUTO or rowDef.getSizeMode() == AUTO)
+      let colDef = m_columnDefinitions.isEmpty() ? null : m_columnDefinitions.get(col)
+      let rowDef = m_rowDefinitions.isEmpty() ? null : m_rowDefinitions.get(row)
+      if ((colDef != null and colDef.getSizeMode() == AUTO) or
+          (rowDef != null and rowDef.getSizeMode() == AUTO))
         m_childrenNeedingMeasure.emplaceAdd(childFrame)
 
     for i = 0 to m_columnDefinitions.size() - 1

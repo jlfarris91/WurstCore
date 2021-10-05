@@ -1,16 +1,13 @@
 package ListBox
-import Frame
 import Vector
-import Layout
 import Panel
-import Object
 import ClosureFrames
 import Range
 
 // ============================================================================
 public class ListBox extends Panel
   private LayoutOrientation m_orientation = LayoutOrientation.TOPTOBOTTOM
-  private Vector<ObjectRef> m_itemsSource
+  private Vector<Object> m_itemsSource
   private FrameTemplate m_itemFrameTemplate
   private Frame m_scrollBar
   private Vector<Frame> m_itemFrames
@@ -53,11 +50,11 @@ public class ListBox extends Panel
       m_needsRebuild = true
 
   // --------------------------------------------------------------------------
-  function getItemsSource() returns Vector<ObjectRef>
+  function getItemsSource() returns Vector<Object>
     return m_itemsSource
 
   // --------------------------------------------------------------------------
-  function setItemsSource(Vector<ObjectRef> itemsSource)
+  function setItemsSource(Vector<Object> itemsSource)
     if (m_itemsSource != itemsSource)
       m_itemsSource = itemsSource
       onItemSourceChanged()

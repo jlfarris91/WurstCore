@@ -1,9 +1,9 @@
 package Frame
 import Range
 import Action
-import initlater Layout
+import public initlater Layout
 import Math
-import Object
+import public Object
 import FramehandleExtensions
 import Execute
 
@@ -92,6 +92,10 @@ public class Frame
     if (m_handle != null)
       m_handle.remove()
       m_handle = null
+
+  // --------------------------------------------------------------------------
+  function getFrameHandle() returns framehandle
+    return m_handle
 
   // --------------------------------------------------------------------------
   function getIsInitialized() returns bool

@@ -1,29 +1,29 @@
 package StackPanel
 import Panel
-import Layout
-import Frame
+import StackLayout
 
 // ============================================================================
 public class StackPanel extends Panel
-  private LayoutOrientation m_orientation
+  private StackLayout m_layout = new StackLayout()
 
   // --------------------------------------------------------------------------
   function getLayoutOrientation() returns LayoutOrientation
-    return m_orientation
+    return m_layout.getOrientation()
 
   // --------------------------------------------------------------------------
   function setLayoutOrientation(LayoutOrientation value)
-    if (m_orientation != value)
-      m_orientation = value
+    if (m_layout.getOrientation() != value)
+      m_layout.setOrientation(value)
       invalidateArrange()
 
   // --------------------------------------------------------------------------
   override function measureOverride(vec2 availableSize) returns vec2
 
+    let orientation = m_layout.getOrientation()
     var stackDesiredSize = ZERO2
     var layoutSlotSize = availableSize
-    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
-    let layoutDir = m_orientation.getLayoutDir()
+    let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
+    let layoutDir = orientation.getLayoutDir()
 
     if (isHorizontal)
       layoutSlotSize.x = REAL_MAX
@@ -48,26 +48,13 @@ public class StackPanel extends Panel
   // --------------------------------------------------------------------------
   override function arrangeOverride(vec2 arrangeSize) returns vec2
 
-    let isHorizontal = m_orientation == LayoutOrientation.LEFTTORIGHT or m_orientation == LayoutOrientation.RIGHTTOLEFT
-    let layoutDir = m_orientation.getLayoutDir()
-    var childRect = rectr(0, 0, arrangeSize.x, arrangeSize.y)
-    var prevChildSize = 0.
+    m_layout.reset(rectr(ZERO2, arrangeSize))
 
     for child in m_children
     //{
       if (child.getVisibility() != FrameVisibility.COLLAPSED)
-        let childDesiredSize = child.getDesiredSize()
-        if (isHorizontal)
-          childRect.x += prevChildSize * layoutDir.x
-          prevChildSize = childDesiredSize.x
-          childRect.width = prevChildSize
-          childRect.height = max(arrangeSize.y, childDesiredSize.y)
-        else
-          childRect.y += prevChildSize * layoutDir.y
-          prevChildSize = childDesiredSize.y
-          childRect.height = prevChildSize
-          childRect.width = max(arrangeSize.x, childDesiredSize.x)
-        child.arrange(childRect)
+        let childArea = m_layout.arrange(child.getDesiredSize())
+        child.arrange(childArea)
     //}
 
     return arrangeSize

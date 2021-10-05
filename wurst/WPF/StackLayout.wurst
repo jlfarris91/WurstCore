@@ -10,6 +10,7 @@ public class StackLayout
   private vec2 m_layoutDir = ZERO2
   private LayoutOrientation m_orientation
   private vec2 m_size = ZERO2
+  private int m_elementCount = 0
 
   // --------------------------------------------------------------------------
   function setOrientation(LayoutOrientation value)
@@ -56,45 +57,41 @@ public class StackLayout
         m_layoutDir = vec2(0, 1)
 
     m_layoutPosStart = m_layoutPos
+    m_elementCount = 0
 
   // --------------------------------------------------------------------------
-  function layoutNextFrame(framehandle frame)
-    layoutNextFrame(frame, null)
-
-  // --------------------------------------------------------------------------
-  function layoutNextFrame(framehandle frame, framehandle parent)
+  function arrange(vec2 desiredFrameSize) returns rectr
+    
+    // Always in local space
+    var frameSize = desiredFrameSize
 
     // Add spacing if not the first frame
-    switch (m_orientation)
-      case LEFTTORIGHT | RIGHTTOLEFT
-        m_layoutPos.x += (m_layoutPos.x == m_layoutPosStart.x) ? 0 : m_layoutDir.x * m_spacing.x
-      case TOPTOBOTTOM | BOTTOMTOTOP
-        m_layoutPos.y += (m_layoutPos.y == m_layoutPosStart.y) ? 0 : m_layoutDir.y * m_spacing.y
+    if (m_elementCount == 0)
+    //{
+      switch (m_orientation)
+        case LEFTTORIGHT | RIGHTTOLEFT
+          m_layoutPos.x += m_layoutDir.x * m_spacing.x
+        case TOPTOBOTTOM | BOTTOMTOTOP
+          m_layoutPos.y += m_layoutDir.y * m_spacing.y
+      
+      // TODO: We have to do this because Frames are assumed to be BottomLeft-based
+      if (m_orientation == RIGHTTOLEFT)
+        m_layoutPos.x -= frameSize.x
+      if (m_orientation == TOPTOBOTTOM)
+        m_layoutPos.y -= frameSize.y
+    //}
 
     // Absolute if no parent is provided, otherwise local to the parent
-    var frameAbsPos = m_layoutPos
-
-    // Always local space
-    var frameSize = vec2(frame.getWidth(), frame.getHeight())
+    var framePos = m_layoutPos
 
     // Remember that x/y frame of reference is bottom left
     switch (m_orientation)
       case LEFTTORIGHT | RIGHTTOLEFT
-        frameAbsPos.y = m_area.bottom()
+        framePos.y = m_area.bottom()
         frameSize.y = m_area.height
       case BOTTOMTOTOP | TOPTOBOTTOM
-        frameAbsPos.x = m_area.left()
+        framePos.x = m_area.left()
         frameSize.x = m_area.width
-
-    // Actually update the frame
-    frame.clearAllPoints()
-    if (parent != null)
-      frame.setPoint(FRAMEPOINT_BOTTOMLEFT, parent, FRAMEPOINT_BOTTOMLEFT, m_area.toLocalPos(frameAbsPos))
-    else
-      frame.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, frameAbsPos)
-
-    frame.setWidth(frameSize.x)
-    frame.setHeight(frameSize.y)
 
     // Prepare for next frame
     switch (m_orientation)
@@ -106,3 +103,17 @@ public class StackLayout
         m_layoutPos.y += m_layoutDir.y * frameSize.y
         m_size.x = max(m_size.x, frameSize.x)
         m_size.y = m_layoutPos.y
+
+    m_elementCount++
+
+    return rectr(framePos, frameSize)
+
+    // Actually update the frame
+    // frame.clearAllPoints()
+    // if (parent != null)
+    //   frame.setPoint(FRAMEPOINT_BOTTOMLEFT, parent, FRAMEPOINT_BOTTOMLEFT, m_area.toLocalPos(frameAbsPos))
+    // else
+    //   frame.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, frameAbsPos)
+
+    // frame.setWidth(frameSize.x)
+    // frame.setHeight(frameSize.y)

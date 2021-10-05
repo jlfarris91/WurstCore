@@ -76,7 +76,11 @@ public function toObject<T>(T source, int objectTypeId) returns object
   return object(source castTo int, objectTypeId)
 
 // ============================================================================
-public class ObjectRef
+public function toObjectRef<T>(T source, int objectTypeId) returns Object
+  return toObject<T>(source, objectTypeId).ref()
+
+// ============================================================================
+public class Object
   private object m_object
 
   // --------------------------------------------------------------------------
@@ -88,8 +92,8 @@ public class ObjectRef
     return m_object
 
 // ============================================================================
-public function object.ref() returns ObjectRef
-  return new ObjectRef(this)
+public function object.ref() returns Object
+  return new Object(this)
 
 // ============================================================================
 public interface ObjectFactory

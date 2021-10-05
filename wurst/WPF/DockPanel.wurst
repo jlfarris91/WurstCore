@@ -1,8 +1,6 @@
 package DockPanel
 import Panel
-import DockLayout
-import Layout
-import Frame
+import public DockLayout
 
 constant DOCK_FILL = Dock.FILL castTo int
 constant DOCK_LEFT = Dock.LEFT castTo int

@@ -1,9 +1,8 @@
 package Panel
-import Frame
+import public Frame
 import HashMap
 import LinkedList
 import Execute
-import Layout
 
 // ============================================================================
 public abstract class Panel extends Frame

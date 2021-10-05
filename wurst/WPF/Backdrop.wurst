@@ -1,0 +1,17 @@
+package Backdrop
+import Frame
+
+// ============================================================================
+public class Backdrop extends Frame
+
+  // --------------------------------------------------------------------------
+  construct (string name, string template)
+    super (createFrame("BACKDROP", name, GAME_UI, template, 0))
+
+  // --------------------------------------------------------------------------
+  construct (string name, string template, framehandle owner)
+    super (createFrame("BACKDROP", name, owner, template, 0))
+
+  // --------------------------------------------------------------------------
+  construct (string name, string template, framehandle owner, int createContext)
+    super (createFrame("BACKDROP", name, owner, template, createContext))
