@@ -8,7 +8,6 @@ import Vector
 import Range
 import HashList
 import HashMap
-import Layout
 import GridPanel
 
 constant vec2 INSPECTOR_POS = vec2(0.55, 0.2)

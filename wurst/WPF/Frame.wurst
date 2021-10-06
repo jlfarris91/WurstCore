@@ -520,8 +520,10 @@ public class Frame
     //Log.info(typeIdToTypeName(this.typeId), "arrange", "", "finalRect : " + finalRect.toString())
     if (getNeverMeasured())
       measure(arrangeRect.size())
+
     arrangeCore(arrangeRect)
     // Log.info(typeIdToTypeName(this.typeId), "arrange", "", "m_finalRect : " + m_finalRect.toString())
+
     m_isBeingArranged--
 
   // --------------------------------------------------------------------------

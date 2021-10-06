@@ -1,6 +1,5 @@
 // package WrapLayout
 // import Layout
-// import Frame
 
 // // ============================================================================
 // public class WrapLayout
@@ -13,6 +12,7 @@
 //   private HorizontalLayoutOrientation m_horizontalOrientation = LEFTTORIGHT
 //   private VerticalLayoutOrientation m_verticalOrientation = TOPTOBOTTOM
 //   private vec2 m_size
+//   private int m_elementCount
 
 //   // --------------------------------------------------------------------------
 //   /// Defines which direction to move in first
@@ -59,6 +59,7 @@
 //   function reset(rectr area)
 //     m_area = area
 //     m_size = ZERO2
+//     m_elementCount = 0
     
 //     // Remember that x/y frame of reference is bottom left
 //     switch (m_horizontalOrientation)
@@ -80,65 +81,107 @@
 //     m_layoutPosStart = m_layoutPos
 
 //   // --------------------------------------------------------------------------
-//   function arrangeFrame(Frame frame)
+//   function measure(vec2 desiredFrameSize) returns vec2
 
+
+
+//     return desiredFrameSize
+
+//   // --------------------------------------------------------------------------
+//   function arrange(vec2 desiredFrameSize) returns rectr
+
+//     // TODO: We have to do this because Frames are assumed to be BottomLeft-based
+//     if (m_elementCount == 0)
+//     //{
+//       if (m_horizontalOrientation == RIGHTTOLEFT)
+//         m_layoutPos.x -= desiredFrameSize.x
+//       if (m_verticalOrientation == TOPTOBOTTOM)
+//         m_layoutPos.y -= desiredFrameSize.y
+//     //}
+
+//     let framePos = m_layoutPos
+
+//     // Prepare for the next frame
 //     switch (m_orientation)
 //       case HORIZONTAL
-//         m_layoutPos.x += m_layoutPos.x == m_layoutPosStart.x ? 0 : m_spacing.x * m_layoutDir.x
+//         m_layoutPos = advanceHorizontally(m_layoutPos, desiredFrameSize)
 //       case VERTICAL
-//         m_layoutPos.y += m_layoutPos.y == m_layoutPosStart.y ? 0 : m_spacing.y * m_layoutDir.y
+//         m_layoutPos = advanceVertically(m_layoutPos, desiredFrameSize)
 
-//     let frameSize = frame.getSize() + frame.getPadding().size()
+//     m_elementCount++
 
-//     switch (m_orientation)
-//       case HORIZONTAL
-        
-
-//     frame.setLocalPos(m_layoutPos)
+//     return rectr(framePos, desiredFrameSize)
 
 //   // --------------------------------------------------------------------------
 //   private function advanceHorizontally(vec2 layoutPos, vec2 frameSize) returns vec2
 
 //     var pos = layoutPos
 
-//     switch (m_orientation)
-//       case HORIZONTAL
-//         switch (m_horizontalOrientation)
-        
-//           case LEFTTORIGHT
-//             if (pos.x + frameSize.x > m_area.width())
-//               pos.x = m_layoutPosStart.x
-//               pos = advanceVertically(pos, frameSize)
-//             else
-//               m_layoutPos.x += frameSize.x
-//             m_size.x = m_layoutPos.x
-//             m_size.y = max(m_size.y, frameSize.y)
+//     if (pos.x != m_layoutPosStart.x)
+//       pos.x += m_spacing.x * m_layoutDir.x
 
-//           case RIGHTTOLEFT
-//             if (m_layoutPos.x - frameSize.x < 0)
-//               m_layoutPos.x = m_layoutPosStart.x
-//               pos = advanceVertically(pos, frameSize)
-//             else
-//               m_layoutPos.x += frameSize.x
-//             m_size.x = m_layoutPos.x
-//             m_size.y = max(m_size.y, pos.y + frameSize.y)
-            
-//       case VERTICAL
+//     pos.x += frameSize.x * m_layoutDir.x
+
+//     switch (m_horizontalOrientation)
+//     //{
+//       case LEFTTORIGHT
+//         if (pos.x > m_area.width)
+//           pos = wrapHorizontally(pos, frameSize)
+//       case RIGHTTOLEFT
+//         if (pos.x < 0)
+//           pos = wrapHorizontally(pos, frameSize)
+//     //}
+
+//     m_size.x = max(m_size.x, (pos.x - m_layoutPosStart.x).abs())
+//     m_size.y = max(m_size.y, (pos.y - m_layoutPosStart.y).abs() + frameSize.y)
 
 //     return pos
 
+//   // --------------------------------------------------------------------------
+//   private function wrapHorizontally(vec2 layoutPos, vec2 frameSize) returns vec2
+//     var pos = layoutPos
+//     pos.x = m_layoutPosStart.x
+//     pos.y = m_layoutPosStart.y + m_size.y * m_layoutDir.y
+
+//     // TODO: We have to do this because Frames are assumed to be BottomLeft-based
+//     if (m_horizontalOrientation == RIGHTTOLEFT)
+//       pos.x -= frameSize.x
+
+//     return pos
 
 //   // --------------------------------------------------------------------------
 //   private function advanceVertically(vec2 layoutPos, vec2 frameSize) returns vec2
 
 //     var pos = layoutPos
 
-//     switch (m_orientation)
-//       case VERTICAL
+//     if (pos.y != m_layoutPosStart.y)
+//       pos.y += m_spacing.y * m_layoutDir.y
 
-//       case HORIZONTAL
-//         pos.y += m_layoutPos.y == m_layoutPosStart.y ? 0 : m_spacing.y * m_layoutDir.y
+//     pos.y += frameSize.y * m_layoutDir.y
+
+//     switch (m_verticalOrientation)
+//     //{
+//       case BOTTOMTOTOP
+//         if (pos.y > m_area.height)
+//           pos = wrapVertically(pos, frameSize)
+//       case TOPTOBOTTOM
+//         if (pos.y < 0)
+//           pos = wrapVertically(pos, frameSize)
+//     //}
+    
+//     m_size.x = max(m_size.x, (pos.x - m_layoutPosStart.x).abs() + frameSize.x)
+//     m_size.y = max(m_size.y, (pos.y - m_layoutPosStart.y).abs())
+
+//     return pos
 
 //   // --------------------------------------------------------------------------
-//   function layoutEnd()
-//     m_layoutPos = ZERO2
+//   private function wrapVertically(vec2 layoutPos, vec2 frameSize) returns vec2
+//     var pos = layoutPos
+//     pos.x = m_layoutPosStart.x + m_size.x * m_layoutDir.x
+//     pos.y = m_layoutPosStart.y
+    
+//     // TODO: We have to do this because Frames are assumed to be BottomLeft-based
+//     if (m_verticalOrientation == TOPTOBOTTOM)
+//       pos.y -= frameSize.y
+
+//     return pos

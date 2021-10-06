@@ -1,26 +1,171 @@
 package WrapPanel
 import Panel
-import Layout
+
+tuple uvsize(Orientation orientation, real u, real v)
+
+// ============================================================================
+function uvsize(Orientation orientation) returns uvsize
+  return uvsize(orientation, 0, 0)
+
+// ============================================================================
+function uvsize(Orientation orientation, vec2 size) returns uvsize
+  return uvsize(orientation,
+                orientation == HORIZONTAL ? size.x : size.y,
+                orientation == HORIZONTAL ? size.y : size.x)
+
+// ============================================================================
+function uvsize.getWidth() returns real
+  return this.orientation == Orientation.HORIZONTAL ? this.u : this.v
+
+// ============================================================================
+function uvsize.setWidth(real value) returns uvsize
+  if (this.orientation == Orientation.HORIZONTAL)
+    return uvsize(this.orientation, value, this.v)
+  else
+    return uvsize(this.orientation, this.u, value)
+
+// ============================================================================
+function uvsize.getHeight() returns real
+  return this.orientation == Orientation.HORIZONTAL ? this.v : this.u
+
+// ============================================================================
+function uvsize.setHeight(real value) returns uvsize
+  if (this.orientation == Orientation.HORIZONTAL)
+    return uvsize(this.orientation, this.u, value)
+  else
+    return uvsize(this.orientation, value, this.v)
 
 // ============================================================================
 public class WrapPanel extends Panel
-  private LayoutOrientation m_orientation
+  private Orientation m_orientation
+  private bool m_stretchItems = false
 
   // --------------------------------------------------------------------------
-  function getLayoutOrientation() returns LayoutOrientation
+  function getOrientation() returns Orientation
     return m_orientation
 
   // --------------------------------------------------------------------------
-  function setLayoutOrientation(LayoutOrientation value)
+  function setOrientation(Orientation value)
     if (m_orientation != value)
       m_orientation = value
       invalidateArrange()
 
+  // --------------------------------------------------------------------------
+  function getStretchItems() returns bool
+    return m_stretchItems
+
+  // --------------------------------------------------------------------------
+  function setStretchItems(bool value)
+    if (m_stretchItems != value)
+      m_stretchItems = value
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   override function measureOverride(vec2 availableSize) returns vec2
-    return availableSize
+
+    var curLineSize = uvsize(m_orientation)
+    var panelSize = uvsize(m_orientation)
+    let uvConstraint = uvsize(m_orientation, availableSize)
+    let childConstrait = vec2(availableSize.x, availableSize.y)
+
+    for child in m_children
+    //{
+      child.measure(childConstrait)
+
+      if (child.getVisibility() != FrameVisibility.COLLAPSED)
+      //{
+        let uvChildSize = uvsize(m_orientation, child.getDesiredSize())
+
+        if (curLineSize.u + uvChildSize.u > uvConstraint.u)
+        //{
+          panelSize.u = max(curLineSize.u, panelSize.u)
+          panelSize.v += curLineSize.v
+          curLineSize = uvChildSize
+
+          // The child is wider than the constraint, put it on a new line
+          if (uvChildSize.u > uvConstraint.u)
+            panelSize.u = max(uvChildSize.u, panelSize.u)
+            panelSize.v += uvChildSize.v
+            curLineSize = uvsize(m_orientation)
+        //}
+        else
+          curLineSize.u += uvChildSize.u
+          curLineSize.v = max(uvChildSize.v, curLineSize.u)
+      //}
+    //}
+
+    panelSize.u = max(curLineSize.u, panelSize.u)
+    panelSize.v += curLineSize.v
+
+    return vec2(panelSize.getWidth(), panelSize.getHeight())
 
   // --------------------------------------------------------------------------
   override function arrangeOverride(vec2 arrangeSize) returns vec2
+
+    let orientation = getOrientation()
+    var accumulatedV = 0.
+    var curLineSize = uvsize(orientation)
+    let uvFinalSize = uvsize(orientation, arrangeSize)
+    var firstInLine = 0
+
+    let finalRect = rectr(ZERO2, arrangeSize)
+
+    for i = 0 to m_children.size() - 1
+    //{
+      let child = m_children.get(i)
+      if (child.getVisibility() != FrameVisibility.COLLAPSED)
+      //{
+        let uvChildSize = uvsize(orientation, child.getDesiredSize())
+
+        if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
+        //{
+          arrangeLine(finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, i)
+          accumulatedV += curLineSize.v
+          curLineSize = uvChildSize
+
+          if (uvChildSize.u > uvFinalSize.u)
+          //{
+            arrangeLine(finalRect, accumulatedV, uvChildSize, uvFinalSize.u, i, i + 1)
+            i++
+            accumulatedV += uvChildSize.v
+            curLineSize = uvsize(orientation)
+          //}
+
+          firstInLine = i
+        //}
+        else
+          curLineSize.u += uvChildSize.u
+          curLineSize.v = max(uvChildSize.v, curLineSize.v)
+      //}
+    //}
+
+    if (firstInLine < m_children.size())
+      arrangeLine(finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, m_children.size())
+
     return arrangeSize
+
+  // --------------------------------------------------------------------------
+  @inline
+  private function arrangeLine(rectr finalRect, real v, uvsize uvLine, real totalU, int start, int _end)
+    let orientation = getOrientation()
+    let isHorizontal = orientation == HORIZONTAL
+    let remainingU = (totalU - uvLine.u) / (_end - start)
+    real u = 0
+
+    for i = start to _end - 1
+      let child = m_children.get(i)
+      let uvChildSize = uvsize(orientation, child.getDesiredSize())
+      var layoutSlotU = uvChildSize.u
+
+      if (m_stretchItems)
+        layoutSlotU += remainingU
+
+      let childRect = rectr(
+        isHorizontal ? u : v,
+        finalRect.top() - (isHorizontal ? v + uvLine.v : u + layoutSlotU),
+        // finalRect.top() - (isHorizontal ? v : u) - (isHorizontal ? lineV : layoutSlotU),
+        isHorizontal ? layoutSlotU : uvLine.v,
+        isHorizontal ? uvLine.v : layoutSlotU)
+
+      child.arrange(childRect)
+      u += layoutSlotU

@@ -66,19 +66,21 @@ public class StackLayout
     var frameSize = desiredFrameSize
 
     // Add spacing if not the first frame
-    if (m_elementCount == 0)
+    if (m_elementCount > 0)
+    //{
+      // TODO: We have to do this because Frames are assumed to be BottomLeft-based
+      if (m_orientation == RIGHTTOLEFT)
+        m_layoutPos.x -= frameSize.x
+      if (m_orientation == TOPTOBOTTOM)
+        m_layoutPos.y -= frameSize.y
+    //}
+    else
     //{
       switch (m_orientation)
         case LEFTTORIGHT | RIGHTTOLEFT
           m_layoutPos.x += m_layoutDir.x * m_spacing.x
         case TOPTOBOTTOM | BOTTOMTOTOP
           m_layoutPos.y += m_layoutDir.y * m_spacing.y
-      
-      // TODO: We have to do this because Frames are assumed to be BottomLeft-based
-      if (m_orientation == RIGHTTOLEFT)
-        m_layoutPos.x -= frameSize.x
-      if (m_orientation == TOPTOBOTTOM)
-        m_layoutPos.y -= frameSize.y
     //}
 
     // Absolute if no parent is provided, otherwise local to the parent

@@ -7,6 +7,10 @@ public class StackPanel extends Panel
   private StackLayout m_layout = new StackLayout()
 
   // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_layout
+
+  // --------------------------------------------------------------------------
   function getLayoutOrientation() returns LayoutOrientation
     return m_layout.getOrientation()
 
@@ -20,7 +24,7 @@ public class StackPanel extends Panel
   override function measureOverride(vec2 availableSize) returns vec2
 
     let orientation = m_layout.getOrientation()
-    var stackDesiredSize = ZERO2
+    var panelDesiredSize = ZERO2
     var layoutSlotSize = availableSize
     let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
     let layoutDir = orientation.getLayoutDir()
@@ -36,14 +40,14 @@ public class StackPanel extends Panel
       if (child.getVisibility() != FrameVisibility.COLLAPSED)
         let childDesiredSize = child.getDesiredSize()
         if (isHorizontal)
-          stackDesiredSize.x += childDesiredSize.x * layoutDir.x
-          stackDesiredSize.y = max(stackDesiredSize.y, childDesiredSize.y)
+          panelDesiredSize.x += childDesiredSize.x * layoutDir.x
+          panelDesiredSize.y = max(panelDesiredSize.y, childDesiredSize.y)
         else
-          stackDesiredSize.x = max(stackDesiredSize.x, childDesiredSize.x)
-          stackDesiredSize.y += childDesiredSize.y * layoutDir.y
+          panelDesiredSize.x = max(panelDesiredSize.x, childDesiredSize.x)
+          panelDesiredSize.y += childDesiredSize.y * layoutDir.y
     //}
 
-    return stackDesiredSize
+    return panelDesiredSize
 
   // --------------------------------------------------------------------------
   override function arrangeOverride(vec2 arrangeSize) returns vec2

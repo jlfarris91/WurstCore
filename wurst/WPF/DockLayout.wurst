@@ -1,7 +1,6 @@
 package DockLayout
 import HashMap
 import initlater Frame
-import initlater Layout
 
 // ============================================================================
 public enum Dock
