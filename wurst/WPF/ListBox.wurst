@@ -145,9 +145,8 @@ public class ListBox extends Panel
         if (m_showScrollbar)
           childSize.x -= m_scrollBar.getDesiredSize().x
 
-      for i = 0 to m_children.size() - 1
-        let childFrame = m_children.get(i)
-        childFrame.measure(childSize)
+      for child in m_children
+        child.measure(childSize)
 
     return availableSize
 

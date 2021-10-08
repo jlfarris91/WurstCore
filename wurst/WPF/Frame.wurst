@@ -7,6 +7,12 @@ import public Object
 import FramehandleExtensions
 import Execute
 
+// import Reflection
+
+public class FrameDebugInfo
+  static int g_totalMeasures
+  static int g_totalArranges
+
 // ============================================================================
 public interface IFrameFactory
   function createFrame(framehandle frameHandle) returns Frame
@@ -67,7 +73,7 @@ public class Frame
   private thickness m_padding = ZEROTHICK
   private object m_dataContext = NULL
   private FrameVisibility m_visibility = FrameVisibility.VISIBLE
-  private bool m_fitToChildren
+  private bool m_fitToChildren = false
 
   private bool m_neverMeasured = true
   private rectr m_finalRectBL = ZERORECTR
@@ -177,7 +183,7 @@ public class Frame
   function setFitToChildren(bool value)
     if (m_fitToChildren != value)
       m_fitToChildren = value
-      invalidateArrange()
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function getVisibility() returns FrameVisibility
@@ -343,6 +349,16 @@ public class Frame
     return rectr(0, 0, m_size.x, m_size.y)
 
   // --------------------------------------------------------------------------
+  function setArea(rectr area)
+    setFinalRect(area)
+    if (m_parent != null)
+      m_parent.invalidateMeasure()
+    else
+      m_previousArrangeRect.x = area.x
+      m_previousArrangeRect.y = area.y
+      measure(m_finalRectBL.size())
+
+  // --------------------------------------------------------------------------
   function getArea() returns rectr
     return m_finalRectBL
 
@@ -467,7 +483,6 @@ public class Frame
     if (not getIsInitialized() or getNeverMeasured())
       return
     measure(m_previousConstraint)
-    invalidateArrange()
 
   // --------------------------------------------------------------------------
   function invalidateArrange()
@@ -484,6 +499,8 @@ public class Frame
     if (not getIsInitialized())
       initialize()
 
+    FrameDebugInfo.g_totalMeasures++
+
     m_isBeingMeasured++
     m_previousConstraint = availableSize
 
@@ -491,6 +508,9 @@ public class Frame
     m_desiredSize = measureCore(availableSize)
     // Log.info(typeIdToTypeName(this.typeId), "measure", "", "desiredSize : " + m_desiredSize.toString())
     m_neverMeasured = false
+
+    arrange(rectr(m_previousArrangeRect.bottomLeft(), availableSize))
+
     m_isBeingMeasured--
 
   // --------------------------------------------------------------------------
@@ -514,6 +534,8 @@ public class Frame
     if (not getIsInitialized())
       initialize()
 
+    FrameDebugInfo.g_totalArranges++
+
     m_isBeingArranged++
     m_previousArrangeRect = arrangeRect
 
@@ -527,11 +549,11 @@ public class Frame
     m_isBeingArranged--
 
   // --------------------------------------------------------------------------
-  protected function arrangeCore(rectr finalRect)
+  protected function arrangeCore(rectr arrangeRect)
 
-    //Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalRect : " + finalRect.toString())
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeRect : " + finalRect.toString())
 
-    var arrangeSize = finalRect.size()
+    var arrangeSize = arrangeRect.size()
 
     // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "m_margin : " + m_margin.toString())
 
@@ -572,13 +594,17 @@ public class Frame
 
     if (m_fitToChildren)
       finalSize = getDesiredSize()
+      // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalSize (fit) : " + finalSize.toString())
 
     let offset = getIsRootFrame()
                  ? m_margin.getFramePointOffset(m_origin)
                  : vec2(m_margin.left, m_margin.bottom)
 
-    let finalRect2 = rectr(finalRect.x + offset.x, finalRect.y + offset.y, finalSize.x, finalSize.y)
-    setFinalRect(finalRect2)
+    let finalRect = rectr(arrangeRect.x + offset.x, arrangeRect.y + offset.y, finalSize.x, finalSize.y)
+
+    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalRect : " + finalRect.toString())
+
+    setFinalRect(finalRect)
 
   // --------------------------------------------------------------------------
   private function setFinalRect(rectr value)

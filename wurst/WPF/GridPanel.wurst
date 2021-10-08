@@ -141,11 +141,11 @@ public class GridPanel extends Panel
 
   // --------------------------------------------------------------------------
   private function getRowClamped(Frame frame) returns int
-    return clamp(frame.getGridRow(), 0, min(m_rowDefinitions.size() - 1, 0))
+    return clamp(frame.getGridRow(), 0, max(m_rowDefinitions.size() - 1, 0))
 
   // --------------------------------------------------------------------------
   private function getColumnClamped(Frame frame) returns int
-    return clamp(frame.getGridColumn(), 0, min(m_columnDefinitions.size() - 1, 0))
+    return clamp(frame.getGridColumn(), 0, max(m_columnDefinitions.size() - 1, 0))
 
   private Vector<Frame> m_childrenNeedingMeasure = new Vector<Frame>()
 
