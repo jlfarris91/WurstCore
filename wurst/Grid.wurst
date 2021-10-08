@@ -33,95 +33,86 @@ public interface IGrid
 
 // ============================================================================
 public class Grid implements IGrid
-  private bounds _bounds
-  private int _width
-  private int _height
-  private vec2 _cellSize
+  private bounds m_bounds
+  private int m_width
+  private int m_height
+  private vec2 m_cellSize
 
   // --------------------------------------------------------------------------
   construct(bounds bounds, int width, int height)
-    _bounds = bounds
-    _width = width
-    _height = height
+    m_bounds = bounds
+    m_width = width
+    m_height = height
 
-    let size = _bounds.size()
-    _cellSize = vec2(size.x / width, size.y / height)
+    let size = m_bounds.size()
+    m_cellSize = vec2(size.x / width, size.y / height)
 
   // --------------------------------------------------------------------------
   override function getBounds() returns bounds
-    return _bounds
+    return m_bounds
 
   // --------------------------------------------------------------------------
   override function getWidth() returns int
-    return _width
+    return m_width
 
   // --------------------------------------------------------------------------
   override function getHeight() returns int
-    return _height
+    return m_height
 
   // --------------------------------------------------------------------------
   override function getCell(vec2 worldPos) returns cell
-    if (not _bounds.contains(worldPos))
+    if (not m_bounds.contains(worldPos))
       return INVALID_CELL
-    let localPos = _bounds.toLocalPos(worldPos)
+    let localPos = m_bounds.toLocalPos(worldPos)
     return getCellFromLocalPos(localPos)
 
   // --------------------------------------------------------------------------
   function getCell(int index) returns cell
-    return cell(index, _width, _height)
+    return cell(index, m_width, m_height)
 
   // --------------------------------------------------------------------------
   override function getIndex(cell cell) returns int
-    return cell.toIndex(_width, _height)
+    return cell.toIndex(m_width, m_height)
 
   // --------------------------------------------------------------------------
   override function getCellBounds(cell cell) returns bounds
-    if (cell.row < 0 or cell.row >= _height)
+    if (cell.row < 0 or cell.row >= m_height)
       error("Argument out of range: cell.row")
-    if (cell.column < 0 or cell.column >= _width)
+    if (cell.column < 0 or cell.column >= m_width)
       error("Argument out of range: cell.column")
-    let min = _bounds.min + vec2(_cellSize.x * cell.column, _cellSize.y * cell.row)
-    let max = min + _cellSize
+    let min = m_bounds.min + vec2(m_cellSize.x * cell.column, m_cellSize.y * cell.row)
+    let max = min + m_cellSize
     return bounds(min, max)
     
   // --------------------------------------------------------------------------
   function forEachCell(Action2<int, int> action)
-    for r = 0 to _height - 1
-      for c = 0 to _width - 1
+    for r = 0 to m_height - 1
+      for c = 0 to m_width - 1
         action.call(r, c)
     if (action.getDestroyAfterUse())
       destroy action
 
   // --------------------------------------------------------------------------
-  function getArea(vec2 worldPos, real range) returns span
-    return getArea(worldPos, vec2(range, range))
-
-  // --------------------------------------------------------------------------
-  function getArea(vec2 worldPos, vec2 range) returns span
-    let minPos = clamp(worldPos - range / 2, _bounds.min, _bounds.max)
-    let maxPos = clamp(worldPos + range / 2, _bounds.min, _bounds.max)
-    let min = getCell(minPos)
-    let max = getCell(maxPos)
-    return span(min, max)
-
-  // --------------------------------------------------------------------------
   function getArea(bounds bounds) returns span
-    let min = getCell(bounds.min)
-    let max = getCell(bounds.max)
-    return span(min, max)
+    return getArea(bounds.min, bounds.max)
+
+  // --------------------------------------------------------------------------
+  function getArea(vec2 min, vec2 max) returns span
+    let clampedMin = getCell(clamp(min, m_bounds.min, m_bounds.max))
+    let clampedMax = getCell(clamp(max, m_bounds.min, m_bounds.max))
+    return span(clampedMin, clampedMax)
 
   // --------------------------------------------------------------------------
   private function getCellFromLocalPos(vec2 localPos) returns cell
-    let x = clamp(R2I(localPos.x / _cellSize.x), 0, _width - 1)
-    let y = clamp(R2I(localPos.y / _cellSize.y), 0, _height - 1)    
+    let x = clamp(R2I(localPos.x / m_cellSize.x), 0, m_width - 1)
+    let y = clamp(R2I(localPos.y / m_cellSize.y), 0, m_height - 1)    
     return cell(y, x)
 
 // ============================================================================
 public function cell.toIndex(int width, int height) returns int
-  if (this.row < 0 or this.row >= height)
-    error("Argument out of range: row")
-  if (this.column < 0 or this.column >= width)
-    error("Argument out of range: column")
+  if (this.column < 0 or this.column >= width or
+      this.row < 0 or this.row >= height)
+    return INVALID_INDEX
   return this.row * width + this.column
 
 // ============================================================================
