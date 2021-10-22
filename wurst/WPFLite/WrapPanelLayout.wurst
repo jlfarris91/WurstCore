@@ -41,6 +41,7 @@ function uvsize.setHeight(real value) returns uvsize
 public class WrapLayout implements IFrameLiteLayout
   private Orientation m_orientation
   private bool m_stretchItems = false
+  private bool m_fitToContents = false
 
   // --------------------------------------------------------------------------
   function getOrientation() returns Orientation
@@ -60,14 +61,25 @@ public class WrapLayout implements IFrameLiteLayout
     m_stretchItems = value
 
   // --------------------------------------------------------------------------
+  function getFitToContents() returns bool
+    return m_fitToContents
+
+  // --------------------------------------------------------------------------
+  function setFitToContents(bool value)
+    m_fitToContents = value
+
+  // --------------------------------------------------------------------------
   override function layout(FrameLite frame)
 
     let parentSize = frame.getSize()
+    let children = frame.getChildren()
+
     var accumulatedV = 0.
     var curLineSize = uvsize(m_orientation)
-    let uvFinalSize = uvsize(m_orientation, parentSize)
+    var uvFinalSize = uvsize(m_orientation, parentSize)
     var firstInLine = 0
-    let children = frame.getChildren()
+
+    var uvPanelSize = uvsize(m_orientation)
 
     let finalRect = rectr(ZERO2, parentSize)
 
@@ -80,12 +92,18 @@ public class WrapLayout implements IFrameLiteLayout
 
         if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
         //{
+          uvPanelSize.u = max(curLineSize.u, uvPanelSize.u)
+          uvPanelSize.v += curLineSize.v
+
           arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, i)
           accumulatedV += curLineSize.v
           curLineSize = uvChildSize
 
           if (uvChildSize.u > uvFinalSize.u)
           //{
+            uvPanelSize.u = max(uvChildSize.u, uvPanelSize.u)
+            uvPanelSize.v += uvChildSize.v
+
             arrangeLine(frame, children, finalRect, accumulatedV, uvChildSize, uvFinalSize.u, i, i + 1)
             i++
             accumulatedV += uvChildSize.v
@@ -102,6 +120,16 @@ public class WrapLayout implements IFrameLiteLayout
 
     if (firstInLine < children.size())
       arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, children.size())
+
+    uvPanelSize.u = max(curLineSize.u, uvFinalSize.u)
+    uvPanelSize.v += curLineSize.v
+
+    if (m_fitToContents)
+      switch (m_orientation)
+        case HORIZONTAL
+          frame.setHeight(uvPanelSize.getHeight())
+        case VERTICAL
+          frame.setWidth(uvPanelSize.getHeight()) // not a bug!
 
   // --------------------------------------------------------------------------
   private function arrangeLine(FrameLite parent, LinkedList<FrameLite> children, rectr finalRect, real v, uvsize uvLine, real totalU, int start, int _end)

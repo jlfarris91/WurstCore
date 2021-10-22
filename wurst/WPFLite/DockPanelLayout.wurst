@@ -51,20 +51,20 @@ public class DockPanelLayout implements IFrameLiteLayout
       //{
         switch (dock)
           case Dock.LEFT
-            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
-              Log.error("Child " + i.toString() + " has zero width")
+            // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
+            //   Log.error("DockLayout", "layout", "", "Left child " + i.toString() + " has zero width")
             fill.left = max(fill.left, childHandle.getWidth() + margin.width())
           case Dock.RIGHT
-            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
-              Log.error("Child " + i.toString() + " has zero width")
+            // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
+            //   Log.error("DockLayout", "layout", "", "Right child " + i.toString() + " has zero width")
             fill.right = max(fill.right, childHandle.getWidth() + margin.width())
           case Dock.BOTTOM
-            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
-              Log.error("Child " + i.toString() + " has zero height")
+            // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
+            //   Log.error("DockLayout", "layout", "", "Bottom child " + i.toString() + " has zero height")
             fill.bottom = max(fill.bottom, childHandle.getHeight() + margin.height())
           case Dock.TOP
-            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
-              Log.error("Child " + i.toString() + " has zero height")
+            // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
+            //   Log.error("DockLayout", "layout", "", "Top child " + i.toString() + " has zero height")
             fill.top = max(fill.top, childHandle.getHeight() + margin.height())
       //}
       i++

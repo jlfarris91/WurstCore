@@ -18,7 +18,7 @@ public class WrapPanelLite extends PanelLite
 
   // --------------------------------------------------------------------------
   function setOrientation(Orientation value)
-    if (m_layout.getOrientation() != value)
+    if (getOrientation() != value)
       m_layout.setOrientation(value)
       invalidateLayout()
 
@@ -28,6 +28,16 @@ public class WrapPanelLite extends PanelLite
 
   // --------------------------------------------------------------------------
   function setStretchItems(bool value)
-    if (m_layout.getStretchItems() != value)
+    if (getStretchItems() != value)
       m_layout.setStretchItems(value)
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getFitToContents() returns bool
+    return m_layout.getFitToContents()
+
+  // --------------------------------------------------------------------------
+  function setFitToContents(bool value)
+    if (getFitToContents() != value)
+      m_layout.setFitToContents(value)
       invalidateLayout()

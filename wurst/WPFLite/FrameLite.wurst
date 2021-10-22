@@ -3,15 +3,16 @@ import HashMap
 import LinkedList
 import Layout
 import Action
+import FramehandleExtensions
+import Reflection
+
+@configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 
 Action1<FrameLite> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
-
 LinkedList<ILightweightProperty> g_allLightweightProperties = new LinkedList<ILightweightProperty>()
 
 // ============================================================================
 public class FrameLite
-  @configurable static constant bool SECURITY_CHECKS_ENABLED = false
-
   static constant LightweightProperty<IFrameLiteFactory>    frameFactory          = new LightweightProperty<IFrameLiteFactory>(null, null)
   static constant LightweightProperty<Thickness>            margin                = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
   static constant LightweightProperty<Thickness>            padding               = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
@@ -205,8 +206,40 @@ public class FrameLite
   // --------------------------------------------------------------------------
   function initialize()
     if (m_initialized)
-      Log.error("Initialized twice")
+      if (FRAME_SECURITY_CHECKS_ENABLED)
+        Log.error(typeIdToTypeName(this.typeId), "initialize", "", "Initialize called more than once")
+      return
+    initializeFrame()
     m_initialized = true
+
+  // --------------------------------------------------------------------------
+  function initialize(rectr area)
+    initialize()
+    setAbsArea(area)
+
+  // --------------------------------------------------------------------------
+  protected function initializeFrame()
+    skip
+
+  // --------------------------------------------------------------------------
+  function show()
+    m_frameHandle.show()
+  
+  // --------------------------------------------------------------------------
+  function show(player thisPlayer)
+    m_frameHandle.show(thisPlayer)
+
+  // --------------------------------------------------------------------------
+  function hide()
+    m_frameHandle.hide()
+
+  // --------------------------------------------------------------------------
+  function hide(player thisPlayer)
+    m_frameHandle.hide(thisPlayer)
+
+  // --------------------------------------------------------------------------
+  function clearFocus()
+    m_frameHandle.clearFocus()
 
   // --------------------------------------------------------------------------
   function invalidateLayout()
@@ -302,8 +335,8 @@ public interface IFrameLiteLayout
 
 // ============================================================================
 public interface IFrameLiteTemplate
-  function getFrameLiteDefinition() returns FrameLiteDefinition
-  function setFrameLiteDefinition(FrameLiteDefinition definition)
+  function getFrameDefinition() returns FrameLiteDefinition
+  function setFrameDefinition(FrameLiteDefinition definition)
   function getItemFrameFactory() returns IFrameLiteFactory
   function setItemFrameFactory(IFrameLiteFactory factory)
   function createFrame() returns FrameLite
@@ -351,11 +384,11 @@ public class FrameLiteTemplate implements IFrameLiteTemplate
   private Action1<FrameLite> m_initializer
 
   // --------------------------------------------------------------------------
-  override function getFrameLiteDefinition() returns FrameLiteDefinition
+  override function getFrameDefinition() returns FrameLiteDefinition
     return m_frameDef
   
   // --------------------------------------------------------------------------
-  override function setFrameLiteDefinition(FrameLiteDefinition value)
+  override function setFrameDefinition(FrameLiteDefinition value)
     m_frameDef = value
 
   // --------------------------------------------------------------------------
