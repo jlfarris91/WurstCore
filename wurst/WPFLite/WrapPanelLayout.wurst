@@ -1,0 +1,138 @@
+package WrapPanelLayout
+import FrameLite
+import Layout
+import LinkedList
+
+tuple uvsize(Orientation orientation, real u, real v)
+
+// ============================================================================
+function uvsize(Orientation orientation) returns uvsize
+  return uvsize(orientation, 0, 0)
+
+// ============================================================================
+function uvsize(Orientation orientation, vec2 size) returns uvsize
+  return uvsize(orientation,
+                orientation == HORIZONTAL ? size.x : size.y,
+                orientation == HORIZONTAL ? size.y : size.x)
+
+// ============================================================================
+function uvsize.getWidth() returns real
+  return this.orientation == Orientation.HORIZONTAL ? this.u : this.v
+
+// ============================================================================
+function uvsize.setWidth(real value) returns uvsize
+  if (this.orientation == Orientation.HORIZONTAL)
+    return uvsize(this.orientation, value, this.v)
+  else
+    return uvsize(this.orientation, this.u, value)
+
+// ============================================================================
+function uvsize.getHeight() returns real
+  return this.orientation == Orientation.HORIZONTAL ? this.v : this.u
+
+// ============================================================================
+function uvsize.setHeight(real value) returns uvsize
+  if (this.orientation == Orientation.HORIZONTAL)
+    return uvsize(this.orientation, this.u, value)
+  else
+    return uvsize(this.orientation, value, this.v)
+
+// ============================================================================
+public class WrapLayout implements IFrameLiteLayout
+  private Orientation m_orientation
+  private bool m_stretchItems = false
+
+  // --------------------------------------------------------------------------
+  function getOrientation() returns Orientation
+    return m_orientation
+
+  // --------------------------------------------------------------------------
+  function setOrientation(Orientation value)
+    if (m_orientation != value)
+      m_orientation = value
+
+  // --------------------------------------------------------------------------
+  function getStretchItems() returns bool
+    return m_stretchItems
+
+  // --------------------------------------------------------------------------
+  function setStretchItems(bool value)
+    m_stretchItems = value
+
+  // --------------------------------------------------------------------------
+  override function layout(FrameLite frame)
+
+    let parentSize = frame.getSize()
+    var accumulatedV = 0.
+    var curLineSize = uvsize(m_orientation)
+    let uvFinalSize = uvsize(m_orientation, parentSize)
+    var firstInLine = 0
+    let children = frame.getChildren()
+
+    let finalRect = rectr(ZERO2, parentSize)
+
+    for i = 0 to children.size() - 1
+    //{
+      let child = children.get(i)
+      if (child.isVisible())
+      //{
+        let uvChildSize = uvsize(m_orientation, child.getSize())
+
+        if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
+        //{
+          arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, i)
+          accumulatedV += curLineSize.v
+          curLineSize = uvChildSize
+
+          if (uvChildSize.u > uvFinalSize.u)
+          //{
+            arrangeLine(frame, children, finalRect, accumulatedV, uvChildSize, uvFinalSize.u, i, i + 1)
+            i++
+            accumulatedV += uvChildSize.v
+            curLineSize = uvsize(m_orientation)
+          //}
+
+          firstInLine = i
+        //}
+        else
+          curLineSize.u += uvChildSize.u
+          curLineSize.v = max(uvChildSize.v, curLineSize.v)
+      //}
+    //}
+
+    if (firstInLine < children.size())
+      arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, children.size())
+
+  // --------------------------------------------------------------------------
+  private function arrangeLine(FrameLite parent, LinkedList<FrameLite> children, rectr finalRect, real v, uvsize uvLine, real totalU, int start, int _end)
+    let orientation = getOrientation()
+    let isHorizontal = orientation == HORIZONTAL
+    let remainingU = (totalU - uvLine.u) / (_end - start)
+    real u = 0
+
+    for i = start to _end - 1
+      let child = children.get(i)
+      let uvChildSize = uvsize(orientation, child.getSize())
+      var layoutSlotU = uvChildSize.u
+
+      if (m_stretchItems)
+        layoutSlotU += remainingU
+
+      let childRect = rectr(
+        isHorizontal ? u : v,
+        finalRect.top() - (isHorizontal ? v + uvLine.v : u + layoutSlotU),
+        // finalRect.top() - (isHorizontal ? v : u) - (isHorizontal ? lineV : layoutSlotU),
+        isHorizontal ? layoutSlotU : uvLine.v,
+        isHorizontal ? uvLine.v : layoutSlotU)
+
+      arrange(parent, child, childRect)
+      u += layoutSlotU
+
+  // --------------------------------------------------------------------------
+  private function arrange(FrameLite parent, FrameLite child, rectr area)
+    let parentHandle = parent.getFrameHandle()
+    let childHandle = child.getFrameHandle()
+    childHandle.clearAllPoints()
+    childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, area.bottomLeft())
+    childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_BOTTOMLEFT, area.topRight())
+    

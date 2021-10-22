@@ -1,0 +1,33 @@
+package WrapPanelLite
+import PanelLite
+import WrapPanelLayout
+import Layout
+
+// ============================================================================
+public class WrapPanelLite extends PanelLite
+  private WrapLayout m_layout
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_layout = new WrapLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
+  function getOrientation() returns Orientation
+    return m_layout.getOrientation()
+
+  // --------------------------------------------------------------------------
+  function setOrientation(Orientation value)
+    if (m_layout.getOrientation() != value)
+      m_layout.setOrientation(value)
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getStretchItems() returns bool
+    return m_layout.getStretchItems()
+
+  // --------------------------------------------------------------------------
+  function setStretchItems(bool value)
+    if (m_layout.getStretchItems() != value)
+      m_layout.setStretchItems(value)
+      invalidateLayout()

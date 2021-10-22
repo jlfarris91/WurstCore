@@ -1,0 +1,142 @@
+package DockPanelLayout
+import FrameLite
+import HashMap
+import Layout
+
+// ============================================================================
+public enum Dock
+  LEFT
+  RIGHT
+  BOTTOM
+  TOP
+
+HashMap<FrameLite, Dock> m_frameToDockLookup
+
+constant vec2 bottomLeftScalar = vec2(1, 1)
+constant vec2 bottomRightScalar = vec2(-1, 1)
+constant vec2 topLeftScalar = vec2(1, -1)
+constant vec2 topRightScalar = vec2(-1, -1)
+
+// ============================================================================
+public class DockPanelLayout implements IFrameLiteLayout
+  private bool m_lastChildFills
+
+  // --------------------------------------------------------------------------
+  function getLastChildFills() returns bool
+    return m_lastChildFills
+
+  // --------------------------------------------------------------------------
+  function setLastChildFills(bool value)
+    m_lastChildFills = value
+
+  // --------------------------------------------------------------------------
+  override function layout(FrameLite frame)
+
+    let padding = frame.getPadding()
+    let parentHandle = frame.getFrameHandle()
+    let parentSize = frame.getSize()
+    let children = frame.getChildren()
+    let childCount = children.size()
+
+    thickness fill = ZEROTHICK
+
+    var i = 0
+    for childFrame in children
+    //{
+      let dock = childFrame.getDock()
+      let margin = childFrame.getMargin()
+      let childHandle = childFrame.getFrameHandle()
+      
+      if (m_lastChildFills == false or i < childCount - 1)
+      //{
+        switch (dock)
+          case Dock.LEFT
+            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
+              Log.error("Child " + i.toString() + " has zero width")
+            fill.left = max(fill.left, childHandle.getWidth() + margin.width())
+          case Dock.RIGHT
+            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
+              Log.error("Child " + i.toString() + " has zero width")
+            fill.right = max(fill.right, childHandle.getWidth() + margin.width())
+          case Dock.BOTTOM
+            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
+              Log.error("Child " + i.toString() + " has zero height")
+            fill.bottom = max(fill.bottom, childHandle.getHeight() + margin.height())
+          case Dock.TOP
+            if (FrameLite.SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
+              Log.error("Child " + i.toString() + " has zero height")
+            fill.top = max(fill.top, childHandle.getHeight() + margin.height())
+      //}
+      i++
+    //}
+
+    i = 0
+    for childFrame in children
+    //{
+      let dock = childFrame.getDock()
+      let margin = childFrame.getMargin()
+      let childHandle = childFrame.getFrameHandle()
+      let childIsPanel = childFrame.isPanel()
+
+      childHandle.clearAllPoints()
+
+      if (m_lastChildFills and i == childCount - 1)
+      //{
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (padding.bottomLeft() + margin.bottomLeft() + fill.bottomLeft()) * bottomLeftScalar)
+        if (childIsPanel)
+          childFrame.setSize(vec2(parentSize.x - (padding.width() + margin.width() + fill.width()), parentSize.y - (padding.height() + margin.height() + fill.height())))
+        else
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (padding.topRight() + margin.topRight() + fill.topRight()) * topRightScalar)
+      //}
+      else
+      //{
+        switch (dock)
+          case Dock.LEFT
+          //{
+            childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (padding.bottomLeft() + margin.bottomLeft()) * bottomLeftScalar)
+            if (childIsPanel)
+              childFrame.setHeight(parentSize.y - (padding.height() + margin.height()))
+            else
+              childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (padding.topLeft() + margin.topLeft()) * topLeftScalar)
+          //}
+          case Dock.RIGHT
+          //{
+            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (padding.bottomRight() + margin.bottomRight()) * bottomRightScalar)
+            if (childIsPanel)
+              childFrame.setHeight(parentSize.y - (padding.height() + margin.height()))
+            else
+              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (padding.topRight() + margin.topRight()) * topRightScalar)
+          //}
+          case Dock.BOTTOM
+          //{
+            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (padding.bottomRight() + margin.bottomRight() + vec2(fill.right, 0)) * bottomRightScalar)
+            if (childIsPanel)
+              childFrame.setWidth(parentSize.x - (padding.width() + margin.width() + fill.width()))
+            else
+              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (padding.bottomLeft() + margin.bottomLeft() + vec2(fill.left, 0)) * bottomLeftScalar)
+          //}
+          case Dock.TOP
+          //{
+            childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (padding.topLeft() + margin.topLeft() + vec2(fill.left, 0)) * topLeftScalar)
+            if (childIsPanel)
+              childFrame.setWidth(parentSize.x - (padding.width() + margin.width() + fill.width()))
+            else
+              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (padding.topRight() + margin.topRight() + vec2(fill.right, 0)) * topRightScalar)
+          //}
+      //}
+      i++
+    //}
+
+// ============================================================================
+public function FrameLite.setDock(Dock dock)
+  if (m_frameToDockLookup == null)
+    m_frameToDockLookup = new HashMap<FrameLite, Dock>()
+  m_frameToDockLookup.put(this, dock)
+
+// ============================================================================
+public function FrameLite.getDock() returns Dock
+  if (m_frameToDockLookup == null)
+    return Dock.LEFT
+  if (m_frameToDockLookup.has(this))
+    return m_frameToDockLookup.get(this)
+  return Dock.LEFT

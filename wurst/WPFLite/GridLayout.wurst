@@ -1,0 +1,245 @@
+package GridLayout
+import FrameLite
+import HashMap
+import LinkedList
+import Math
+import Vector
+import Layout
+
+HashMap<FrameLite, int> m_frameToColumnMap
+HashMap<FrameLite, int> m_frameToRowMap
+
+public enum GridSizeMode
+  FIXED
+  AUTO
+  PROPORTIONAL
+
+constant vec2 bottomLeftScalar = vec2(1, 1)
+constant vec2 bottomRightScalar = vec2(-1, 1)
+constant vec2 topLeftScalar = vec2(1, -1)
+constant vec2 topRightScalar = vec2(-1, -1)
+
+// ============================================================================
+public class ColumnDefinition
+  private real m_value
+  private GridSizeMode m_mode = AUTO
+  protected real m_desiredSize
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_mode = AUTO
+    m_value = 0.0
+
+  // --------------------------------------------------------------------------
+  construct(real width)
+    m_mode = FIXED
+    m_value = width
+
+  // --------------------------------------------------------------------------
+  construct(GridSizeMode mode, real value)
+    m_mode = mode
+    m_value = value
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function getSizeMode() returns GridSizeMode
+    return m_mode
+
+// ============================================================================
+public class RowDefinition
+  private real m_value
+  private GridSizeMode m_mode = AUTO
+  protected real m_desiredSize
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_mode = AUTO
+    m_value = 0.0
+
+  // --------------------------------------------------------------------------
+  construct(real height)
+    m_mode = FIXED
+    m_value = height
+
+  // --------------------------------------------------------------------------
+  construct(GridSizeMode mode, real value)
+    m_mode = mode
+    m_value = value
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function getSizeMode() returns GridSizeMode
+    return m_mode
+
+// ============================================================================
+public class GridLayout implements IFrameLiteLayout
+  private Vector<ColumnDefinition> m_columnDefinitions
+  private Vector<RowDefinition> m_rowDefinitions
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_columnDefinitions = new Vector<ColumnDefinition>()
+    m_rowDefinitions = new Vector<RowDefinition>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    while m_columnDefinitions.isEmpty() == false
+      destroy m_columnDefinitions.pop()
+    m_columnDefinitions = null
+
+    while m_rowDefinitions.isEmpty() == false
+      destroy m_rowDefinitions.pop()
+    m_rowDefinitions = null
+
+  // --------------------------------------------------------------------------
+  function addColumnDefinition(ColumnDefinition columnDefinition)
+    m_columnDefinitions.add(columnDefinition)
+
+  // --------------------------------------------------------------------------
+  function addRowDefinition(RowDefinition rowDefinition)
+    m_rowDefinitions.add(rowDefinition)
+
+  // --------------------------------------------------------------------------
+  override function layout(FrameLite frame)
+
+    let parentHandle = frame.getFrameHandle()
+    let children = frame.getChildren()
+    let padding = frame.getPadding()
+
+    var remainingSize = frame.getSize() - padding.size()
+    
+    // ===== MEASURE COLUMNS =====
+
+    for col = 0 to m_columnDefinitions.getCount() - 1
+    //{
+      let colDef = m_columnDefinitions.getItem(col)
+      let sizeMode = colDef.getSizeMode()
+      var cachedSize = 0.
+
+      if (sizeMode == FIXED)
+        cachedSize = min(colDef.getValue(), remainingSize.x)
+        colDef.m_desiredSize = cachedSize
+        remainingSize.x -= cachedSize
+
+      else if (sizeMode == AUTO)
+        for childFrame in children
+          if (childFrame.getGridColumn() == col)
+            cachedSize = max(cachedSize, childFrame.getWidth() + childFrame.getMargin().width())
+        colDef.m_desiredSize = cachedSize
+        remainingSize.x -= cachedSize
+    //}
+
+    var totalColWeight = 0.0
+
+    for col = 0 to m_columnDefinitions.getCount() - 1
+      let colDef = m_columnDefinitions.getItem(col)
+      if (colDef.getSizeMode() == PROPORTIONAL)
+        totalColWeight += colDef.getValue()
+
+    for col = 0 to m_columnDefinitions.getCount() - 1
+      let colDef = m_columnDefinitions.getItem(col)
+      if (colDef.getSizeMode() == PROPORTIONAL)
+        colDef.m_desiredSize = remainingSize.x * (colDef.getValue() / totalColWeight)
+
+    // ===== MEASURE ROWS =====
+
+    for row = 0 to m_rowDefinitions.getCount() - 1
+    //{
+      let rowDef = m_rowDefinitions.getItem(row)
+      let sizeMode = rowDef.getSizeMode()
+      var cachedSize = 0.
+
+      if (sizeMode == FIXED)
+        cachedSize = min(rowDef.getValue(), remainingSize.y)
+        rowDef.m_desiredSize = cachedSize
+        remainingSize.y -= cachedSize
+
+      else if (sizeMode == AUTO)
+        for childFrame in children
+          if (childFrame.getGridRow() == row)
+            cachedSize = max(cachedSize, childFrame.getHeight() + childFrame.getMargin().height())
+        rowDef.m_desiredSize = cachedSize
+        remainingSize.y -= cachedSize
+    //}
+
+    var totalRowWeight = 0.
+
+    for row = 0 to m_rowDefinitions.getCount() - 1
+      let rowDef = m_rowDefinitions.getItem(row)
+      if (rowDef.getSizeMode() == PROPORTIONAL)
+        totalRowWeight += rowDef.getValue()
+
+    for row = 0 to m_rowDefinitions.getCount() - 1
+      let rowDef = m_rowDefinitions.getItem(row)
+      if (rowDef.getSizeMode() == PROPORTIONAL)
+        rowDef.m_desiredSize = remainingSize.y * (rowDef.getValue() / totalRowWeight)
+
+    // ===== LAYOUT CHILDREN =====
+
+    for childFrame in children
+    //{
+      let row = getRowClamped(childFrame)
+      let col = getColumnClamped(childFrame)
+      let childFrameHandle = childFrame.getFrameHandle()
+      let margin = childFrame.getMargin()
+      let cellArea = getCellArea(row, col).grow(margin * -1).translate(padding.bottomLeft())
+      
+      childFrameHandle.clearAllPoints()
+      childFrameHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, cellArea.bottomLeft())
+      if (childFrame.isPanel())
+        childFrame.setSize(cellArea.size())
+      else
+        childFrameHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_BOTTOMLEFT, cellArea.topRight())
+    //}
+
+  // --------------------------------------------------------------------------
+  private function getCellArea(int row, int col) returns rectr
+    let rowDefs = m_rowDefinitions.getCount()
+    let colDefs = m_columnDefinitions.getCount()
+    var cellArea = ZERORECTR
+    cellArea.height = (row < rowDefs) ? m_rowDefinitions.getItem(row).m_desiredSize : 0
+    cellArea.width = (col < colDefs) ? m_columnDefinitions.getItem(col).m_desiredSize : 0
+    for r = 0 to row - 1
+      cellArea.y += (r < rowDefs) ? m_rowDefinitions.getItem(r).m_desiredSize : 0
+    for c = 0 to col - 1
+      cellArea.x += (c < colDefs) ? m_columnDefinitions.getItem(c).m_desiredSize : 0
+    return cellArea
+
+  // --------------------------------------------------------------------------
+  private function getRowClamped(FrameLite frame) returns int
+    return clamp(frame.getGridRow(), 0, max(m_rowDefinitions.getCount() - 1, 0))
+
+  // --------------------------------------------------------------------------
+  private function getColumnClamped(FrameLite frame) returns int
+    return clamp(frame.getGridColumn(), 0, max(m_columnDefinitions.getCount() - 1, 0))
+
+
+// ============================================================================
+public function FrameLite.getGridColumn() returns int
+  if (m_frameToColumnMap == null)
+    return 0
+  return m_frameToColumnMap.get(this)
+
+// ============================================================================
+public function FrameLite.setGridColumn(int column)
+  if (m_frameToColumnMap == null)
+    m_frameToColumnMap = new HashMap<FrameLite, int>()
+  m_frameToColumnMap.put(this, column)
+
+// ============================================================================
+public function FrameLite.getGridRow() returns int
+  if (m_frameToRowMap == null)
+    return 0
+  return m_frameToRowMap.get(this)
+
+// ============================================================================
+public function FrameLite.setGridRow(int row)
+  if (m_frameToRowMap == null)
+    m_frameToRowMap = new HashMap<FrameLite, int>()
+  m_frameToRowMap.put(this, row)

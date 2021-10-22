@@ -1,0 +1,22 @@
+package GridPanelLite
+import PanelLite
+import GridLayout
+
+// ============================================================================
+public class GridPanelLite extends PanelLite
+  private GridLayout m_layout
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_layout = new GridLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
+  function addColumnDefinition(ColumnDefinition columnDefinition)
+    m_layout.addColumnDefinition(columnDefinition)
+    invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function addRowDefinition(RowDefinition rowDefinition)
+    m_layout.addRowDefinition(rowDefinition)
+    invalidateLayout()

@@ -39,8 +39,32 @@ public function thickness.size() returns vec2
   return vec2(this.width(), this.height())
 
 // ============================================================================
+public function thickness.bottomLeft() returns vec2
+  return vec2(this.left, this.bottom)
+
+// ============================================================================
+public function thickness.bottomRight() returns vec2
+  return vec2(this.right, this.bottom)
+
+// ============================================================================
+public function thickness.topLeft() returns vec2
+  return vec2(this.left, this.top)
+
+// ============================================================================
+public function thickness.topRight() returns vec2
+  return vec2(this.right, this.top)
+
+// ============================================================================
 public function thickness.op_mult(real factor) returns thickness
   return thickness(this.left * factor, this.bottom * factor, this.right * factor, this.top * factor)
+
+// ============================================================================
+public function thickness.op_plus(thickness other) returns thickness
+  return thickness(this.left + other.left, this.bottom + other.bottom, this.right + other.right, this.top + other.top)
+
+// ============================================================================
+public function thickness.op_minus(thickness other) returns thickness
+  return thickness(this.left - other.left, this.bottom - other.bottom, this.right - other.right, this.top - other.top)
 
 // ============================================================================
 public function rectr.toString() returns string
@@ -215,6 +239,17 @@ public enum HorizontalLayoutOrientation
 public enum VerticalLayoutOrientation
   BOTTOMTOTOP
   TOPTOBOTTOM
+
+// ============================================================================
+public class LayoutScalars
+  static constant vec2 left = vec2(1, 0)
+  static constant vec2 right = vec2(-1, 0)
+  static constant vec2 bottom = vec2(0, 1)
+  static constant vec2 top = vec2(0, -1)
+  static constant vec2 bottomLeft = vec2(1, 1)
+  static constant vec2 bottomRight = vec2(-1, 1)
+  static constant vec2 topLeft = vec2(1, -1)
+  static constant vec2 topRight = vec2(-1, -1)
 
 @test function rectr_setLeft()
   let area = rectrFromExtents(-10, -10, 10, 10)
