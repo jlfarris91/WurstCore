@@ -14,6 +14,12 @@ public class StackPanel extends Panel
     setFrameLayout(m_layout)
 
   // --------------------------------------------------------------------------
+  construct(string name)
+    super(name)
+    m_layout = new StackLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
   function setOrientation(LayoutOrientation value)
     if (m_layout.getOrientation() != value)
       m_layout.setOrientation(value)

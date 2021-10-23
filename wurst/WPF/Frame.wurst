@@ -9,6 +9,7 @@ import Object
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 
 Action1<Frame> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
+Action1<Frame> g_playerChanged = context -> context.onPlayerChanged()
 LinkedList<ILightweightProperty> g_allLightweightProperties
 
 // ============================================================================
@@ -17,6 +18,7 @@ public class Frame
   static constant LightweightProperty<IFrameFactory>  frameFactoryProperty  = new LightweightProperty<IFrameFactory>(null, null)
   static constant LightweightProperty<Thickness>      marginProperty        = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
   static constant LightweightProperty<Thickness>      paddingProperty       = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
+  static constant LightweightProperty<player>         playerProperty        = new LightweightProperty<player>(null, null)
 
   private framehandle m_frameHandle
   private Frame m_parent
@@ -143,10 +145,14 @@ public class Frame
       m_frameHandle.setWidth(value.x)
       m_frameHandle.setHeight(value.y)
       invalidateLayout()
-      
+
   // --------------------------------------------------------------------------
   function setAbsArea(rectr area)
-    m_frameHandle.setAbsPoint(FRAMEPOINT_CENTER, area.center())
+    setAbsArea(area, FRAMEPOINT_TOPLEFT)
+
+  // --------------------------------------------------------------------------
+  function setAbsArea(rectr area, framepointtype framepoint)
+    m_frameHandle.setAbsPoint(framepoint, area.getFramePointOffset(framepoint))
     m_frameHandle.setWidth(area.width)
     m_frameHandle.setHeight(area.height)
     invalidateLayout()
@@ -166,6 +172,10 @@ public class Frame
     m_frameHandle.setText(value)
 
   // --------------------------------------------------------------------------
+  function getText() returns string
+    return m_frameHandle.getText()
+
+  // --------------------------------------------------------------------------
   function isVisible() returns bool
     return m_frameHandle.isVisible()
 
@@ -173,7 +183,11 @@ public class Frame
   function setVisible(bool value)
     if (isVisible() != value)
       if (value)
-        m_frameHandle.show()
+        let _player = getPlayer()
+        if (_player != null)
+          m_frameHandle.show(_player)
+        else
+          m_frameHandle.show()
         invalidateLayout()
       else
         m_frameHandle.hide()
@@ -257,8 +271,16 @@ public class Frame
       paddingProperty.raisePropertyChanged(this)
 
   // --------------------------------------------------------------------------
-  function initialize(rectr area)
-    setAbsArea(area)
+  function getPlayer() returns player
+    return playerProperty.getValue(this)
+
+  // --------------------------------------------------------------------------
+  function setPlayer(player value)
+    playerProperty.setValue(this, value)
+
+  // --------------------------------------------------------------------------
+  protected function onPlayerChanged()
+    skip
 
   // --------------------------------------------------------------------------
   function show()

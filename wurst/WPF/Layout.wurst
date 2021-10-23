@@ -207,6 +207,26 @@ public function rectr.toLocalPos(vec2 absPos) returns vec2
   return absPos - this.bottomLeft()
 
 // ============================================================================
+public function rectr.getFramePointOffset(framepointtype framepoint) returns vec2
+  if (framepoint == FRAMEPOINT_BOTTOMLEFT)
+    return this.bottomLeft()
+  if (framepoint == FRAMEPOINT_BOTTOMRIGHT)
+    return this.bottomRight()
+  if (framepoint == FRAMEPOINT_TOPLEFT)
+    return this.topLeft()
+  if (framepoint == FRAMEPOINT_TOPRIGHT)
+    return this.topRight()
+  if (framepoint == FRAMEPOINT_LEFT)
+    return vec2(this.left(), 0)
+  if (framepoint == FRAMEPOINT_RIGHT)
+    return vec2(this.right(), 0)
+  if (framepoint == FRAMEPOINT_TOP)
+    return vec2(0, this.top())
+  if (framepoint == FRAMEPOINT_BOTTOM)
+    return vec2(0, this.bottom())
+  return this.center()
+
+// ============================================================================
 public enum Orientation
   HORIZONTAL
   VERTICAL
