@@ -1,5 +1,5 @@
-package DockPanelLayout
-import FrameLite
+package DockLayout
+import Frame
 import HashMap
 import Layout
 
@@ -10,7 +10,7 @@ public enum Dock
   BOTTOM
   TOP
 
-HashMap<FrameLite, Dock> m_frameToDockLookup
+HashMap<Frame, Dock> m_frameToDockLookup
 
 constant vec2 bottomLeftScalar = vec2(1, 1)
 constant vec2 bottomRightScalar = vec2(-1, 1)
@@ -18,7 +18,7 @@ constant vec2 topLeftScalar = vec2(1, -1)
 constant vec2 topRightScalar = vec2(-1, -1)
 
 // ============================================================================
-public class DockPanelLayout implements IFrameLiteLayout
+public class DockLayout implements IFrameLayout
   private bool m_lastChildFills
 
   // --------------------------------------------------------------------------
@@ -30,7 +30,7 @@ public class DockPanelLayout implements IFrameLiteLayout
     m_lastChildFills = value
 
   // --------------------------------------------------------------------------
-  override function layout(FrameLite frame)
+  override function layout(Frame frame)
 
     let padding = frame.getPadding()
     let parentHandle = frame.getFrameHandle()
@@ -128,13 +128,13 @@ public class DockPanelLayout implements IFrameLiteLayout
     //}
 
 // ============================================================================
-public function FrameLite.setDock(Dock dock)
+public function Frame.setDock(Dock dock)
   if (m_frameToDockLookup == null)
-    m_frameToDockLookup = new HashMap<FrameLite, Dock>()
+    m_frameToDockLookup = new HashMap<Frame, Dock>()
   m_frameToDockLookup.put(this, dock)
 
 // ============================================================================
-public function FrameLite.getDock() returns Dock
+public function Frame.getDock() returns Dock
   if (m_frameToDockLookup == null)
     return Dock.LEFT
   if (m_frameToDockLookup.has(this))

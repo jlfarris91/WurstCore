@@ -91,6 +91,38 @@ public class Object
   function getObject() returns object
     return m_object
 
+  // --------------------------------------------------------------------------
+  function setObject(object value)
+    m_object = value
+
+  // --------------------------------------------------------------------------
+  function is(int expectedTypeId) returns bool
+    return m_object.is(expectedTypeId)
+
+  // --------------------------------------------------------------------------
+  function as<T>(int expectedTypeId) returns T
+    return m_object.as<T>(expectedTypeId)
+
+  // --------------------------------------------------------------------------
+  function cast<T>(int expectedTypeId) returns T
+    return m_object.cast<T>(expectedTypeId)
+    
+  // --------------------------------------------------------------------------
+  function isNull() returns bool
+    return m_object.isNull()
+
+  // --------------------------------------------------------------------------
+  function isTyped() returns bool
+    return m_object.isTyped()
+
+  // --------------------------------------------------------------------------
+  function getType() returns Type
+    return m_object.getType()
+
+  // --------------------------------------------------------------------------
+  function getTypeName() returns string
+    return m_object.getTypeName()
+
 // ============================================================================
 public function object.ref() returns Object
   return new Object(this)

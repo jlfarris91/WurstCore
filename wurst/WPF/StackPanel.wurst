@@ -1,64 +1,24 @@
 package StackPanel
+import Frame
 import Panel
 import StackLayout
+import Layout
 
 // ============================================================================
 public class StackPanel extends Panel
-  private StackLayout m_layout = new StackLayout()
+  private StackLayout m_layout
 
   // --------------------------------------------------------------------------
-  ondestroy
-    destroy m_layout
+  construct()
+    m_layout = new StackLayout()
+    setFrameLayout(m_layout)
 
   // --------------------------------------------------------------------------
-  function getLayoutOrientation() returns LayoutOrientation
-    return m_layout.getOrientation()
-
-  // --------------------------------------------------------------------------
-  function setLayoutOrientation(LayoutOrientation value)
+  function setOrientation(LayoutOrientation value)
     if (m_layout.getOrientation() != value)
       m_layout.setOrientation(value)
-      invalidateMeasure()
+      invalidateLayout()
 
   // --------------------------------------------------------------------------
-  override function measureOverride(vec2 availableSize) returns vec2
-
-    let orientation = m_layout.getOrientation()
-    var panelDesiredSize = ZERO2
-    var layoutSlotSize = availableSize
-    let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
-    let layoutDir = orientation.getLayoutDir()
-
-    if (isHorizontal)
-      layoutSlotSize.x = REAL_MAX
-    else
-      layoutSlotSize.y = REAL_MAX
-
-    for child in m_children
-    //{
-      child.measure(layoutSlotSize)
-      if (child.getVisibility() != FrameVisibility.COLLAPSED)
-        let childDesiredSize = child.getDesiredSize()
-        if (isHorizontal)
-          panelDesiredSize.x += childDesiredSize.x * layoutDir.x
-          panelDesiredSize.y = max(panelDesiredSize.y, childDesiredSize.y)
-        else
-          panelDesiredSize.x = max(panelDesiredSize.x, childDesiredSize.x)
-          panelDesiredSize.y += childDesiredSize.y * layoutDir.y
-    //}
-
-    return panelDesiredSize
-
-  // --------------------------------------------------------------------------
-  override function arrangeOverride(vec2 arrangeSize) returns vec2
-
-    m_layout.reset(rectr(ZERO2, arrangeSize))
-
-    for child in m_children
-    //{
-      if (child.getVisibility() != FrameVisibility.COLLAPSED)
-        let childArea = m_layout.arrange(child.getDesiredSize())
-        child.arrange(childArea)
-    //}
-
-    return arrangeSize
+  function getOrientation() returns LayoutOrientation
+    return m_layout.getOrientation()

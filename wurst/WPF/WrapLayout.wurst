@@ -1,5 +1,5 @@
-package WrapPanelLayout
-import FrameLite
+package WrapLayout
+import Frame
 import Layout
 import LinkedList
 
@@ -38,7 +38,7 @@ function uvsize.setHeight(real value) returns uvsize
     return uvsize(this.orientation, value, this.v)
 
 // ============================================================================
-public class WrapLayout implements IFrameLiteLayout
+public class WrapLayout implements IFrameLayout
   private Orientation m_orientation
   private bool m_stretchItems = false
   private bool m_fitToContents = false
@@ -69,14 +69,14 @@ public class WrapLayout implements IFrameLiteLayout
     m_fitToContents = value
 
   // --------------------------------------------------------------------------
-  override function layout(FrameLite frame)
+  override function layout(Frame frame)
 
     let parentSize = frame.getSize()
     let children = frame.getChildren()
 
     var accumulatedV = 0.
     var curLineSize = uvsize(m_orientation)
-    var uvFinalSize = uvsize(m_orientation, parentSize)
+    let uvFinalSize = uvsize(m_orientation, parentSize)
     var firstInLine = 0
 
     var uvPanelSize = uvsize(m_orientation)
@@ -132,7 +132,7 @@ public class WrapLayout implements IFrameLiteLayout
           frame.setWidth(uvPanelSize.getHeight()) // not a bug!
 
   // --------------------------------------------------------------------------
-  private function arrangeLine(FrameLite parent, LinkedList<FrameLite> children, rectr finalRect, real v, uvsize uvLine, real totalU, int start, int _end)
+  private function arrangeLine(Frame parent, LinkedList<Frame> children, rectr finalRect, real v, uvsize uvLine, real totalU, int start, int _end)
     let orientation = getOrientation()
     let isHorizontal = orientation == HORIZONTAL
     let remainingU = (totalU - uvLine.u) / (_end - start)
@@ -157,7 +157,7 @@ public class WrapLayout implements IFrameLiteLayout
       u += layoutSlotU
 
   // --------------------------------------------------------------------------
-  private function arrange(FrameLite parent, FrameLite child, rectr area)
+  private function arrange(Frame parent, Frame child, rectr area)
     let parentHandle = parent.getFrameHandle()
     let childHandle = child.getFrameHandle()
     childHandle.clearAllPoints()

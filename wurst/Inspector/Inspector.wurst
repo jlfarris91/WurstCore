@@ -9,18 +9,15 @@ import Range
 import HashList
 import HashMap
 import GridPanel
+import GridLayout
 
-constant vec2 INSPECTOR_POS = vec2(0.55, 0.2)
+constant vec2 INSPECTOR_POS = vec2(0.8, 0.54)
 constant vec2 INSPECTOR_SIZE = vec2(0.25, 0.34)
 
 InspectorFrame g_inspectorFrame
 
 // ============================================================================
 public abstract class InspectorRow extends Frame
-
-  // --------------------------------------------------------------------------
-  construct (string framename, framehandle owner)
-    super(framename, owner)
 
   // --------------------------------------------------------------------------
   construct (framehandle frame)
@@ -84,7 +81,7 @@ public class InspectorEditorRow extends InspectorRow
   // --------------------------------------------------------------------------
   function addEditor(string editorType, PropertyEditor editor)
     editor.setGridColumn(1)
-    m_gridPanel.addLogicalChild(editor)
+    m_gridPanel.addChild(editor)
     m_editors.put(editorType, editor)
   
   // --------------------------------------------------------------------------
@@ -93,18 +90,18 @@ public class InspectorEditorRow extends InspectorRow
       m_editors.get(key).refresh()
 
   // --------------------------------------------------------------------------
-  override function onInitialize()
-    super.onInitialize()
+  override function initializeFrame()
+    super.initializeFrame()
 
     m_gridPanel = new GridPanel()
     m_gridPanel.addColumnDefinition(new ColumnDefinition(GridSizeMode.PROPORTIONAL, 1))
     m_gridPanel.addColumnDefinition(new ColumnDefinition(GridSizeMode.PROPORTIONAL, 1))
-    addLogicalChild(m_gridPanel)
+    addChild(m_gridPanel)
 
     let textFrame = createFrame("TEXT", "HeaderText", GAME_UI, "", 0)
     m_headerText = new Frame(textFrame)
       ..setGridColumn(0)
-    m_gridPanel.addLogicalChild(m_headerText)
+    m_gridPanel.addChild(m_headerText)
 
   // --------------------------------------------------------------------------
   private function getOrAddEditor(IPropertyDescriptor descriptor) returns PropertyEditor
@@ -120,14 +117,14 @@ public class InspectorEditorRow extends InspectorRow
     if (m_activeEditor != editor)
       deactivateActiveEditor()
       m_activeEditor = editor
-      m_activeEditor..setContext(m_descriptor, m_contexts)..setVisibility(FrameVisibility.VISIBLE)
+      m_activeEditor..setContext(m_descriptor, m_contexts)..setVisible(true)
       return true
     return false
 
   // --------------------------------------------------------------------------
   private function deactivateActiveEditor()
     if (m_activeEditor != null)
-      m_activeEditor..setVisibility(FrameVisibility.COLLAPSED)..setContext(null, null)
+      m_activeEditor..setVisible(false)..setContext(null, null)
       m_activeEditor = null
 
 // ============================================================================
@@ -135,11 +132,11 @@ public class PropertyEditorFactory implements IPropertyEditorFactory
   override function createEditor(IPropertyDescriptor descriptor) returns PropertyEditor
     switch (descriptor.getEditorType())
       case "int"
-        return new IntEditor()..initialize()..setVisibility(FrameVisibility.COLLAPSED)
+        return new IntEditor()..setVisible(false)..initialize()
       case "real"
-        return new RealEditor()..initialize()..setVisibility(FrameVisibility.COLLAPSED)
+        return new RealEditor()..setVisible(false)..initialize()
       case "string"
-        return new StringEditor()..initialize()..setVisibility(FrameVisibility.COLLAPSED)
+        return new StringEditor()..setVisible(false)..initialize()
     return null
 
 // ============================================================================
@@ -165,7 +162,7 @@ public class InspectorFrame extends Frame
 
   // --------------------------------------------------------------------------
   construct()
-    super("InspectorTemplate", GAME_UI)
+    super(createFrame("FRAME", "Inspector", GAME_UI, "InspectorTemplate", 0))
     m_propertyEditorFactory = new PropertyEditorFactory()
     m_descriptors = new HashList<IPropertyDescriptor>()
     m_descriptorWindow = new Vector<IPropertyDescriptor>()
@@ -184,29 +181,28 @@ public class InspectorFrame extends Frame
     // destroy m_dockPanelLayout
 
   // --------------------------------------------------------------------------
-  override function onInitialize()
-    super.onInitialize()
+  override function initializeFrame()
+    super.initializeFrame()
 
     let titleFrameHandle = createFrame("FRAME", "TitleFrame", GAME_UI, "", 0)
     m_titleContainer = new Frame(titleFrameHandle)
       ..setHeight(0.03)
       // ..setDock(Dock.TOP)
       // ..setLayout(new GridLayout())
-    addLogicalChild(m_titleContainer)
+    addChild(m_titleContainer)
 
     let titleTextHandle = createFrame("TEXT", "InspectorTitle", GAME_UI, "", 0)
+    ..setTextAlignment(TEXT_JUSTIFY_CENTER, TEXT_JUSTIFY_CENTER)
     m_titleText = new Frame(titleTextHandle)
       ..setText("Inspector")
       ..setHeight(0.03)
-      ..setTextAlignment(TEXT_JUSTIFY_CENTER, TEXT_JUSTIFY_CENTER)
-    m_titleContainer.addLogicalChild(m_titleText)
+    m_titleContainer.addChild(m_titleText)
 
     let scrollBarHandle = createFrame("SCROLLBAR", "ScrollBar", GAME_UI, "BattleNetScrollBarTemplate", 0)
     m_scrollBar = new Frame(scrollBarHandle)
       ..setWidth(0.012)
       // ..setDock(Dock.RIGHT)
-      ..setVisibility(FrameVisibility.VISIBLE)
-    addLogicalChild(m_scrollBar)
+    addChild(m_scrollBar)
 
     rebuild()
 
@@ -280,11 +276,11 @@ public class InspectorFrame extends Frame
       (row castTo InspectorEditorRow)..setContext(descriptor, m_contexts)
 
   // --------------------------------------------------------------------------
-  function layout()
+  override function layout()
 
-    let area = getLocalArea()
+    let panelSize = getSize()
 
-    let numRows = getMaxNumberOfRows(m_itemHeight, area.height)
+    let numRows = getMaxNumberOfRows(m_itemHeight, panelSize.y)
     // let spacing = getSpacing(m_itemHeight, area.height)
 
     if (numRows == m_numRows)
@@ -317,8 +313,7 @@ public class InspectorFrame extends Frame
   private function addEditorRow() returns InspectorEditorRow
     let row = new InspectorEditorRow(m_propertyEditorFactory)
     ..initialize()
-    ..setVisibility(FrameVisibility.VISIBLE)
-    addLogicalChild(row)
+    addChild(row)
     m_rows.add(row)
     return row
 
@@ -376,13 +371,13 @@ public class Inspector
 
   // --------------------------------------------------------------------------
   static function getIsVisible() returns bool
-    return g_inspectorFrame != null ? g_inspectorFrame.getIsVisible() : false
+    return g_inspectorFrame != null ? g_inspectorFrame.isVisible() : false
 
   // --------------------------------------------------------------------------
   static function show()
     if (not getIsReady())
       return
-    g_inspectorFrame.show()
+    g_inspectorFrame.show(localPlayer)
 
   // --------------------------------------------------------------------------
   static function hide()
@@ -391,16 +386,18 @@ public class Inspector
     g_inspectorFrame.hide()
 
   // --------------------------------------------------------------------------
-  static function initialize(player _player)
+  static function initialize()
     if (g_inspectorFrame != null)
       return
     
     g_inspectorFrame = new InspectorFrame()
-    ..setPlayer(_player)
-    ..initialize()
-    ..setLocalPos(INSPECTOR_POS)
     ..setSize(INSPECTOR_SIZE)
     ..hide()
+    ..initialize()
+
+    g_inspectorFrame.getFrameHandle()
+    ..clearAllPoints()
+    ..setAbsPoint(FRAMEPOINT_TOPRIGHT, INSPECTOR_POS)
 
     doPeriodically(1.0) (CallbackPeriodic cb) ->
       Inspector.rebuild()

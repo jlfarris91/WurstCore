@@ -1,16 +1,20 @@
 package StackLayout
+import Frame
 import Layout
 
+constant vec2 bottomLeftScalar = vec2(1, 1)
+constant vec2 bottomRightScalar = vec2(-1, 1)
+constant vec2 topLeftScalar = vec2(1, -1)
+constant vec2 topRightScalar = vec2(-1, -1)
+
+constant vec2 leftScalar = vec2(1, 0)
+constant vec2 rightScalar = vec2(-1, 0)
+constant vec2 bottomScalar = vec2(0, 1)
+constant vec2 topScalar = vec2(0, -1)
+
 // ============================================================================
-public class StackLayout
-  private rectr m_area = ZERORECTR
-  private vec2 m_spacing = ZERO2
-  private vec2 m_layoutPos = ZERO2
-  private vec2 m_layoutPosStart = ZERO2
-  private vec2 m_layoutDir = ZERO2
+public class StackLayout implements IFrameLayout
   private LayoutOrientation m_orientation
-  private vec2 m_size = ZERO2
-  private int m_elementCount = 0
 
   // --------------------------------------------------------------------------
   function setOrientation(LayoutOrientation value)
@@ -21,101 +25,91 @@ public class StackLayout
     return m_orientation
 
   // --------------------------------------------------------------------------
-  function setSpacing(vec2 value)
-    m_spacing = value
+  override function layout(Frame frame)
 
-  // --------------------------------------------------------------------------
-  function getSpacing() returns vec2
-    return m_spacing
+    let parentHandle = frame.getFrameHandle()
+    let parentSize = frame.getSize()
+    let children = frame.getChildren()
+    let padding = frame.getPadding()
 
-  // --------------------------------------------------------------------------
-  function getWidth() returns real
-    return m_size.x
+    vec2 uv = ZERO2
 
-  // --------------------------------------------------------------------------
-  function getHeight() returns real
-    return m_size.y
-
-  // --------------------------------------------------------------------------
-  function reset(rectr area)
-    m_area = area
-    m_size = ZERO2
-    
-    // Remember that x/y frame of reference is bottom left
-    switch (m_orientation)
-      case LEFTTORIGHT
-        m_layoutPos.x = m_area.left()
-        m_layoutDir = vec2(1, 0)
-      case RIGHTTOLEFT
-        m_layoutPos.x = m_area.right()
-        m_layoutDir = vec2(-1, 0)
-      case TOPTOBOTTOM
-        m_layoutPos.y = m_area.top()
-        m_layoutDir = vec2(0, -1)
-      case BOTTOMTOTOP
-        m_layoutPos.y = m_area.bottom()
-        m_layoutDir = vec2(0, 1)
-
-    m_layoutPosStart = m_layoutPos
-    m_elementCount = 0
-
-  // --------------------------------------------------------------------------
-  function arrange(vec2 desiredFrameSize) returns rectr
-    
-    // Always in local space
-    var frameSize = desiredFrameSize
-
-    // Add spacing if not the first frame
-    if (m_elementCount > 0)
+    for childFrame in children
     //{
-      // TODO: We have to do this because Frames are assumed to be BottomLeft-based
-      if (m_orientation == RIGHTTOLEFT)
-        m_layoutPos.x -= frameSize.x
-      if (m_orientation == TOPTOBOTTOM)
-        m_layoutPos.y -= frameSize.y
-    //}
-    else
-    //{
+
+      let margin = childFrame.getMargin()
+      let childHandle = childFrame.getFrameHandle()
+      let childIsPanel = childFrame.isPanel()
+
+      childHandle.clearAllPoints()
+
       switch (m_orientation)
-        case LEFTTORIGHT | RIGHTTOLEFT
-          m_layoutPos.x += m_layoutDir.x * m_spacing.x
-        case TOPTOBOTTOM | BOTTOMTOTOP
-          m_layoutPos.y += m_layoutDir.y * m_spacing.y
-    //}
-
-    // Absolute if no parent is provided, otherwise local to the parent
-    var framePos = m_layoutPos
-
-    // Remember that x/y frame of reference is bottom left
-    switch (m_orientation)
-      case LEFTTORIGHT | RIGHTTOLEFT
-        framePos.y = m_area.bottom()
-        frameSize.y = m_area.height
-      case BOTTOMTOTOP | TOPTOBOTTOM
-        framePos.x = m_area.left()
-        frameSize.x = m_area.width
-
-    // Prepare for next frame
-    switch (m_orientation)
-      case LEFTTORIGHT | RIGHTTOLEFT
-        m_layoutPos.x += m_layoutDir.x * frameSize.x
-        m_size.x = m_layoutPos.x
-        m_size.y = max(m_size.y, frameSize.y)
-      case BOTTOMTOTOP | TOPTOBOTTOM
-        m_layoutPos.y += m_layoutDir.y * frameSize.y
-        m_size.x = max(m_size.x, frameSize.x)
-        m_size.y = m_layoutPos.y
-
-    m_elementCount++
-
-    return rectr(framePos, frameSize)
-
-    // Actually update the frame
-    // frame.clearAllPoints()
-    // if (parent != null)
-    //   frame.setPoint(FRAMEPOINT_BOTTOMLEFT, parent, FRAMEPOINT_BOTTOMLEFT, m_area.toLocalPos(frameAbsPos))
-    // else
-    //   frame.setAbsPoint(FRAMEPOINT_BOTTOMLEFT, frameAbsPos)
-
-    // frame.setWidth(frameSize.x)
-    // frame.setHeight(frameSize.y)
+        case LEFTTORIGHT
+        //{
+          switch (childFrame.getVerticalLayoutMode())
+            case BOTTOM
+              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + padding.bottomLeft() + margin.bottomLeft()) * bottomLeftScalar)
+            case TOP
+              childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + padding.topLeft() + margin.topLeft()) * topLeftScalar)
+            case CENTER
+              childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, uv + vec2(padding.left + margin.left, 0) /* * leftScalar */)
+            case STRETCH
+              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + padding.bottomLeft() + margin.bottomLeft()) * bottomLeftScalar)
+              if (childIsPanel)
+                childFrame.setHeight(parentSize.y - (padding.height() + margin.height()))
+              else
+                childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + padding.topLeft() + margin.topLeft()) * topLeftScalar)
+          uv.x += childHandle.getWidth() + margin.width()
+        //}
+        case RIGHTTOLEFT
+        //{
+          switch (childFrame.getVerticalLayoutMode())
+            case BOTTOM
+              childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + padding.bottomRight() + margin.bottomRight()) * bottomRightScalar)
+            case TOP
+              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + padding.topRight() + margin.topRight()) * topRightScalar)
+            case CENTER
+              childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, (uv + vec2(padding.right + margin.right, 0)) * rightScalar)
+            case STRETCH
+              childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + padding.bottomRight() + margin.bottomRight()) * bottomRightScalar)
+              if (childIsPanel)
+                childFrame.setHeight(parentSize.y - (padding.height() + margin.height()))
+              else
+                childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + padding.topRight() + margin.topRight()) * topRightScalar)
+          uv.x += childHandle.getWidth() + margin.width()
+        //}
+        case BOTTOMTOTOP
+        //{
+          switch (childFrame.getHorizontalLayoutMode())
+            case LEFT
+              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + padding.bottomLeft() + margin.bottomLeft()) * bottomLeftScalar)
+            case RIGHT
+              childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + padding.bottomRight() + margin.bottomRight()) * bottomRightScalar)
+            case CENTER
+              childHandle.setPoint(FRAMEPOINT_BOTTOM, parentHandle, FRAMEPOINT_BOTTOM, (uv + vec2(0, padding.bottom + margin.bottom)) /* * bottomScalar */)
+            case STRETCH
+              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + padding.bottomLeft() + margin.bottomLeft()) * bottomLeftScalar)
+              if (childIsPanel)
+                childFrame.setWidth(parentSize.x - (padding.width() + margin.width()))
+              else
+                childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + padding.bottomRight() + margin.bottomRight()) * bottomRightScalar)
+          uv.y += childHandle.getHeight() + margin.height()
+        //}
+        case TOPTOBOTTOM
+        //{
+          switch (childFrame.getHorizontalLayoutMode())
+            case LEFT
+              childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + padding.topLeft() + margin.topLeft()) * topLeftScalar)
+            case RIGHT
+              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + padding.topRight() + margin.topRight()) * topRightScalar)
+            case CENTER
+              childHandle.setPoint(FRAMEPOINT_TOP, parentHandle, FRAMEPOINT_TOP, (uv + vec2(0, padding.top + margin.top)) * topScalar)
+            case STRETCH
+              childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + padding.topLeft() + margin.topLeft()) * topLeftScalar)
+              if (childIsPanel)
+                childFrame.setWidth(parentSize.x - (padding.width() + margin.width()))
+              else
+                childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + padding.topRight() + margin.topRight()) * topRightScalar)
+          uv.y += childHandle.getHeight() + margin.height()
+        //}
+      //}

@@ -12,10 +12,6 @@ public abstract class PropertyEditor extends Frame
   private bool m_isIndeterminate
 
   // --------------------------------------------------------------------------
-  construct(string name, framehandle owner)
-    super(name, owner)
-
-  // --------------------------------------------------------------------------
   construct(framehandle frame)
     super(frame)
 
@@ -144,11 +140,11 @@ public class IntEditor extends PropertyEditor
 
   // --------------------------------------------------------------------------
   construct()
-    super("IntEditorTemplate", GAME_UI)
+    super(createFrame("FRAME", "IntEditor", GAME_UI, "IntEditorTemplate", 0))
 
   // --------------------------------------------------------------------------
-  override function onInitialize()
-    super.onInitialize()
+  override function initializeFrame()
+    super.initializeFrame()
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
@@ -158,7 +154,7 @@ public class IntEditor extends PropertyEditor
     ..onEditboxEnter(() -> onEditboxEnter())
     ..setText("<MISSING>")
     ..setLevel(999)
-    ..setAllPoints(m_handle)
+    ..setAllPoints(getFrameHandle())
     ..show()
 
   // --------------------------------------------------------------------------
@@ -247,11 +243,11 @@ public class StringEditor extends PropertyEditor
 
   // --------------------------------------------------------------------------
   construct()
-    super("StringEditorTemplate", GAME_UI)
+    super(createFrame("FRAME", "StringEditor", GAME_UI, "StringEditorTemplate", 0))
 
   // --------------------------------------------------------------------------
-  override function onInitialize()
-    super.onInitialize()
+  override function initializeFrame()
+    super.initializeFrame()
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
@@ -260,7 +256,7 @@ public class StringEditor extends PropertyEditor
       "InspectorEditBoxTemplate", 0)
     ..setText("<MISSING>")
     ..setLevel(999)
-    ..setAllPoints(m_handle)
+    ..setAllPoints(getFrameHandle())
     ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 
@@ -340,11 +336,11 @@ public class RealEditor extends PropertyEditor
 
   // --------------------------------------------------------------------------
   construct()
-    super("RealEditorTemplate", GAME_UI)
+    super(createFrame("FRAME", "RealEditor", GAME_UI, "RealEditorTemplate", 0))
 
   // --------------------------------------------------------------------------
-  override function onInitialize()
-    super.onInitialize()
+  override function initializeFrame()
+    super.initializeFrame()
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
@@ -353,7 +349,7 @@ public class RealEditor extends PropertyEditor
       "InspectorEditBoxTemplate", 0)
     ..setText("<MISSING>")
     ..setLevel(999)
-    ..setAllPoints(m_handle)
+    ..setAllPoints(getFrameHandle())
     ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 

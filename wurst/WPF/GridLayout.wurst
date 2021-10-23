@@ -1,13 +1,13 @@
 package GridLayout
-import FrameLite
+import Frame
 import HashMap
 import LinkedList
 import Math
 import Vector
 import Layout
 
-HashMap<FrameLite, int> m_frameToColumnMap
-HashMap<FrameLite, int> m_frameToRowMap
+HashMap<Frame, int> m_frameToColumnMap
+HashMap<Frame, int> m_frameToRowMap
 
 public enum GridSizeMode
   FIXED
@@ -78,7 +78,7 @@ public class RowDefinition
     return m_mode
 
 // ============================================================================
-public class GridLayout implements IFrameLiteLayout
+public class GridLayout implements IFrameLayout
   private Vector<ColumnDefinition> m_columnDefinitions
   private Vector<RowDefinition> m_rowDefinitions
 
@@ -106,7 +106,7 @@ public class GridLayout implements IFrameLiteLayout
     m_rowDefinitions.add(rowDefinition)
 
   // --------------------------------------------------------------------------
-  override function layout(FrameLite frame)
+  override function layout(Frame frame)
 
     let parentHandle = frame.getFrameHandle()
     let children = frame.getChildren()
@@ -212,34 +212,34 @@ public class GridLayout implements IFrameLiteLayout
     return cellArea
 
   // --------------------------------------------------------------------------
-  private function getRowClamped(FrameLite frame) returns int
+  private function getRowClamped(Frame frame) returns int
     return clamp(frame.getGridRow(), 0, max(m_rowDefinitions.getCount() - 1, 0))
 
   // --------------------------------------------------------------------------
-  private function getColumnClamped(FrameLite frame) returns int
+  private function getColumnClamped(Frame frame) returns int
     return clamp(frame.getGridColumn(), 0, max(m_columnDefinitions.getCount() - 1, 0))
 
 
 // ============================================================================
-public function FrameLite.getGridColumn() returns int
+public function Frame.getGridColumn() returns int
   if (m_frameToColumnMap == null)
     return 0
   return m_frameToColumnMap.get(this)
 
 // ============================================================================
-public function FrameLite.setGridColumn(int column)
+public function Frame.setGridColumn(int column)
   if (m_frameToColumnMap == null)
-    m_frameToColumnMap = new HashMap<FrameLite, int>()
+    m_frameToColumnMap = new HashMap<Frame, int>()
   m_frameToColumnMap.put(this, column)
 
 // ============================================================================
-public function FrameLite.getGridRow() returns int
+public function Frame.getGridRow() returns int
   if (m_frameToRowMap == null)
     return 0
   return m_frameToRowMap.get(this)
 
 // ============================================================================
-public function FrameLite.setGridRow(int row)
+public function Frame.setGridRow(int row)
   if (m_frameToRowMap == null)
-    m_frameToRowMap = new HashMap<FrameLite, int>()
+    m_frameToRowMap = new HashMap<Frame, int>()
   m_frameToRowMap.put(this, row)

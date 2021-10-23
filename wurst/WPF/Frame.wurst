@@ -1,17 +1,348 @@
 package Frame
-import Range
+import HashMap
+import LinkedList
+import Layout
 import Action
-import public initlater Layout
-import Math
-import public Object
 import FramehandleExtensions
-import Execute
+import Reflection
+import Object
 
-// import Reflection
+@configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 
-public class FrameDebugInfo
-  static int g_totalMeasures
-  static int g_totalArranges
+Action1<Frame> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
+LinkedList<ILightweightProperty> g_allLightweightProperties = new LinkedList<ILightweightProperty>()
+
+// ============================================================================
+public class Frame
+  static constant LightweightProperty<Object>         dataContextProperty   = new LightweightProperty<Object>(null, g_invalidateFrameLayoutOnPropertyChanged)
+  static constant LightweightProperty<IFrameFactory>  frameFactoryProperty  = new LightweightProperty<IFrameFactory>(null, null)
+  static constant LightweightProperty<Thickness>      marginProperty        = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
+  static constant LightweightProperty<Thickness>      paddingProperty       = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
+
+  private framehandle m_frameHandle
+  private Frame m_parent
+  private bool m_initialized
+  private LinkedList<Frame> m_children = new LinkedList<Frame>()
+  private HorizontalLayoutMode m_horizontalLayoutMode = HorizontalLayoutMode.STRETCH
+  private VerticalLayoutMode m_verticalLayoutMode = VerticalLayoutMode.STRETCH
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frameHandle)
+    m_frameHandle = frameHandle
+
+  // --------------------------------------------------------------------------
+  ondestroy
+  //{
+    if (m_frameHandle != null)
+      m_frameHandle.remove()
+      m_frameHandle = null
+
+    if (m_parent != null)
+      m_parent.m_children.remove(this)
+      m_parent = null
+
+    while m_children.isEmpty() == false
+      destroy m_children.pop()
+    destroy m_children
+    m_children = null
+  
+    m_frameHandle.remove()
+    m_frameHandle = null
+
+    for prop in g_allLightweightProperties
+      prop.clearValue(this)
+  //}
+
+  // --------------------------------------------------------------------------
+  function getFrameHandle() returns framehandle
+    return m_frameHandle
+
+  // --------------------------------------------------------------------------
+  function getParent() returns Frame
+    return m_parent
+
+  // --------------------------------------------------------------------------
+  private function setParent(Frame value)
+    if (m_parent == value)
+      return
+
+    if (m_parent != null)
+      m_parent.m_children.remove(this)
+
+    m_parent = value
+
+    if (m_parent != null)
+      m_parent.m_children.add(this)
+      m_frameHandle.setParent(value.m_frameHandle)
+
+    invalidateLayout()
+  
+  // --------------------------------------------------------------------------
+  function getChildren() returns LinkedList<Frame>
+    return m_children
+
+  // --------------------------------------------------------------------------
+  function addChild(Frame childFrame)
+    if (childFrame.m_parent != this)
+      childFrame.setParent(this)
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function removeChild(Frame childFrame)
+    if (childFrame.m_parent == this)
+      childFrame.setParent(null)
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function isPanel() returns bool
+    return false
+
+  // --------------------------------------------------------------------------
+  function getWidth() returns real
+    return m_frameHandle.getWidth()
+  
+  // --------------------------------------------------------------------------
+  function setWidth(real value)
+    if (m_frameHandle.getWidth() != value)
+      m_frameHandle.setWidth(value)
+      invalidateLayout()
+  
+  // --------------------------------------------------------------------------
+  function getHeight() returns real
+    return m_frameHandle.getHeight()
+  
+  // --------------------------------------------------------------------------
+  function setHeight(real value)
+    if (m_frameHandle.getHeight() != value)
+      m_frameHandle.setHeight(value)
+      invalidateLayout()
+  
+  // --------------------------------------------------------------------------
+  function getSize() returns vec2
+    return vec2(m_frameHandle.getWidth(), m_frameHandle.getHeight())
+  
+  // --------------------------------------------------------------------------
+  function setSize(vec2 value)
+    if (m_frameHandle.getWidth() != value.x or m_frameHandle.getHeight() != value.y)
+      m_frameHandle.setWidth(value.x)
+      m_frameHandle.setHeight(value.y)
+      invalidateLayout()
+      
+  // --------------------------------------------------------------------------
+  function setAbsArea(rectr area)
+    m_frameHandle.setAbsPoint(FRAMEPOINT_CENTER, area.center())
+    m_frameHandle.setWidth(area.width)
+    m_frameHandle.setHeight(area.height)
+    invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function setText(string value)
+    m_frameHandle.setText(value)
+
+  // --------------------------------------------------------------------------
+  function isVisible() returns bool
+    return m_frameHandle.isVisible()
+
+  // --------------------------------------------------------------------------
+  function setVisible(bool value)
+    if (isVisible() != value)
+      if (value)
+        show()
+      else
+        hide()
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getEnabled() returns bool
+    return m_frameHandle.isEnabled()
+
+  // --------------------------------------------------------------------------
+  function getDataContext() returns object
+    let valueObject = dataContextProperty.getValue(this)
+    return valueObject != null ? valueObject.getObject() : NULL
+
+  // --------------------------------------------------------------------------
+  function setDataContext(object value)
+    var valueObject = dataContextProperty.getValue(this)
+    if (valueObject == null)
+      valueObject = new Object(value)
+      dataContextProperty.setValue(this, valueObject)
+    else if (valueObject.getObject() != value)
+      valueObject.setObject(value)
+      dataContextProperty.raisePropertyChanged(this)
+    dataContextProperty.setValue(this, valueObject)
+
+  // --------------------------------------------------------------------------
+  function getFrameFactory() returns IFrameFactory
+    return frameFactoryProperty.getValue(this)
+
+  // --------------------------------------------------------------------------
+  function setFrameFactory(IFrameFactory value)
+    frameFactoryProperty.setValue(this, value)
+
+  // --------------------------------------------------------------------------
+  function getHorizontalLayoutMode() returns HorizontalLayoutMode
+    return m_horizontalLayoutMode
+
+  // --------------------------------------------------------------------------
+  function setHorizontalLayoutMode(HorizontalLayoutMode value)
+    if (m_horizontalLayoutMode != value)
+      m_horizontalLayoutMode = value
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getVerticalLayoutMode() returns VerticalLayoutMode    
+    return m_verticalLayoutMode
+
+  // --------------------------------------------------------------------------
+  function setVerticalLayoutMode(VerticalLayoutMode value)
+    if (m_verticalLayoutMode != value)
+      m_verticalLayoutMode = value
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getMargin() returns thickness
+    let valueObject = marginProperty.getValue(this)
+    return valueObject != null ? valueObject.value : ZEROTHICK
+
+  // --------------------------------------------------------------------------
+  function setMargin(thickness value)
+    var valueObject = marginProperty.getValue(this)
+    if (valueObject == null)
+      valueObject = new Thickness(value)
+      marginProperty.setValue(this, valueObject)
+    else if (valueObject.value != value)
+      valueObject.value = value
+      marginProperty.raisePropertyChanged(this)
+
+  // --------------------------------------------------------------------------
+  function getPadding() returns thickness
+    let valueObject = paddingProperty.getValue(this)
+    return valueObject != null ? valueObject.value : ZEROTHICK
+
+  // --------------------------------------------------------------------------
+  function setPadding(thickness value)
+    var valueObject = paddingProperty.getValue(this)
+    if (valueObject == null)
+      valueObject = new Thickness(value)
+      paddingProperty.setValue(this, valueObject)
+    else if (valueObject.value != value)
+      valueObject.value = value
+      paddingProperty.raisePropertyChanged(this)
+
+  // --------------------------------------------------------------------------
+  function initialize()
+    if (m_initialized)
+      if (FRAME_SECURITY_CHECKS_ENABLED)
+        Log.error(typeIdToTypeName(this.typeId), "initialize", "", "Initialize called more than once")
+      return
+    initializeFrame()
+    m_initialized = true
+
+  // --------------------------------------------------------------------------
+  function initialize(rectr area)
+    initialize()
+    setAbsArea(area)
+
+  // --------------------------------------------------------------------------
+  protected function initializeFrame()
+    skip
+
+  // --------------------------------------------------------------------------
+  function show()
+    m_frameHandle.show()
+  
+  // --------------------------------------------------------------------------
+  function show(player thisPlayer)
+    m_frameHandle.show(thisPlayer)
+
+  // --------------------------------------------------------------------------
+  function hide()
+    m_frameHandle.hide()
+
+  // --------------------------------------------------------------------------
+  function hide(player thisPlayer)
+    m_frameHandle.hide(thisPlayer)
+
+  // --------------------------------------------------------------------------
+  function clearFocus()
+    m_frameHandle.clearFocus()
+
+  // --------------------------------------------------------------------------
+  function invalidateLayout()
+    if (m_initialized == false)
+      return
+    
+    if (m_parent != null)
+      m_parent.invalidateLayout()
+
+    layout()
+
+  // --------------------------------------------------------------------------
+  protected function layout()
+    if (m_parent != null and not m_parent.isPanel())
+      layoutFrame(m_parent, this, m_parent.getPadding())
+      
+  // --------------------------------------------------------------------------
+  static function layoutFrame(Frame parentFrame, Frame childFrame, thickness padding)
+
+    let parentHandle = parentFrame.getFrameHandle()
+    let childHandle = childFrame.getFrameHandle()
+
+    childHandle.clearAllPoints()
+
+    let horizontalLayoutMode = childFrame.getHorizontalLayoutMode()
+    let verticalLayoutMode = childFrame.getVerticalLayoutMode()
+    let margin = childFrame.getMargin() + padding
+
+    if (horizontalLayoutMode == STRETCH and verticalLayoutMode == STRETCH)
+    //{
+      childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, margin.bottomLeft() * LayoutScalars.bottomLeft)
+      childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, margin.topRight() * LayoutScalars.topRight)
+    //}
+    else if (horizontalLayoutMode == CENTER and verticalLayoutMode == CENTER)
+    //{
+      childHandle.setPoint(FRAMEPOINT_CENTER, parentHandle, FRAMEPOINT_CENTER, ZERO2)
+    //}
+    else if (horizontalLayoutMode == LEFT)
+    //{
+      if (verticalLayoutMode == BOTTOM or verticalLayoutMode == STRETCH)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, margin.bottomLeft() * LayoutScalars.bottomLeft)
+      if (verticalLayoutMode == TOP or verticalLayoutMode == STRETCH)
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, margin.topLeft()  * LayoutScalars.topLeft)
+      if (verticalLayoutMode == CENTER)
+        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, vec2(margin.left, 0))
+    //}
+    else if (horizontalLayoutMode == RIGHT)
+    //{
+      if (verticalLayoutMode == BOTTOM or verticalLayoutMode == STRETCH)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, margin.bottomRight() * LayoutScalars.bottomRight)
+      if (verticalLayoutMode == TOP or verticalLayoutMode == STRETCH)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, margin.topRight()  * LayoutScalars.topRight)
+      if (verticalLayoutMode == CENTER)
+        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, vec2(-margin.right, 0))
+    //}
+    else if (horizontalLayoutMode == CENTER)
+    //{
+      if (verticalLayoutMode == BOTTOM or verticalLayoutMode == STRETCH)
+        childHandle.setPoint(FRAMEPOINT_BOTTOM, parentHandle, FRAMEPOINT_BOTTOM, vec2(0, margin.bottom))
+      if (verticalLayoutMode == TOP or verticalLayoutMode == STRETCH)
+        childHandle.setPoint(FRAMEPOINT_TOP, parentHandle, FRAMEPOINT_TOP, vec2(0, -margin.top))
+    //}
+    else if (horizontalLayoutMode == STRETCH)
+    //{
+      if (verticalLayoutMode == BOTTOM)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, margin.bottomLeft() * LayoutScalars.bottomLeft)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, margin.bottomRight() * LayoutScalars.bottomRight)
+      else if (verticalLayoutMode == TOP)
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, margin.topLeft() * LayoutScalars.topLeft)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, margin.topRight() * LayoutScalars.topRight)
+      else if (verticalLayoutMode == CENTER)
+        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, vec2(margin.left, 0))
+        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, vec2(-margin.right, 0))
+    //}
+    else
+      Log.error("H: " + horizontalLayoutMode.toString() + " v: " + verticalLayoutMode.toString())
 
 // ============================================================================
 public interface IFrameFactory
@@ -20,610 +351,14 @@ public interface IFrameFactory
 // ============================================================================
 public class DefaultFrameFactory implements IFrameFactory
   constant static IFrameFactory instance = new DefaultFrameFactory()
+  
+  // --------------------------------------------------------------------------
   override function createFrame(framehandle frameHandle) returns Frame
     return new Frame(frameHandle)
 
 // ============================================================================
-public enum HorizontalLayoutMode
-  LEFT
-  CENTER
-  RIGHT
-  STRETCH
-
-// ============================================================================
-public enum VerticalLayoutMode
-  BOTTOM
-  CENTER
-  TOP
-  STRETCH
-
-// ============================================================================
-public enum FrameVisibility
-  COLLAPSED
-  VISIBLE
-  HIDDEN
-
-public function FrameVisibility.toString() returns string
-  switch (this)
-    case VISIBLE
-      return "VISIBLE"
-    case HIDDEN
-      return "HIDDEN"
-    case COLLAPSED
-      return "COLLAPSED"
-
-public constant vec2 INF2 = vec2(REAL_MAX, REAL_MAX)
-
-// ============================================================================
-public class Frame
-  protected Frame m_parent
-  protected framehandle m_handle
-
-  private player m_player
-  private bool m_initialized
-  private framepointtype m_origin = FRAMEPOINT_BOTTOMLEFT
-  private vec2 m_size
-  private vec2 m_desiredSize
-  private vec2 m_minSize = vec2(0.001, 0.001)
-  private vec2 m_maxSize = INF2
-  private rangeReal m_minMax
-  private textaligntype m_textHorzAlign
-  private textaligntype m_textVertAlign
-  private thickness m_margin = ZEROTHICK
-  private thickness m_padding = ZEROTHICK
-  private object m_dataContext = NULL
-  private FrameVisibility m_visibility = FrameVisibility.VISIBLE
-  private bool m_fitToChildren = false
-
-  private bool m_neverMeasured = true
-  private rectr m_finalRectBL = ZERORECTR
-
-  private HorizontalLayoutMode m_horizontalLayoutMode = STRETCH
-  private VerticalLayoutMode m_verticalLayoutMode = STRETCH
-
-  private IFrameFactory m_frameFactory
-
-  // --------------------------------------------------------------------------
-  construct (string framename, framehandle owner)
-    m_handle = createFrame(framename, owner, 0, 0)
-    construct_initialize()
-
-  // --------------------------------------------------------------------------
-  construct(framehandle frame)
-    m_handle = frame
-    construct_initialize()
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_handle != null)
-      m_handle.remove()
-      m_handle = null
-
-  // --------------------------------------------------------------------------
-  function getFrameHandle() returns framehandle
-    return m_handle
-
-  // --------------------------------------------------------------------------
-  function getIsInitialized() returns bool
-    return m_initialized
-
-  // --------------------------------------------------------------------------
-  function getFrameFactory() returns IFrameFactory
-    if (m_frameFactory != null)
-      return m_frameFactory
-    if (m_parent != null)
-      return m_parent.getFrameFactory()
-    return DefaultFrameFactory.instance
-
-  // --------------------------------------------------------------------------
-  function setFrameFactory(IFrameFactory factory)
-    m_frameFactory = factory
-
-  // --------------------------------------------------------------------------
-  function getParent() returns Frame
-    return m_parent
-
-  // --------------------------------------------------------------------------
-  function getPlayer() returns player
-    return m_player
-
-  // --------------------------------------------------------------------------
-  function setPlayer(player value)
-    m_player = value
-
-  // --------------------------------------------------------------------------
-  function getDataContext() returns object
-    if (m_dataContext != NULL)
-      return m_dataContext
-    if (m_parent != null)
-      return m_parent.getDataContext()
-    return NULL
-
-  // --------------------------------------------------------------------------
-  function setDataContext(object value)
-    let oldValue = m_dataContext
-    if (oldValue != value)
-      m_dataContext = value
-      onDataContextChanged(oldValue, value)
-
-  // --------------------------------------------------------------------------
-  function initialize()
-    if (m_initialized)
-      return
-    onInitialize()
-    m_initialized = true
-
-  // --------------------------------------------------------------------------
-  function initializeRoot(rectr area)
-    setFinalRect(area)
-    initialize()
-    execute() () ->
-      arrange(area)
-
-  // --------------------------------------------------------------------------
-  function initializeRoot(rectr area, framepointtype origin)
-    m_origin = origin
-    initializeRoot(area)
-
-  // --------------------------------------------------------------------------
-  protected function onInitialize()
-    skip
-
-  // --------------------------------------------------------------------------
-  private function construct_initialize()
-    m_size.x = m_handle.getWidth()
-    m_size.y = m_handle.getHeight()    
-    m_handle.clearAllPoints()
-
-  // --------------------------------------------------------------------------
-  function getFitToChildren() returns bool
-    return m_fitToChildren
-
-  // --------------------------------------------------------------------------
-  function setFitToChildren(bool value)
-    if (m_fitToChildren != value)
-      m_fitToChildren = value
-      invalidateMeasure()
-
-  // --------------------------------------------------------------------------
-  function getVisibility() returns FrameVisibility
-    return m_visibility
-
-  // --------------------------------------------------------------------------
-  function setVisibility(FrameVisibility value)
-    if (m_initialized and m_visibility == value)
-      return
-    let prevValue = m_visibility
-    m_visibility = value
-    if (m_parent != null and (value == COLLAPSED or prevValue == COLLAPSED))
-      m_parent.invalidateArrange()
-    if (value == VISIBLE)
-      showInternal()
-    else
-      hideInternal()
-
-  // --------------------------------------------------------------------------
-  function show()
-    setVisibility(FrameVisibility.VISIBLE)
-
-  // --------------------------------------------------------------------------
-  function hide()
-    setVisibility(FrameVisibility.COLLAPSED)
-
-  // --------------------------------------------------------------------------
-  private function showInternal()
-    if (not m_initialized)
-      initialize()
-    if (m_player != null)
-      m_handle.show(m_player)
-    else
-      m_handle.show()
-    
-  // --------------------------------------------------------------------------
-  private function hideInternal()
-    if (m_player != null)
-      m_handle.hide(m_player)
-    else
-      m_handle.hide()
-
-  // --------------------------------------------------------------------------
-  function getText() returns string
-    return m_handle.getText()
-
-  // --------------------------------------------------------------------------
-  function setText(string text)
-    m_handle.setText(text)
-
-  // --------------------------------------------------------------------------
-  function getTextSizeLimit() returns int
-    return m_handle.getTextSizeLimit()
-
-  // --------------------------------------------------------------------------
-  function setTextSizeLimit(int value)
-    m_handle.setTextSizeLimit(value)
-
-  // --------------------------------------------------------------------------
-  function setTextAlignment(textaligntype vert, textaligntype horz)
-    m_textVertAlign = vert
-    m_textHorzAlign = horz
-    m_handle.setTextAlignment(vert, horz)
-
-  // --------------------------------------------------------------------------
-  function getHorizontalTextAlignment() returns textaligntype
-    return m_textHorzAlign
-
-  // --------------------------------------------------------------------------
-  function getVerticalTextAlignment() returns textaligntype
-    return m_textVertAlign
-
-  // --------------------------------------------------------------------------
-  function getValue() returns real
-    return m_handle.getValue()
-
-  // --------------------------------------------------------------------------
-  function setValue(real value)
-    m_handle.setValue(value)
-
-  // --------------------------------------------------------------------------
-  function setMinMax(rangeReal minMax)
-    m_minMax = minMax
-    m_handle.setMinMax(minMax.min, minMax.max)
-
-  // --------------------------------------------------------------------------
-  function getMinMax() returns rangeReal
-    return m_minMax
-
-  // --------------------------------------------------------------------------
-  function getIsVisible() returns bool
-    return m_handle.isVisible()
-
-  // --------------------------------------------------------------------------
-  function getWidth() returns real
-    return m_size.x
-
-  // --------------------------------------------------------------------------
-  function setWidth(real width)
-    setSize(vec2(width, m_size.y))
-
-  // --------------------------------------------------------------------------
-  function getHeight() returns real
-    return m_size.x
-  
-  // --------------------------------------------------------------------------
-  function setHeight(real height)
-    setSize(vec2(m_size.x, height))
-
-  // --------------------------------------------------------------------------
-  function getSize() returns vec2
-    return m_size
-  
-  // --------------------------------------------------------------------------
-  function setSize(vec2 size)
-    if (m_size != size)
-      m_size = size
-      invalidateMeasure()
-
-  // --------------------------------------------------------------------------
-  function getDesiredSize() returns vec2
-    return m_desiredSize
-
-  // --------------------------------------------------------------------------
-  function getMinSize() returns vec2
-    return m_minSize
-
-  // --------------------------------------------------------------------------
-  function setMinSize(vec2 value)
-    m_minSize = value
-
-  // --------------------------------------------------------------------------
-  function getMaxSize() returns vec2
-    return m_maxSize
-
-  // --------------------------------------------------------------------------
-  function setMaxSize(vec2 value)
-    m_maxSize = value
-
-  // --------------------------------------------------------------------------
-  function getActualSize() returns vec2
-    return vec2(m_handle.getWidth(), m_handle.getHeight())
-
-  // --------------------------------------------------------------------------
-  function getLocalPos() returns vec2
-    return getIsRootFrame()
-           ? m_finalRectBL.getFramePoint(m_origin)
-           : m_finalRectBL.bottomLeft()
-
-  // --------------------------------------------------------------------------
-  function setLocalPos(vec2 pos)
-    let finalRectValue = getIsRootFrame()
-                         ? m_finalRectBL.setFramePoint(m_origin, pos)
-                         : m_finalRectBL.setBottomLeft(pos)
-    setFinalRect(finalRectValue)
-
-  // --------------------------------------------------------------------------
-  function getAbsPos() returns vec2
-    return m_parent != null ? getAbsPos() + getLocalPos() : getLocalPos()
-
-  // --------------------------------------------------------------------------
-  function getLocalArea() returns rectr
-    return rectr(0, 0, m_size.x, m_size.y)
-
-  // --------------------------------------------------------------------------
-  function setArea(rectr area)
-    setFinalRect(area)
-    if (m_parent != null)
-      m_parent.invalidateMeasure()
-    else
-      m_previousArrangeRect.x = area.x
-      m_previousArrangeRect.y = area.y
-      measure(m_finalRectBL.size())
-
-  // --------------------------------------------------------------------------
-  function getArea() returns rectr
-    return m_finalRectBL
-
-  // --------------------------------------------------------------------------
-  function getAbsArea() returns rectr
-    let absPos = getAbsPos()
-    return rectr(absPos.x, absPos.y, m_size.x, m_size.y)
-
-  // --------------------------------------------------------------------------
-  function getHorizontalLayoutMode() returns HorizontalLayoutMode
-    return m_horizontalLayoutMode
-
-  // --------------------------------------------------------------------------
-  function setHorizontalLayoutMode(HorizontalLayoutMode mode)
-    m_horizontalLayoutMode = mode
-    updateFramePositionAndSize()
-
-  // --------------------------------------------------------------------------
-  function getVerticalLayoutMode() returns VerticalLayoutMode
-    return m_verticalLayoutMode
-
-  // --------------------------------------------------------------------------
-  function setVerticalLayoutMode(VerticalLayoutMode mode)
-    m_verticalLayoutMode = mode
-    updateFramePositionAndSize()
-
-  // --------------------------------------------------------------------------
-  function getMargin() returns thickness
-    return m_margin
-
-  // --------------------------------------------------------------------------
-  function setMargin(real value)
-    setMargin(thickness(value, value, value, value))
-
-  // --------------------------------------------------------------------------
-  function setMargin(vec2 value)
-    setMargin(thickness(value.x, value.y, value.x, value.y))
-
-  // --------------------------------------------------------------------------
-  function setMargin(real left, real bottom, real right, real top)
-    setMargin(thickness(left, bottom, right, top))
-
-  // --------------------------------------------------------------------------
-  function setMargin(thickness value)
-    if (m_margin != value)
-      m_margin = value
-      invalidateMeasure()
-
-  // --------------------------------------------------------------------------
-  function getPadding() returns thickness
-    return m_padding
-
-  // --------------------------------------------------------------------------
-  function setPadding(real value)
-    setPadding(thickness(value, value, value, value))
-
-  // --------------------------------------------------------------------------
-  function setPadding(vec2 value)
-    setPadding(thickness(value.x, value.y, value.x, value.y))
-
-  // --------------------------------------------------------------------------
-  function setPadding(thickness value)
-    if (m_padding != value)
-      m_padding = value
-      invalidateMeasure()
-
-  // --------------------------------------------------------------------------
-  function clearFocus()
-    m_handle.clearFocus()
-
-  // --------------------------------------------------------------------------
-  /** Origin vlaue is only respected by root frames currently
-      TODO: add support for child frames */
-  function setOrigin(framepointtype value)
-    if (m_origin != value)
-      m_origin = value
-      invalidateArrange()
-
-  // --------------------------------------------------------------------------
-  function getIsRootFrame() returns bool
-    return m_parent == null
-
-  // --------------------------------------------------------------------------
-  private function updateFramePositionAndSize()
-    m_handle.clearAllPoints()
-    if (getIsRootFrame())
-      m_handle.setAbsPoint(m_origin, m_finalRectBL.getFramePoint(m_origin))
-    else
-      m_handle.setPoint(FRAMEPOINT_BOTTOMLEFT, m_parent.m_handle, FRAMEPOINT_BOTTOMLEFT, m_finalRectBL.bottomLeft())
-    m_handle.setWidth(m_finalRectBL.width)
-    m_handle.setHeight(m_finalRectBL.height)
-
-  // --------------------------------------------------------------------------
-  function addLogicalChild(Frame frame)
-    frame.m_parent = this
-    frame.m_handle.setParent(m_handle)
-    updateFramePositionAndSize()
-
-  // --------------------------------------------------------------------------
-  function removeLogicalChild(Frame frame)
-    frame.m_parent = null
-    frame.m_handle.setParent(null)
-    frame.m_handle.clearAllPoints()
-    updateFramePositionAndSize()
-
-  int m_isBeingMeasured
-  int m_isBeingArranged
-
-  vec2 m_previousConstraint
-  rectr m_previousArrangeRect
-
-  // --------------------------------------------------------------------------
-  function getIsBeingMeasured() returns bool
-    return m_isBeingMeasured > 0
-
-  // --------------------------------------------------------------------------
-  function getIsBeingArranged() returns bool
-    return m_isBeingArranged > 0
-
-  // --------------------------------------------------------------------------
-  function invalidateMeasure()
-    if (not getIsInitialized() or getNeverMeasured())
-      return
-    measure(m_previousConstraint)
-
-  // --------------------------------------------------------------------------
-  function invalidateArrange()
-    if (not getIsInitialized() or getNeverMeasured())
-      return
-    arrange(m_previousArrangeRect)
-
-  // --------------------------------------------------------------------------
-  function measure(vec2 availableSize)
-    
-    if (getIsBeingMeasured())
-      return
-
-    if (not getIsInitialized())
-      initialize()
-
-    FrameDebugInfo.g_totalMeasures++
-
-    m_isBeingMeasured++
-    m_previousConstraint = availableSize
-
-    //Log.info(typeIdToTypeName(this.typeId), "measure", "", "availableSize : " + availableSize.toString())
-    m_desiredSize = measureCore(availableSize)
-    // Log.info(typeIdToTypeName(this.typeId), "measure", "", "desiredSize : " + m_desiredSize.toString())
-    m_neverMeasured = false
-
-    arrange(rectr(m_previousArrangeRect.bottomLeft(), availableSize))
-
-    m_isBeingMeasured--
-
-  // --------------------------------------------------------------------------
-  protected function measureCore(vec2 availableSize) returns vec2
-    let marginSize = m_margin.size()
-    let frameworkAvailableSize = availableSize - marginSize
-    var desiredSize = measureOverride(frameworkAvailableSize)    
-    desiredSize = clamp(desiredSize, m_minSize, m_maxSize) + marginSize
-    return vec2(max(0, desiredSize.x), max(0, desiredSize.y))
-
-  // --------------------------------------------------------------------------
-  protected function measureOverride(vec2 _availableSize) returns vec2
-    return getSize()
-
-  // --------------------------------------------------------------------------
-  function arrange(rectr arrangeRect)
-    
-    if (getIsBeingArranged())
-      return
-
-    if (not getIsInitialized())
-      initialize()
-
-    FrameDebugInfo.g_totalArranges++
-
-    m_isBeingArranged++
-    m_previousArrangeRect = arrangeRect
-
-    //Log.info(typeIdToTypeName(this.typeId), "arrange", "", "finalRect : " + finalRect.toString())
-    if (getNeverMeasured())
-      measure(arrangeRect.size())
-
-    arrangeCore(arrangeRect)
-    // Log.info(typeIdToTypeName(this.typeId), "arrange", "", "m_finalRect : " + m_finalRect.toString())
-
-    m_isBeingArranged--
-
-  // --------------------------------------------------------------------------
-  protected function arrangeCore(rectr arrangeRect)
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeRect : " + finalRect.toString())
-
-    var arrangeSize = arrangeRect.size()
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "m_margin : " + m_margin.toString())
-
-    arrangeSize.x = max(0, arrangeSize.x - m_margin.width())
-    arrangeSize.y = max(0, arrangeSize.y - m_margin.height())
-    
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 1 : " + arrangeSize.toString())
-
-    let desiredSize = getSize()
-  
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "desiredSize : " + desiredSize.toString())
-
-    arrangeSize.x = max(arrangeSize.x, desiredSize.x)
-    arrangeSize.y = max(arrangeSize.y, desiredSize.y)
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 2 : " + arrangeSize.toString())
-
-    if (m_horizontalLayoutMode != HorizontalLayoutMode.STRETCH)
-      arrangeSize.x = desiredSize.x
-    
-    if (m_verticalLayoutMode != VerticalLayoutMode.STRETCH)
-      arrangeSize.y = desiredSize.y
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 3 : " + arrangeSize.toString())
-
-    let effectiveMaxSize = vec2(max(desiredSize.x, m_maxSize.x), max(desiredSize.y, m_maxSize.y))
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "effectiveMaxSize : " + effectiveMaxSize.toString())
-
-    arrangeSize.x = min(arrangeSize.x, effectiveMaxSize.x)
-    arrangeSize.y = min(arrangeSize.y, effectiveMaxSize.y)
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "arrangeSize 4 : " + arrangeSize.toString())
-
-    var finalSize = arrangeOverride(arrangeSize)
-    
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalSize : " + finalSize.toString())
-
-    if (m_fitToChildren)
-      finalSize = getDesiredSize()
-      // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalSize (fit) : " + finalSize.toString())
-
-    let offset = getIsRootFrame()
-                 ? m_margin.getFramePointOffset(m_origin)
-                 : vec2(m_margin.left, m_margin.bottom)
-
-    let finalRect = rectr(arrangeRect.x + offset.x, arrangeRect.y + offset.y, finalSize.x, finalSize.y)
-
-    // Log.info(typeIdToTypeName(this.typeId), "arrangeCore", "", "finalRect : " + finalRect.toString())
-
-    setFinalRect(finalRect)
-
-  // --------------------------------------------------------------------------
-  private function setFinalRect(rectr value)
-    let finalRectValue = getIsRootFrame() ? value.toBottomLeftBase(m_origin) : value
-    if (m_finalRectBL != finalRectValue)
-      m_finalRectBL = finalRectValue
-      updateFramePositionAndSize()
-
-  // --------------------------------------------------------------------------
-  protected function arrangeOverride(vec2 arrangeSize) returns vec2
-    return arrangeSize
-    
-  // --------------------------------------------------------------------------
-  function getNeverMeasured() returns bool
-    return m_neverMeasured    
-
-  // --------------------------------------------------------------------------
-  protected function onDataContextChanged(object _oldValue, object _newValue)
-    skip
+public interface IFrameLayout
+  function layout(Frame frame)
 
 // ============================================================================
 public interface IFrameTemplate
@@ -709,109 +444,94 @@ public class FrameTemplate implements IFrameTemplate
     return frame
 
 // ============================================================================
-function rectr.getFramePoint(framepointtype value) returns vec2
-  if (value == FRAMEPOINT_LEFT)
-    return vec2(this.left(), 0)
-  if (value == FRAMEPOINT_RIGHT)
-    return vec2(this.right(), 0)
-  if (value == FRAMEPOINT_BOTTOM)
-    return vec2(0, this.bottom())
-  if (value == FRAMEPOINT_TOP)
-    return vec2(0, this.top())
-  if (value == FRAMEPOINT_BOTTOMLEFT)
-    return this.bottomLeft()
-  if (value == FRAMEPOINT_BOTTOMRIGHT)
-    return this.bottomRight()
-  if (value == FRAMEPOINT_TOPLEFT)
-    return this.topLeft()
-  if (value == FRAMEPOINT_TOPRIGHT)
-    return this.topRight()
-  else
-    return this.center()
+public enum HorizontalLayoutMode
+  LEFT
+  CENTER
+  RIGHT
+  STRETCH
+  
+// ============================================================================
+public function HorizontalLayoutMode.toString() returns string
+  switch (this)
+    case LEFT
+      return "LEFT"
+    case RIGHT
+      return "RIGHT"
+    case CENTER
+      return "CENTER"
+    case STRETCH
+      return "STRETCH"
 
 // ============================================================================
-function rectr.setFramePoint(framepointtype value, vec2 pos) returns rectr
-  if (value == FRAMEPOINT_LEFT)
-    return this.setLeft(pos.x)
-  if (value == FRAMEPOINT_RIGHT)
-    return this.setRight(pos.x)
-  if (value == FRAMEPOINT_BOTTOM)
-    return this.setBottom(pos.y)
-  if (value == FRAMEPOINT_TOP)
-    return this.setBottom(pos.y)
-  if (value == FRAMEPOINT_BOTTOMLEFT)
-    return this.setBottomLeft(pos)
-  if (value == FRAMEPOINT_BOTTOMRIGHT)
-    return this.setBottomRight(pos)
-  if (value == FRAMEPOINT_TOPLEFT)
-    return this.setTopLeft(pos)
-  if (value == FRAMEPOINT_TOPRIGHT)
-    return this.setTopRight(pos)
-  else
-    return this.setCenter(pos)
+public enum VerticalLayoutMode
+  BOTTOM
+  CENTER
+  TOP
+  STRETCH
 
 // ============================================================================
-function rectr.getFramePointOffset(framepointtype value) returns vec2
-  if (value == FRAMEPOINT_LEFT)
-    return vec2(this.x, 0)
-  if (value == FRAMEPOINT_RIGHT)
-    return vec2(-this.x, 0)
-  if (value == FRAMEPOINT_BOTTOM)
-    return vec2(0, this.y)
-  if (value == FRAMEPOINT_TOP)
-    return vec2(0, -this.y)
-  if (value == FRAMEPOINT_BOTTOMLEFT)
-    return vec2(this.x, this.y)
-  if (value == FRAMEPOINT_BOTTOMRIGHT)
-    return vec2(-this.x, this.y)
-  if (value == FRAMEPOINT_TOPLEFT)
-    return vec2(this.x, -this.y)
-  if (value == FRAMEPOINT_TOPRIGHT)
-    return vec2(-this.x, -this.y)
-  else
-    return this.center()
+public function VerticalLayoutMode.toString() returns string
+  switch (this)
+    case BOTTOM
+      return "BOTTOM"
+    case TOP
+      return "TOP"
+    case CENTER
+      return "CENTER"
+    case STRETCH
+      return "STRETCH"
 
 // ============================================================================
-/** Converts a rectr with the pos relative to the given frameepointtype
-    into a rectr where the pos is relative to FRAMEPOINT_BOTTOMLEFT
- */
-function rectr.toBottomLeftBase(framepointtype value) returns rectr
-  if (value == FRAMEPOINT_LEFT)
-    return rectr(this.x, 0, this.width, this.height)
-  if (value == FRAMEPOINT_RIGHT)
-    return rectr(this.x - this.width, 0, this.width, this.height)
-  if (value == FRAMEPOINT_BOTTOM)
-    return rectr(0, this.y, this.width, this.height)
-  if (value == FRAMEPOINT_TOP)
-    return rectr(0, this.y - this.height, this.width, this.height)
-  if (value == FRAMEPOINT_BOTTOMLEFT)
-    return rectr(this.x, this.y, this.width, this.height)
-  if (value == FRAMEPOINT_BOTTOMRIGHT)
-    return rectr(this.x - this.width, this.y, this.width, this.height)
-  if (value == FRAMEPOINT_TOPLEFT)
-    return rectr(this.x, this.y - this.height, this.width, this.height)
-  if (value == FRAMEPOINT_TOPRIGHT)
-    return rectr(this.x - this.width, this.y - this.height, this.width, this.height)
-  else
-    return rectr(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height)
+class Thickness
+  thickness value = ZEROTHICK
+  construct(thickness initialValue)
+    value = initialValue
 
 // ============================================================================
-function thickness.getFramePointOffset(framepointtype value) returns vec2
-  if (value == FRAMEPOINT_LEFT)
-    return vec2(this.left, 0)
-  if (value == FRAMEPOINT_RIGHT)
-    return vec2(-this.right, 0)
-  if (value == FRAMEPOINT_BOTTOM)
-    return vec2(0, this.bottom)
-  if (value == FRAMEPOINT_TOP)
-    return vec2(0, -this.top)
-  if (value == FRAMEPOINT_BOTTOMLEFT)
-    return vec2(this.left, this.bottom)
-  if (value == FRAMEPOINT_BOTTOMRIGHT)
-    return vec2(-this.right, this.bottom)
-  if (value == FRAMEPOINT_TOPLEFT)
-    return vec2(this.left, -this.top)
-  if (value == FRAMEPOINT_TOPRIGHT)
-    return vec2(-this.right, -this.top)
-  else
-    return ZERO2
+public interface ILightweightProperty
+  function hasValue(Frame context) returns bool
+  function clearValue(Frame context)
+
+// ============================================================================
+public class LightweightProperty<T> implements ILightweightProperty
+  private HashMap<Frame, T> m_effectiveValues
+  private Action1<Frame> m_propertyChanged
+  private T m_defaultValue
+
+  // --------------------------------------------------------------------------
+  construct(T defaultValue, Action1<Frame> propertyChanged)
+    m_defaultValue = defaultValue
+    m_propertyChanged = propertyChanged
+    g_allLightweightProperties.add(this)
+
+  // --------------------------------------------------------------------------
+  override function hasValue(Frame context) returns bool
+    return m_effectiveValues != null and m_effectiveValues.has(context)
+
+  // --------------------------------------------------------------------------
+  function getValue(Frame context) returns T
+    if (m_effectiveValues == null)
+      return m_defaultValue
+    return m_effectiveValues.get(context)
+
+  // --------------------------------------------------------------------------
+  function setValue(Frame context, T value)
+    if (m_effectiveValues == null)
+      m_effectiveValues = new HashMap<Frame, T>()
+    if (m_effectiveValues.has(context) == false or
+        m_effectiveValues.get(context) != value)
+      m_effectiveValues.put(context, value)
+      raisePropertyChanged(context)
+  
+  // --------------------------------------------------------------------------
+  override function clearValue(Frame context)
+    if (m_effectiveValues != null)
+      m_effectiveValues.remove(context)
+      if (m_effectiveValues.size() == 0)
+        destroy m_effectiveValues
+        m_effectiveValues = null
+
+  // --------------------------------------------------------------------------
+  protected function raisePropertyChanged(Frame context)
+    if (m_propertyChanged != null)
+      m_propertyChanged.call(context)
