@@ -1,0 +1,146 @@
+package TabPanel
+import Panel
+import DockPanel
+import WrapPanel
+import HashMap
+import Frame
+import Layout
+import ClosureFrames
+import LinkedList
+import ErrorHandling
+
+// ============================================================================
+public class TabPanel extends DockPanel
+  private WrapPanel m_buttonPanel
+  private Panel m_fillPanel
+  private HashMap<string, Frame> m_buttonFrames = new HashMap<string, Frame>()
+  private HashMap<string, Frame> m_contentFrames = new HashMap<string, Frame>()
+  private LinkedList<string> m_allIds = new LinkedList<string>()
+  private string m_selectedFrameId
+  private Frame m_selectedContentFrame
+
+  // --------------------------------------------------------------------------
+  construct()
+    super()
+    _construct()
+
+  // --------------------------------------------------------------------------
+  construct(string name)
+    super(name)
+    _construct()
+
+  // --------------------------------------------------------------------------
+  private function _construct()
+
+    setLastChildFills(true)
+
+    createFrame("BACKDROP", "backdrop", GAME_UI, "TestBackdrop", 0)
+    ..setParent(getFrameHandle())
+    ..setAllPoints(getFrameHandle())
+
+    m_buttonPanel = new WrapPanel("BP")
+    ..setDock(Dock.TOP)
+    ..setOrientation(Orientation.HORIZONTAL)
+    ..setStretchItems(true)
+    ..setFitToContents(true)
+    ..setMargin(thickness(0, -0.005, 0, 0))
+    ..setHeight(0.03)
+    ..setWidth(0.03)
+    addChild(m_buttonPanel)
+
+    createFrame("BACKDROP", "backdrop", GAME_UI, "TestBackdrop", 0)
+    ..setParent(m_buttonPanel.getFrameHandle())
+    ..setAllPoints(m_buttonPanel.getFrameHandle())
+
+    m_fillPanel = new Panel("FP")
+    ..setPadding(thickness(0.01))
+    addChild(m_fillPanel)
+    
+    createFrame("BACKDROP", "backdrop", GAME_UI, "BattleNetControlBackdropTemplate", 0)
+    ..setParent(m_fillPanel.getFrameHandle())
+    ..setAllPoints(m_fillPanel.getFrameHandle())
+
+  // --------------------------------------------------------------------------
+  function addContent(string id, Frame contentFrame)
+    addContent(id, id, contentFrame)
+
+  // --------------------------------------------------------------------------
+  function addContent(string id, string buttonText, Frame contentFrame)
+    let buttonFrame = new Frame(createFrame("DebuggerDialogButton", GAME_UI, 0, 0))
+    ..setText(buttonText)
+    ..setWidth(0.05)
+    ..setHeight(0.025)
+    addContent(id, buttonFrame, contentFrame)
+
+  // --------------------------------------------------------------------------
+  function addContent(string id, Frame buttonFrame, Frame contentFrame)
+
+    if (m_allIds.has(id))
+      error("TabPanel already has content registered with id " + id)
+
+    m_contentFrames.put(id, contentFrame)
+    m_fillPanel.addChild(contentFrame)
+    contentFrame.hide()
+
+    m_buttonFrames.put(id, buttonFrame)
+    m_buttonPanel.addChild(buttonFrame)
+    buttonFrame.getFrameHandle().onClick(() -> onButtonClicked(buttonFrame, id))
+
+  // --------------------------------------------------------------------------
+  function removeContent(string id)
+    let contentFrame = m_contentFrames.get(id)
+    if (contentFrame != null)
+      destroy contentFrame
+    let buttonFrame = m_buttonFrames.get(id)
+    if (buttonFrame != null)
+      destroy buttonFrame
+    m_allIds.remove(id)
+
+  // --------------------------------------------------------------------------
+  function removeAllContent()
+    while (m_allIds.isEmpty() == false)
+      removeContent(m_allIds.pop())
+
+  // --------------------------------------------------------------------------
+  function getContent(string id) returns Frame
+    return m_contentFrames.get(id)
+
+  // --------------------------------------------------------------------------
+  function getAllContentIds() returns LinkedList<string>
+    return m_allIds
+
+  // --------------------------------------------------------------------------
+  function getSelectedContentId() returns string
+    return m_selectedFrameId
+
+  // --------------------------------------------------------------------------
+  function setSelectedContentId(string id)
+    if (m_selectedFrameId == id)
+      return
+    
+    if (m_selectedContentFrame != null)
+      m_selectedContentFrame.hide()
+      m_selectedContentFrame = null
+    
+    m_selectedFrameId = id
+    m_selectedContentFrame = m_contentFrames.get(m_selectedFrameId)
+    
+    if (m_selectedContentFrame != null)
+      m_selectedContentFrame.show()
+
+  // --------------------------------------------------------------------------
+  override function beginBatchLayout()
+    super.beginBatchLayout()
+    m_buttonPanel.beginBatchLayout()
+    m_fillPanel.beginBatchLayout()
+
+  // --------------------------------------------------------------------------
+  override function endBatchLayout()
+    m_buttonPanel.endBatchLayout()
+    m_fillPanel.endBatchLayout()
+    super.endBatchLayout()
+  
+  // --------------------------------------------------------------------------
+  private function onButtonClicked(Frame buttonFrame, string id)
+    buttonFrame.clearFocus()
+    setSelectedContentId(id)

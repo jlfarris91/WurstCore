@@ -6,3 +6,67 @@ public function framehandle.clearFocus()
   let enabled = this.isEnabled()
   this.setEnabled(not enabled)
   this.setEnabled(enabled)
+
+// ============================================================================
+public function framehandle.addText(string text)
+  BlzFrameAddText(this, text)
+
+// ============================================================================
+public function framehandle.getSize() returns vec2
+  return vec2(this.getWidth(), this.getHeight())
+
+// ============================================================================
+public function framehandle.setSize(vec2 value)
+  this.setWidth(value.x)
+  this.setHeight(value.y)
+
+// ============================================================================
+public function framehandle.getChildrenCount() returns int
+  return BlzFrameGetChildrenCount(this)
+
+// ============================================================================
+public function framehandle.getChild(int index) returns framehandle
+  return BlzFrameGetChild(this, index)
+
+// ============================================================================
+public function framehandle.iterator() returns FrameChildrenIterator
+  return new FrameChildrenIterator(this)
+  
+// ============================================================================
+public class FrameChildrenIterator
+  private framehandle m_handle
+  private int m_index
+  private int m_childCount
+  private bool m_destroyOnClose
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    m_handle = frame
+    m_destroyOnClose = true
+    reset()
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frame, bool destroyOnClose)
+    m_handle = frame
+    m_destroyOnClose = destroyOnClose
+    reset()
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_index = 0
+    m_childCount = m_handle.getChildrenCount()
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_index + 1 < m_childCount
+
+  // --------------------------------------------------------------------------
+  function next() returns framehandle
+    let child = m_handle.getChild(m_index)
+    m_index++
+    return child
+
+  // --------------------------------------------------------------------------
+  function close()
+    if m_destroyOnClose
+      destroy this

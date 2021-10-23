@@ -13,6 +13,12 @@ public class WrapPanel extends Panel
     setFrameLayout(m_layout)
 
   // --------------------------------------------------------------------------
+  construct(string name)
+    super(name)
+    m_layout = new WrapLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
   function getOrientation() returns Orientation
     return m_layout.getOrientation()
 
@@ -30,14 +36,4 @@ public class WrapPanel extends Panel
   function setStretchItems(bool value)
     if (getStretchItems() != value)
       m_layout.setStretchItems(value)
-      invalidateLayout()
-
-  // --------------------------------------------------------------------------
-  function getFitToContents() returns bool
-    return m_layout.getFitToContents()
-
-  // --------------------------------------------------------------------------
-  function setFitToContents(bool value)
-    if (getFitToContents() != value)
-      m_layout.setFitToContents(value)
       invalidateLayout()

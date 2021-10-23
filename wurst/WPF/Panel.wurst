@@ -1,5 +1,6 @@
 package Panel
 import Frame
+import Layout
 
 // ============================================================================
 public class Panel extends Frame
@@ -8,7 +9,15 @@ public class Panel extends Frame
 
   // --------------------------------------------------------------------------
   construct()
-    super(createFrame("FRAME", "Panel", GAME_UI, "", 0))
+    super(createFrame("FRAME", "", GAME_UI, "", 0))
+
+  // --------------------------------------------------------------------------
+  construct(string name)
+    super(createFrame("FRAME", name, GAME_UI, "", 0))
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frameHandle)
+    super(frameHandle)
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -37,8 +46,20 @@ public class Panel extends Frame
     if (m_layout != null)
       m_layout.layout(this)
     else
+    //{
       let children = getChildren()
       let padding = getPadding()
+      let parentHandle = getFrameHandle()
       for child in children
-        Frame.layoutFrame(this, child, padding)
+      //{
+        if (child.isVisible())
+          if (child.isPanel())
+            let marginAndPadding = padding + child.getMargin()
+            child.getFrameHandle().setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, marginAndPadding.bottomLeft())
+            child.getFrameHandle().setSize(getSize() - marginAndPadding.size())
+            child.layout()
+          else
+            Frame.layoutFrame(this, child, padding)
+      //}
+    //}
     m_layingOut = false

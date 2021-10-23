@@ -41,7 +41,6 @@ function uvsize.setHeight(real value) returns uvsize
 public class WrapLayout implements IFrameLayout
   private Orientation m_orientation
   private bool m_stretchItems = false
-  private bool m_fitToContents = false
 
   // --------------------------------------------------------------------------
   function getOrientation() returns Orientation
@@ -61,14 +60,6 @@ public class WrapLayout implements IFrameLayout
     m_stretchItems = value
 
   // --------------------------------------------------------------------------
-  function getFitToContents() returns bool
-    return m_fitToContents
-
-  // --------------------------------------------------------------------------
-  function setFitToContents(bool value)
-    m_fitToContents = value
-
-  // --------------------------------------------------------------------------
   override function layout(Frame frame)
 
     let parentSize = frame.getSize()
@@ -79,67 +70,60 @@ public class WrapLayout implements IFrameLayout
     let uvFinalSize = uvsize(m_orientation, parentSize)
     var firstInLine = 0
 
-    var uvPanelSize = uvsize(m_orientation)
-
     let finalRect = rectr(ZERO2, parentSize)
 
     for i = 0 to children.size() - 1
     //{
       let child = children.get(i)
-      if (child.isVisible())
+
+      //if (child.isVisible())
       //{
-        let uvChildSize = uvsize(m_orientation, child.getSize())
+      let uvChildSize = uvsize(m_orientation, child.getSize())
+      if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
+      //{
+        arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, i)
+        accumulatedV += curLineSize.v
+        curLineSize = uvChildSize
 
-        if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
+        if (uvChildSize.u > uvFinalSize.u)
         //{
-          uvPanelSize.u = max(curLineSize.u, uvPanelSize.u)
-          uvPanelSize.v += curLineSize.v
-
-          arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, i)
-          accumulatedV += curLineSize.v
-          curLineSize = uvChildSize
-
-          if (uvChildSize.u > uvFinalSize.u)
-          //{
-            uvPanelSize.u = max(uvChildSize.u, uvPanelSize.u)
-            uvPanelSize.v += uvChildSize.v
-
-            arrangeLine(frame, children, finalRect, accumulatedV, uvChildSize, uvFinalSize.u, i, i + 1)
-            i++
-            accumulatedV += uvChildSize.v
-            curLineSize = uvsize(m_orientation)
-          //}
-
-          firstInLine = i
+          arrangeLine(frame, children, finalRect, accumulatedV, uvChildSize, uvFinalSize.u, i, i + 1)
+          i++
+          accumulatedV += uvChildSize.v
+          curLineSize = uvsize(m_orientation)
         //}
-        else
-          curLineSize.u += uvChildSize.u
-          curLineSize.v = max(uvChildSize.v, curLineSize.v)
+
+        firstInLine = i
       //}
+      else
+        curLineSize.u += uvChildSize.u
+        curLineSize.v = max(uvChildSize.v, curLineSize.v)
+      //}
+      //else
+      //  frame.log("child hidden " + i.toString())
     //}
 
     if (firstInLine < children.size())
       arrangeLine(frame, children, finalRect, accumulatedV, curLineSize, uvFinalSize.u, firstInLine, children.size())
+      accumulatedV += curLineSize.v
 
-    uvPanelSize.u = max(curLineSize.u, uvFinalSize.u)
-    uvPanelSize.v += curLineSize.v
-
-    if (m_fitToContents)
-      switch (m_orientation)
-        case HORIZONTAL
-          frame.setHeight(uvPanelSize.getHeight())
-        case VERTICAL
-          frame.setWidth(uvPanelSize.getHeight()) // not a bug!
+    if (frame.getFitToContents())
+      if (m_orientation == HORIZONTAL)
+        frame.setHeight(accumulatedV)
+      else
+        frame.setWidth(accumulatedV)
 
   // --------------------------------------------------------------------------
   private function arrangeLine(Frame parent, LinkedList<Frame> children, rectr finalRect, real v, uvsize uvLine, real totalU, int start, int _end)
     let orientation = getOrientation()
     let isHorizontal = orientation == HORIZONTAL
-    let remainingU = (totalU - uvLine.u) / (_end - start)
+    let remainingU = (totalU - uvLine.u) / max(_end - start, 1)
     real u = 0
 
     for i = start to _end - 1
+
       let child = children.get(i)
+
       let uvChildSize = uvsize(orientation, child.getSize())
       var layoutSlotU = uvChildSize.u
 
@@ -149,7 +133,6 @@ public class WrapLayout implements IFrameLayout
       let childRect = rectr(
         isHorizontal ? u : v,
         finalRect.top() - (isHorizontal ? v + uvLine.v : u + layoutSlotU),
-        // finalRect.top() - (isHorizontal ? v : u) - (isHorizontal ? lineV : layoutSlotU),
         isHorizontal ? layoutSlotU : uvLine.v,
         isHorizontal ? uvLine.v : layoutSlotU)
 
@@ -163,4 +146,6 @@ public class WrapLayout implements IFrameLayout
     childHandle.clearAllPoints()
     childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, area.bottomLeft())
     childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_BOTTOMLEFT, area.topRight())
+    if (child.isPanel())
+      child.setSize(area.size())
     

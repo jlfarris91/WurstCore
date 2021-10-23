@@ -1,6 +1,6 @@
 package DockPanel
 import Panel
-import DockLayout
+import public DockLayout
 
 // ============================================================================
 public class DockPanel extends Panel
@@ -8,6 +8,12 @@ public class DockPanel extends Panel
 
   // --------------------------------------------------------------------------
   construct()
+    m_layout = new DockLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
+  construct(string name)
+    super(name)
     m_layout = new DockLayout()
     setFrameLayout(m_layout)
 

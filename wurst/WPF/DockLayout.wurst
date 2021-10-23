@@ -46,23 +46,36 @@ public class DockLayout implements IFrameLayout
       let dock = childFrame.getDock()
       let margin = childFrame.getMargin()
       let childHandle = childFrame.getFrameHandle()
+      let childIsPanel = childFrame.isPanel()
       
       if (m_lastChildFills == false or i < childCount - 1)
       //{
         switch (dock)
           case Dock.LEFT
+            if (childIsPanel)
+              childFrame.setSize(vec2(parentSize.x - fill.right, parentSize.y))
+              childFrame.layout()
             // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
             //   Log.error("DockLayout", "layout", "", "Left child " + i.toString() + " has zero width")
             fill.left = max(fill.left, childHandle.getWidth() + margin.width())
           case Dock.RIGHT
+            if (childIsPanel)
+              childFrame.setSize(vec2(parentSize.x - fill.left, parentSize.y))
+              childFrame.layout()
             // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getWidth() == 0)
             //   Log.error("DockLayout", "layout", "", "Right child " + i.toString() + " has zero width")
             fill.right = max(fill.right, childHandle.getWidth() + margin.width())
           case Dock.BOTTOM
+            if (childIsPanel)
+              childFrame.setSize(vec2(parentSize.x - fill.width(), parentSize.y - fill.top))
+              childFrame.layout()
             // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
             //   Log.error("DockLayout", "layout", "", "Bottom child " + i.toString() + " has zero height")
             fill.bottom = max(fill.bottom, childHandle.getHeight() + margin.height())
           case Dock.TOP
+            if (childIsPanel)
+              childFrame.setSize(vec2(parentSize.x - fill.width(), parentSize.y - fill.bottom))
+              childFrame.layout()
             // if (FRAME_SECURITY_CHECKS_ENABLED and childHandle.getHeight() == 0)
             //   Log.error("DockLayout", "layout", "", "Top child " + i.toString() + " has zero height")
             fill.top = max(fill.top, childHandle.getHeight() + margin.height())
@@ -74,7 +87,7 @@ public class DockLayout implements IFrameLayout
     for childFrame in children
     //{
       let dock = childFrame.getDock()
-      let margin = childFrame.getMargin()
+      let marginAndPadding = childFrame.getMargin() + padding
       let childHandle = childFrame.getFrameHandle()
       let childIsPanel = childFrame.isPanel()
 
@@ -82,46 +95,51 @@ public class DockLayout implements IFrameLayout
 
       if (m_lastChildFills and i == childCount - 1)
       //{
-        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (padding.bottomLeft() + margin.bottomLeft() + fill.bottomLeft()) * bottomLeftScalar)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (marginAndPadding.bottomLeft() + fill.bottomLeft()) * bottomLeftScalar)
         if (childIsPanel)
-          childFrame.setSize(vec2(parentSize.x - (padding.width() + margin.width() + fill.width()), parentSize.y - (padding.height() + margin.height() + fill.height())))
+          childFrame.setSize(vec2(parentSize.x - (marginAndPadding.width() + fill.width()), parentSize.y - (marginAndPadding.height() + fill.height())))
+          childFrame.layout()
         else
-        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (padding.topRight() + margin.topRight() + fill.topRight()) * topRightScalar)
+          childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (marginAndPadding.topRight() + fill.topRight()) * topRightScalar)
       //}
       else
       //{
         switch (dock)
           case Dock.LEFT
           //{
-            childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (padding.bottomLeft() + margin.bottomLeft()) * bottomLeftScalar)
-            if (childIsPanel)
-              childFrame.setHeight(parentSize.y - (padding.height() + margin.height()))
-            else
-              childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (padding.topLeft() + margin.topLeft()) * topLeftScalar)
+            childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, marginAndPadding.bottomLeft() * bottomLeftScalar)
+            // if (childIsPanel)
+            //   childFrame.setHeight(parentSize.y - marginAndPadding.height())
+            // else
+            if (childIsPanel == false)
+              childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, marginAndPadding.topLeft() * topLeftScalar)
           //}
           case Dock.RIGHT
           //{
-            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (padding.bottomRight() + margin.bottomRight()) * bottomRightScalar)
-            if (childIsPanel)
-              childFrame.setHeight(parentSize.y - (padding.height() + margin.height()))
-            else
-              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (padding.topRight() + margin.topRight()) * topRightScalar)
+            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, marginAndPadding.bottomRight() * bottomRightScalar)
+            // if (childIsPanel)
+            //   childFrame.setHeight(parentSize.y - marginAndPadding.height())
+            // else
+            if (childIsPanel == false)
+              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, marginAndPadding.topRight() * topRightScalar)
           //}
           case Dock.BOTTOM
           //{
-            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (padding.bottomRight() + margin.bottomRight() + vec2(fill.right, 0)) * bottomRightScalar)
-            if (childIsPanel)
-              childFrame.setWidth(parentSize.x - (padding.width() + margin.width() + fill.width()))
-            else
-              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (padding.bottomLeft() + margin.bottomLeft() + vec2(fill.left, 0)) * bottomLeftScalar)
+            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (marginAndPadding.bottomRight() + vec2(fill.right, 0)) * bottomRightScalar)
+            // if (childIsPanel)
+            //   childFrame.setWidth(parentSize.x - (marginAndPadding.width() + fill.width()))
+            // else
+            if (childIsPanel == false)
+              childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (marginAndPadding.bottomLeft() + vec2(fill.left, 0)) * bottomLeftScalar)
           //}
           case Dock.TOP
           //{
-            childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (padding.topLeft() + margin.topLeft() + vec2(fill.left, 0)) * topLeftScalar)
-            if (childIsPanel)
-              childFrame.setWidth(parentSize.x - (padding.width() + margin.width() + fill.width()))
-            else
-              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (padding.topRight() + margin.topRight() + vec2(fill.right, 0)) * topRightScalar)
+            childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (marginAndPadding.topLeft() + vec2(fill.left, 0)) * topLeftScalar)
+            // if (childIsPanel)
+            //   childFrame.setWidth(parentSize.x - (marginAndPadding.width() + fill.width()))
+            // else
+            if (childIsPanel == false)
+              childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (marginAndPadding.topRight() + vec2(fill.right, 0)) * topRightScalar)
           //}
       //}
       i++

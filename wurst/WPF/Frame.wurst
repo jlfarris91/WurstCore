@@ -3,14 +3,13 @@ import HashMap
 import LinkedList
 import Layout
 import Action
-import FramehandleExtensions
-import Reflection
+import public FramehandleExtensions
 import Object
 
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 
 Action1<Frame> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
-LinkedList<ILightweightProperty> g_allLightweightProperties = new LinkedList<ILightweightProperty>()
+LinkedList<ILightweightProperty> g_allLightweightProperties
 
 // ============================================================================
 public class Frame
@@ -21,14 +20,23 @@ public class Frame
 
   private framehandle m_frameHandle
   private Frame m_parent
-  private bool m_initialized
-  private LinkedList<Frame> m_children = new LinkedList<Frame>()
-  private HorizontalLayoutMode m_horizontalLayoutMode = HorizontalLayoutMode.STRETCH
-  private VerticalLayoutMode m_verticalLayoutMode = VerticalLayoutMode.STRETCH
+  private LinkedList<Frame> m_children
+  private HorizontalLayoutMode m_horizontalLayoutMode
+  private VerticalLayoutMode m_verticalLayoutMode
+  private bool m_fitToContents
+  private int m_ignoreLayout
+
+  function log(string message)
+    Log.info("[{0}] {1}".format(getFullName(), message))
 
   // --------------------------------------------------------------------------
   construct(framehandle frameHandle)
     m_frameHandle = frameHandle
+    m_children = new LinkedList<Frame>()
+    m_parent = null
+    m_horizontalLayoutMode = HorizontalLayoutMode.STRETCH
+    m_verticalLayoutMode = VerticalLayoutMode.STRETCH
+    m_fitToContents = false
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -52,6 +60,14 @@ public class Frame
     for prop in g_allLightweightProperties
       prop.clearValue(this)
   //}
+
+  // --------------------------------------------------------------------------
+  function getName() returns string
+    return m_frameHandle.getName()
+
+  // --------------------------------------------------------------------------
+  function getFullName() returns string
+    return m_parent != null ? "{0}.{1}".format(m_parent.getFullName(), getName()) : getName()
 
   // --------------------------------------------------------------------------
   function getFrameHandle() returns framehandle
@@ -136,6 +152,16 @@ public class Frame
     invalidateLayout()
 
   // --------------------------------------------------------------------------
+  function getFitToContents() returns bool
+    return m_fitToContents
+
+  // --------------------------------------------------------------------------
+  function setFitToContents(bool value)
+    if (m_fitToContents != value)
+      m_fitToContents = value
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
   function setText(string value)
     m_frameHandle.setText(value)
 
@@ -147,10 +173,10 @@ public class Frame
   function setVisible(bool value)
     if (isVisible() != value)
       if (value)
-        show()
+        m_frameHandle.show()
+        invalidateLayout()
       else
-        hide()
-      invalidateLayout()
+        m_frameHandle.hide()
 
   // --------------------------------------------------------------------------
   function getEnabled() returns bool
@@ -231,26 +257,12 @@ public class Frame
       paddingProperty.raisePropertyChanged(this)
 
   // --------------------------------------------------------------------------
-  function initialize()
-    if (m_initialized)
-      if (FRAME_SECURITY_CHECKS_ENABLED)
-        Log.error(typeIdToTypeName(this.typeId), "initialize", "", "Initialize called more than once")
-      return
-    initializeFrame()
-    m_initialized = true
-
-  // --------------------------------------------------------------------------
   function initialize(rectr area)
-    initialize()
     setAbsArea(area)
 
   // --------------------------------------------------------------------------
-  protected function initializeFrame()
-    skip
-
-  // --------------------------------------------------------------------------
   function show()
-    m_frameHandle.show()
+    setVisible(true)
   
   // --------------------------------------------------------------------------
   function show(player thisPlayer)
@@ -258,7 +270,7 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function hide()
-    m_frameHandle.hide()
+    setVisible(false)
 
   // --------------------------------------------------------------------------
   function hide(player thisPlayer)
@@ -269,8 +281,21 @@ public class Frame
     m_frameHandle.clearFocus()
 
   // --------------------------------------------------------------------------
+  function beginBatchLayout()
+    m_ignoreLayout++
+
+  // --------------------------------------------------------------------------
+  function endBatchLayout()
+    if (m_ignoreLayout == 0)
+      Log.error("Frame", "endBatchLayout", getFullName(), "Batch layout call mismatch")
+    m_ignoreLayout--
+    if (m_ignoreLayout == 0)
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
   function invalidateLayout()
-    if (m_initialized == false)
+
+    if (m_ignoreLayout > 0)
       return
     
     if (m_parent != null)
@@ -279,7 +304,8 @@ public class Frame
     layout()
 
   // --------------------------------------------------------------------------
-  protected function layout()
+  // protected function layout()
+  function layout()
     if (m_parent != null and not m_parent.isPanel())
       layoutFrame(m_parent, this, m_parent.getPadding())
       
@@ -293,12 +319,12 @@ public class Frame
 
     let horizontalLayoutMode = childFrame.getHorizontalLayoutMode()
     let verticalLayoutMode = childFrame.getVerticalLayoutMode()
-    let margin = childFrame.getMargin() + padding
+    let marginAndPadding = childFrame.getMargin() + padding
 
     if (horizontalLayoutMode == STRETCH and verticalLayoutMode == STRETCH)
     //{
-      childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, margin.bottomLeft() * LayoutScalars.bottomLeft)
-      childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, margin.topRight() * LayoutScalars.topRight)
+      childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, marginAndPadding.bottomLeft() * LayoutScalars.bottomLeft)
+      childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, marginAndPadding.topRight() * LayoutScalars.topRight)
     //}
     else if (horizontalLayoutMode == CENTER and verticalLayoutMode == CENTER)
     //{
@@ -307,39 +333,39 @@ public class Frame
     else if (horizontalLayoutMode == LEFT)
     //{
       if (verticalLayoutMode == BOTTOM or verticalLayoutMode == STRETCH)
-        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, margin.bottomLeft() * LayoutScalars.bottomLeft)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, marginAndPadding.bottomLeft() * LayoutScalars.bottomLeft)
       if (verticalLayoutMode == TOP or verticalLayoutMode == STRETCH)
-        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, margin.topLeft()  * LayoutScalars.topLeft)
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, marginAndPadding.topLeft()  * LayoutScalars.topLeft)
       if (verticalLayoutMode == CENTER)
-        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, vec2(margin.left, 0))
+        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, vec2(marginAndPadding.left, 0))
     //}
     else if (horizontalLayoutMode == RIGHT)
     //{
       if (verticalLayoutMode == BOTTOM or verticalLayoutMode == STRETCH)
-        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, margin.bottomRight() * LayoutScalars.bottomRight)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, marginAndPadding.bottomRight() * LayoutScalars.bottomRight)
       if (verticalLayoutMode == TOP or verticalLayoutMode == STRETCH)
-        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, margin.topRight()  * LayoutScalars.topRight)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, marginAndPadding.topRight()  * LayoutScalars.topRight)
       if (verticalLayoutMode == CENTER)
-        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, vec2(-margin.right, 0))
+        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, vec2(-marginAndPadding.right, 0))
     //}
     else if (horizontalLayoutMode == CENTER)
     //{
       if (verticalLayoutMode == BOTTOM or verticalLayoutMode == STRETCH)
-        childHandle.setPoint(FRAMEPOINT_BOTTOM, parentHandle, FRAMEPOINT_BOTTOM, vec2(0, margin.bottom))
+        childHandle.setPoint(FRAMEPOINT_BOTTOM, parentHandle, FRAMEPOINT_BOTTOM, vec2(0, marginAndPadding.bottom))
       if (verticalLayoutMode == TOP or verticalLayoutMode == STRETCH)
-        childHandle.setPoint(FRAMEPOINT_TOP, parentHandle, FRAMEPOINT_TOP, vec2(0, -margin.top))
+        childHandle.setPoint(FRAMEPOINT_TOP, parentHandle, FRAMEPOINT_TOP, vec2(0, -marginAndPadding.top))
     //}
     else if (horizontalLayoutMode == STRETCH)
     //{
       if (verticalLayoutMode == BOTTOM)
-        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, margin.bottomLeft() * LayoutScalars.bottomLeft)
-        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, margin.bottomRight() * LayoutScalars.bottomRight)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, marginAndPadding.bottomLeft() * LayoutScalars.bottomLeft)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, marginAndPadding.bottomRight() * LayoutScalars.bottomRight)
       else if (verticalLayoutMode == TOP)
-        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, margin.topLeft() * LayoutScalars.topLeft)
-        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, margin.topRight() * LayoutScalars.topRight)
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, marginAndPadding.topLeft() * LayoutScalars.topLeft)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, marginAndPadding.topRight() * LayoutScalars.topRight)
       else if (verticalLayoutMode == CENTER)
-        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, vec2(margin.left, 0))
-        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, vec2(-margin.right, 0))
+        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, vec2(marginAndPadding.left, 0))
+        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, vec2(-marginAndPadding.right, 0))
     //}
     else
       Log.error("H: " + horizontalLayoutMode.toString() + " v: " + verticalLayoutMode.toString())
@@ -502,6 +528,9 @@ public class LightweightProperty<T> implements ILightweightProperty
   construct(T defaultValue, Action1<Frame> propertyChanged)
     m_defaultValue = defaultValue
     m_propertyChanged = propertyChanged
+
+    if (g_allLightweightProperties == null)
+      g_allLightweightProperties = new LinkedList<ILightweightProperty>()
     g_allLightweightProperties.add(this)
 
   // --------------------------------------------------------------------------
