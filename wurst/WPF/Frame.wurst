@@ -394,7 +394,7 @@ public class Frame
         child.measure(availableSize)
         let childMeasuredSize = child.getMeasuredSize()
         desiredSize.x = max(desiredSize.x, childMeasuredSize.x)
-        desiredSize.y = max(desiredSize.y, childMeasuredSize.y)         
+        desiredSize.y = max(desiredSize.y, childMeasuredSize.y)
     //}
     return desiredSize
 

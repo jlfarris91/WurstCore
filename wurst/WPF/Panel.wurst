@@ -1,7 +1,6 @@
 package Panel
 import Frame
 import Layout
-import VectorExtensions
 
 // ============================================================================
 public class Panel extends Frame

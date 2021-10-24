@@ -4,7 +4,6 @@ import Layout
 import Frame
 import LinkedList
 import Vector
-import Action
 
 // ============================================================================
 public class WrapPanel extends Panel
@@ -167,9 +166,10 @@ public class WrapLayout implements IFrameLayout
     let children = frame.getChildren()
     var curLineSize = uvsize(m_orientation)
     var uvFinalSize = uvsize(m_orientation, finalSize)
-
-    let itemWidthSet = getItemWidth() != REAL_MAX
-    let itemHeightSet = getItemHeight() != REAL_MAX
+    let itemWidthSet = m_itemSize.x != REAL_MAX
+    let itemHeightSet = m_itemSize.y != REAL_MAX
+    let useItemU = m_orientation == HORIZONTAL ? itemWidthSet : itemHeightSet
+    let itemU = m_orientation == HORIZONTAL ? m_itemSize.x : m_itemSize.y
     
     uvFinalSize.v = 0.
 
@@ -185,14 +185,15 @@ public class WrapLayout implements IFrameLayout
 
         if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
         //{
-          layoutLine(frame, curLineSize, uvFinalSize)
+          layoutLine(frame, curLineSize, uvFinalSize, useItemU, itemU)
           uvFinalSize.v += curLineSize.v
           curLineSize = uvChildSize
+          
+          m_lineScratchpad.add(child)
 
           if (uvChildSize.u > uvFinalSize.u)
           //{
-            m_lineScratchpad.add(child)
-            layoutLine(frame, uvChildSize, uvFinalSize)
+            layoutLine(frame, uvChildSize, uvFinalSize, useItemU, itemU)
             uvFinalSize.v += uvChildSize.v
             curLineSize = uvsize(m_orientation)
           //}
@@ -205,15 +206,15 @@ public class WrapLayout implements IFrameLayout
     //}
 
     if (m_lineScratchpad.isEmpty() == false)
-      layoutLine(frame, curLineSize, uvFinalSize)
+      layoutLine(frame, curLineSize, uvFinalSize, useItemU, itemU)
       uvFinalSize.v += curLineSize.v
 
     return finalSize
 
   // --------------------------------------------------------------------------
-  private function layoutLine(Frame parent, uvsize uvLine, uvsize total)
+  private function layoutLine(Frame parent, uvsize uvLine, uvsize total, bool useItemU, real itemU)
     let isHorizontal = m_orientation == HORIZONTAL
-    let remainingU = (total.u - uvLine.u) / max(m_lineScratchpad.getCount(), 1)
+    let remainingU = m_stretchItems ? (total.u - uvLine.u) / max(m_lineScratchpad.getCount(), 1) : 0
     real u = 0
 
     let parentHandle = parent.getFrameHandle()
@@ -221,23 +222,15 @@ public class WrapLayout implements IFrameLayout
     for child in m_lineScratchpad
     //{
       let childHandle = child.getFrameHandle()
-
-      let uvChildSize = uvsize(m_orientation, child.getSize())
-      var layoutSlotU = uvChildSize.u
-
-      if (m_stretchItems)
-        layoutSlotU += remainingU
+      let uvChildSize = uvsize(m_orientation, child.getMeasuredSize())
+      let layoutSlotU = useItemU ? itemU : (uvChildSize.u + remainingU)
+      let offset = isHorizontal ? vec2(u, -total.v) : vec2(total.v, -u)
+      let size = isHorizontal ? vec2(layoutSlotU, uvLine.v) : vec2(uvLine.v, layoutSlotU)
+      u += layoutSlotU
 
       childHandle.clearAllPoints()
-
-      if (isHorizontal)
-        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, vec2(u, -(total.v + uvLine.v)))
-      else
-        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, vec2(total.v, -(u + layoutSlotU)))
-
-      child.setSize(vec2(isHorizontal ? layoutSlotU : uvLine.v, isHorizontal ? uvLine.v : layoutSlotU))
-
-      u += layoutSlotU
+      childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, offset)
+      child.layout(size)
     //}
     
     m_lineScratchpad.clear()
