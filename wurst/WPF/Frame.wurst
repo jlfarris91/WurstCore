@@ -279,7 +279,7 @@ public class Frame
     return m_horizontalLayoutMode
 
   // --------------------------------------------------------------------------
-  function setHorizontalLayoutMode(HorizontalLayoutMode value)
+  function setHorizontalAlignment(HorizontalLayoutMode value)
     if (m_horizontalLayoutMode != value)
       m_horizontalLayoutMode = value
       invalidateArrange()
@@ -289,7 +289,7 @@ public class Frame
     return m_verticalLayoutMode
 
   // --------------------------------------------------------------------------
-  function setVerticalLayoutMode(VerticalLayoutMode value)
+  function setVerticalAlignment(VerticalLayoutMode value)
     if (m_verticalLayoutMode != value)
       m_verticalLayoutMode = value
       invalidateArrange()
@@ -661,7 +661,7 @@ public class Frame
     writeFlag(FrameFlags.arrangeDirty, value)
 
   // --------------------------------------------------------------------------
-  protected function getMeasureInProgress() returns bool
+  function getMeasureInProgress() returns bool
     return readFlag(FrameFlags.measureInProgress)
 
   // --------------------------------------------------------------------------
@@ -669,7 +669,7 @@ public class Frame
     writeFlag(FrameFlags.measureInProgress, value)
 
   // --------------------------------------------------------------------------
-  protected function getArrangeInProgress() returns bool
+  function getArrangeInProgress() returns bool
     return readFlag(FrameFlags.arrangeInProgress)
 
   // --------------------------------------------------------------------------

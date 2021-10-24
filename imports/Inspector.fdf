@@ -54,6 +54,37 @@ Frame "SLIDER" "VerticalSliderTest" {
     }
 }
 
+Frame "SLIDER" "HorizontalSliderTest" {
+    Width 0.012,
+    SliderLayoutHorizontal,
+
+    ControlBackdrop "EscMenuScrollBarBackdrop",
+    Frame "BACKDROP" "EscMenuScrollBarBackdrop" {
+        DecorateFileNames,
+        BackdropTileBackground,
+        BackdropBackground  "EscMenuSliderBackground",
+        BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+        BackdropCornerSize  0.006,
+        BackdropBackgroundSize 0.006,
+        BackdropBackgroundInsets 0.0025 0.0025 0.0025 0.0025,
+        BackdropEdgeFile  "EscMenuSliderBorder",
+        BackdropBlendAll,
+    }
+
+    SliderThumbButtonFrame "EscMenuScrollThumbButton",
+    Frame "BUTTON" "EscMenuScrollThumbButton" {
+        Width 0.016,
+        Height 0.016,
+
+        ControlBackdrop "EscMenuScrollThumbButtonBackdrop",
+        Frame "BACKDROP" "EscMenuScrollThumbButtonBackdrop" {
+            DecorateFileNames,
+            BackdropBlendAll,
+            BackdropBackground  "EscMenuSliderThumbButton",
+        }
+    }
+}
+
 // ============================================================================
 Frame "BACKDROP" "TestBackdrop" {
   SetAllPoints,

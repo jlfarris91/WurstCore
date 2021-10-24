@@ -260,6 +260,18 @@ public enum LayoutOrientation
   BOTTOMTOTOP
 
 // ============================================================================
+public function LayoutOrientation.toString() returns string
+  switch (this)
+    case LayoutOrientation.BOTTOMTOTOP
+      return "BOTTOMTOTOP"
+    case LayoutOrientation.LEFTTORIGHT
+      return "LEFTTORIGHT"
+    case LayoutOrientation.RIGHTTOLEFT
+      return "RIGHTTOLEFT"
+    case LayoutOrientation.TOPTOBOTTOM
+      return "TOPTOBOTTOM"
+
+// ============================================================================
 public function LayoutOrientation.getLayoutDir() returns vec2
   switch (this)
     case LEFTTORIGHT

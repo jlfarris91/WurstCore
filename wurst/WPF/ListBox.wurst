@@ -1,0 +1,330 @@
+package ListBox
+import Panel
+import Frame
+import Layout
+import Vector
+import ClosureFrames
+import Range
+import Object
+import StackPanel
+import ClosureTimers
+
+// ============================================================================
+public class ListBox extends Panel
+  private StackPanel m_stackPanel
+  
+  private real m_spacing
+  private bool m_needsRebuild
+
+  private Vector<Object> m_itemsSource
+  private FrameTemplate m_itemFrameTemplate
+  private Vector<Frame> m_itemFrames
+  private Vector<Frame> m_itemFramesPool
+  private real m_itemSize
+
+  private Frame m_verticalScrollBar
+  private Frame m_horizontalScrollBar
+  private Frame m_scrollBar
+  private framehandle m_scrollingBackdrop
+  private rangeReal m_scrollBarMinMax
+  private bool m_showScrollbar
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_itemsSource = null
+    m_itemFrames = new Vector<Frame>()
+    m_itemFramesPool = new Vector<Frame>()
+
+    m_stackPanel = new StackPanel()
+
+    // Just exists to capture the mouse wheel scroll event
+    m_scrollingBackdrop = createFrame("SLIDER", "BackdropScrollCapture", GAME_UI, "", 0)
+      ..setLevel(1) // above items
+      ..onMouseWheel(() -> onMouseWheel())
+      ..setParent(getFrameHandle())
+      ..hide()
+
+    let verticalScrollBarHandle = createFrame("VerticalSliderTest")
+      ..onSliderValueChange(() -> updateViewport())
+      ..onMouseWheel(() -> onMouseWheel())
+      ..setParent(getFrameHandle())
+
+    m_verticalScrollBar = new Frame(verticalScrollBarHandle)
+      ..setWidth(0.012)
+      ..hide()
+    addChild(m_verticalScrollBar)
+
+    let horizontalScrollBarHandle = createFrame("HorizontalSliderTest")
+      ..onSliderValueChange(() -> updateViewport())
+      ..onMouseWheel(() -> onMouseWheel())
+      ..setParent(getFrameHandle())
+
+    m_horizontalScrollBar = new Frame(horizontalScrollBarHandle)
+      ..setHeight(0.012)
+      ..hide()
+    addChild(m_horizontalScrollBar)
+
+    updateScrollBarFrame()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_itemFrames
+
+  // --------------------------------------------------------------------------
+  function getOrientation() returns LayoutOrientation
+    return m_stackPanel.getOrientation()
+
+  // --------------------------------------------------------------------------
+  function setOrientation(LayoutOrientation value)
+    if (getOrientation() != value)
+      m_stackPanel.setOrientation(value)
+      updateScrollBarFrame()
+      invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function getItemFrameTemplate() returns FrameTemplate
+    return m_itemFrameTemplate
+  
+  // --------------------------------------------------------------------------
+  function setItemFrameTemplate(FrameTemplate value)
+    if (m_itemFrameTemplate != value)
+      m_itemFrameTemplate = value
+      destroyItemFrames()
+      m_needsRebuild = true
+
+  // --------------------------------------------------------------------------
+  function getItemsSource() returns Vector<Object>
+    return m_itemsSource
+
+  // --------------------------------------------------------------------------
+  function setItemsSource(Vector<Object> itemsSource)
+    if (m_itemsSource != itemsSource)
+      m_itemsSource = itemsSource
+      onItemSourceChanged()
+
+  // --------------------------------------------------------------------------
+  private function updateScrollBarFrame()
+    let orientation = getOrientation()
+    let scrollBar = (orientation == LEFTTORIGHT or orientation == RIGHTTOLEFT) ? m_horizontalScrollBar : m_verticalScrollBar
+    if (scrollBar == m_scrollBar)
+      return
+    if (m_scrollBar != null)
+      m_scrollBar.hide()
+    m_scrollBar = scrollBar
+    if (m_scrollBar != null)
+      m_scrollBar.show()
+      m_scrollBar.invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function onItemSourceChanged()
+    updateScrollbar()
+    updateViewport()
+    tryUpdateItems(getSize())
+    
+  // --------------------------------------------------------------------------
+  private function tryUpdateItems(vec2 size)
+    let orientation = getOrientation()
+    let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
+    let newMaxNumberItems = getMaxNumberOfItems(m_itemSize, isHorizontal ? size.x : size.y)
+    if (getNeverMeasured() or m_needsRebuild or newMaxNumberItems != m_itemFrames.getCount())
+      rebuildItems(size)
+  
+  // --------------------------------------------------------------------------
+  private function rebuildItems(vec2 size)
+
+    let itemFrameTemplate = getItemFrameTemplate()
+    if (itemFrameTemplate == null)
+      return
+
+    let orientation = getOrientation()
+    let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
+    let panelSize = isHorizontal ? size.x : size.y
+
+    if (m_itemFrames.isEmpty())
+      let firstItemFrame = getNewItemFrame(itemFrameTemplate)
+      if (firstItemFrame == null)
+        return
+      m_itemFrames.add(firstItemFrame)
+      firstItemFrame.measure(size)
+      let itemFrameMeasuredSize = firstItemFrame.getMeasuredSize()      
+      m_itemSize = isHorizontal ? itemFrameMeasuredSize.x : itemFrameMeasuredSize.y
+
+    let maxNumItems = getMaxNumberOfItems(m_itemSize, panelSize)
+    m_spacing = getSpacing(m_itemSize, panelSize)
+
+    while (m_itemFrames.getCount() < maxNumItems)
+      let frame = getNewItemFrame(itemFrameTemplate)
+      m_itemFrames.add(frame)
+      frame.show()
+
+    while (m_itemFrames.getCount() > maxNumItems)
+      let frame = m_itemFrames.pop()
+      m_itemFramesPool.add(frame)
+      frame.hide()
+
+    m_needsRebuild = false
+
+    updateScrollbar()
+
+  // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+
+    var stackPanelSize = availableSize
+    let orientation = getOrientation()
+    let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
+    
+    if (m_showScrollbar)
+      m_verticalScrollBar.measure(availableSize)
+      m_horizontalScrollBar.measure(availableSize)
+
+    let scrollBarMeasuredSize = m_showScrollbar ? m_scrollBar.getMeasuredSize() : ZERO2
+
+    if (isHorizontal)
+      stackPanelSize.x = m_itemSize
+      if (m_showScrollbar)
+        stackPanelSize.y -= scrollBarMeasuredSize.y
+    else
+      stackPanelSize.y = m_itemSize
+      if (m_showScrollbar)
+        stackPanelSize.x -= scrollBarMeasuredSize.x
+
+    m_stackPanel.measure(stackPanelSize)
+
+    return availableSize
+
+  // --------------------------------------------------------------------------
+  override function arrangeOverride(vec2 arrangeSize) returns vec2
+
+    let frameHandle = getFrameHandle()
+    let orientation = getOrientation()
+    let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
+    var stackPanelSize = arrangeSize
+    var scrollBarSize = ZERO2
+
+    if (m_showScrollbar)
+    //{
+      let scrollBarMeasuredSize = m_scrollBar.getMeasuredSize()
+      scrollBarSize = isHorizontal ? vec2(arrangeSize.x, scrollBarMeasuredSize.y) : vec2(scrollBarMeasuredSize.x, arrangeSize.y)
+      
+      let scrollBarHandle = m_scrollBar.getFrameHandle()
+      scrollBarHandle.clearAllPoints()
+      if (isHorizontal)
+        scrollBarHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, frameHandle, FRAMEPOINT_BOTTOMLEFT)
+        scrollBarHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, frameHandle, FRAMEPOINT_BOTTOMRIGHT)
+      else
+        scrollBarHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, frameHandle, FRAMEPOINT_BOTTOMRIGHT)
+        scrollBarHandle.setPoint(FRAMEPOINT_TOPRIGHT, frameHandle, FRAMEPOINT_TOPRIGHT)
+      m_scrollBar.arrange(scrollBarSize)
+
+      m_scrollingBackdrop.setPoint(FRAMEPOINT_BOTTOMLEFT, frameHandle, FRAMEPOINT_BOTTOMLEFT, isHorizontal ? vec2(0, scrollBarSize.y) : ZERO2)
+      m_scrollingBackdrop.setPoint(FRAMEPOINT_TOPRIGHT, frameHandle, FRAMEPOINT_TOPRIGHT, isHorizontal ? ZERO2 : vec2(-scrollBarSize.x, 0))
+    //}
+
+    if (orientation == RIGHTTOLEFT)
+      stackPanelSize.y -= scrollBarSize.y
+    else if (orientation == TOPTOBOTTOM)
+      stackPanelSize.x -= scrollBarSize.x
+
+    let stackPanelHandle = m_stackPanel.getFrameHandle()
+    
+    stackPanelHandle.clearAllPoints()
+    stackPanelHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, frameHandle, FRAMEPOINT_BOTTOMLEFT, isHorizontal ? vec2(0, scrollBarSize.y) : ZERO2)
+
+    m_stackPanel.arrange(stackPanelSize)
+
+    nullTimer(() -> tryUpdateItems(arrangeSize))
+
+    return arrangeSize
+
+  // --------------------------------------------------------------------------
+  private static function getMaxNumberOfItems(real rowHeight, real totalHeight) returns int
+    return rowHeight == 0 ? 1 : (totalHeight / rowHeight).floor()
+
+  // --------------------------------------------------------------------------
+  private static function getSpacing(real rowHeight, real totalHeight) returns real
+    if (rowHeight == 0)
+      return 0
+    let rowsAbs = totalHeight / rowHeight
+    let rowsFloor = rowsAbs.floor()
+    if (rowsFloor == 0)
+      return 0
+    return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
+
+  // --------------------------------------------------------------------------
+  function getNewItemFrame(FrameTemplate itemFrameTemplate) returns Frame
+    Frame frame
+    if (not m_itemFramesPool.isEmpty())
+      frame = m_itemFramesPool.pop()
+    else
+      frame = itemFrameTemplate.createFrame()
+      m_stackPanel.addChild(frame)
+    return frame
+
+  // --------------------------------------------------------------------------
+  private function destroyItemFrames()
+    while (m_itemFrames.isEmpty() == false)
+      let childFrame = m_itemFrames.pop()
+      m_stackPanel.removeChild(childFrame)
+      destroy childFrame
+    while (m_itemFramesPool.isEmpty() == false)
+      destroy m_itemFramesPool.pop()
+
+  // --------------------------------------------------------------------------
+  private function updateScrollbar()
+
+    let scrollBarHandle = m_scrollBar.getFrameHandle()
+
+    let itemFramesCount = m_itemFrames.getCount()
+    let itemSourceCount = m_itemsSource != null ? m_itemsSource.getCount() : 0
+    let viewportSize = itemFramesCount
+
+    let prevScrollValue = scrollBarHandle.getValue()
+    let viewportStart = max(((m_scrollBarMinMax.max + viewportSize - 1) - prevScrollValue).floor(), 0)
+
+    let scrollBarMax = max(itemSourceCount - viewportSize, 0).toReal()
+    m_scrollBarMinMax = rangeReal(0, scrollBarMax)
+    scrollBarHandle.setMinMax(0, scrollBarMax)
+
+    let nextScrollValue = max(((itemSourceCount - 1) - viewportStart), 0)
+    scrollBarHandle.setValue(nextScrollValue.toReal())
+
+    let wasShowingScrollBar = m_showScrollbar
+    m_showScrollbar = itemFramesCount < itemSourceCount
+    
+    if (m_showScrollbar != wasShowingScrollBar)
+      invalidateMeasure()
+      invalidateArrange()
+      updateViewport()
+      if (m_showScrollbar)
+        m_scrollBar.show()
+      else
+        m_scrollBar.hide()
+      m_scrollingBackdrop.setVisible(m_showScrollbar)
+
+  // --------------------------------------------------------------------------
+  private function updateViewport()
+
+    let scrollBarHandle = m_scrollBar.getFrameHandle()
+
+    let scrollValue = scrollBarHandle.getValue()
+    let viewportStart = max((m_scrollBarMinMax.max - scrollValue).round(), 0)
+    let itemFramesCount = m_itemFrames.getCount()
+    let itemSourceCount = m_itemsSource != null ? m_itemsSource.getCount() : 0
+
+    for i = 0 to itemFramesCount - 1
+      let childFrame = m_itemFrames.getItem(i)
+      let itemIndex = viewportStart + i
+      if (itemIndex < itemSourceCount)
+        childFrame.setDataContext(m_itemsSource.getItem(itemIndex).getObject())
+        childFrame.show()
+      else
+        childFrame.hide()
+
+  // --------------------------------------------------------------------------
+  private function onMouseWheel()
+
+    let scrollBarHandle = m_scrollBar.getFrameHandle()
+
+    let scrollValue = BlzGetTriggerFrameValue()
+    let newScrollValue = scrollBarHandle.getValue() + (scrollValue / 120.0).floor()
+    scrollBarHandle.setValue(newScrollValue)
