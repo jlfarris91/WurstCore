@@ -28,7 +28,7 @@ public class WrapPanel extends Panel
   function setOrientation(Orientation value)
     if (getOrientation() != value)
       m_layout.setOrientation(value)
-      invalidateLayout()
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   function getStretchItems() returns bool
@@ -38,7 +38,7 @@ public class WrapPanel extends Panel
   function setStretchItems(bool value)
     if (getStretchItems() != value)
       m_layout.setStretchItems(value)
-      invalidateLayout()
+      invalidateArrange()
 
 tuple uvsize(Orientation orientation, real u, real v)
 
@@ -161,7 +161,7 @@ public class WrapLayout implements IFrameLayout
     return panelSizeUV.getSize()
 
   // --------------------------------------------------------------------------
-  override function layout(Frame frame, vec2 finalSize) returns vec2
+  override function arrange(Frame frame, vec2 finalSize) returns vec2
 
     let children = frame.getChildren()
     var curLineSize = uvsize(m_orientation)
@@ -230,7 +230,7 @@ public class WrapLayout implements IFrameLayout
 
       childHandle.clearAllPoints()
       childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, offset)
-      child.layout(size)
+      child.arrange(size)
     //}
     
     m_lineScratchpad.clear()

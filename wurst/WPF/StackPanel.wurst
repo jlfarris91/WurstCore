@@ -22,7 +22,7 @@ public class StackPanel extends Panel
   function setOrientation(LayoutOrientation value)
     if (m_layout.getOrientation() != value)
       m_layout.setOrientation(value)
-      invalidateLayout()
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   function getOrientation() returns LayoutOrientation
@@ -98,7 +98,7 @@ public class StackLayout implements IFrameLayout
     return panelDesiredSize
 
   // --------------------------------------------------------------------------
-  override function layout(Frame frame, vec2 finalSize) returns vec2
+  override function arrange(Frame frame, vec2 finalSize) returns vec2
 
     let children = frame.getChildren()
     let padding = frame.getPadding()
@@ -146,7 +146,7 @@ public class StackLayout implements IFrameLayout
         childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
         childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
     
-    childFrame.layout(vec2(childFrame.getMeasuredSize().x, size.y - marginAndPadding.height()))
+    childFrame.arrange(vec2(childFrame.getMeasuredSize().x, size.y - marginAndPadding.height()))
 
   // --------------------------------------------------------------------------
   private static function layout_rightToLeft(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
@@ -166,7 +166,7 @@ public class StackLayout implements IFrameLayout
         childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
         childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + marginAndPadding.topRight()) * LayoutScalars.topRight)
     
-    childFrame.layout(vec2(childFrame.getMeasuredSize().x, size.y - marginAndPadding.height()))
+    childFrame.arrange(vec2(childFrame.getMeasuredSize().x, size.y - marginAndPadding.height()))
 
   // --------------------------------------------------------------------------
   private static function layout_bottomToTop(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
@@ -186,7 +186,7 @@ public class StackLayout implements IFrameLayout
         childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
         childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
     
-    childFrame.layout(vec2(size.x - marginAndPadding.width(), childFrame.getMeasuredSize().y))
+    childFrame.arrange(vec2(size.x - marginAndPadding.width(), childFrame.getMeasuredSize().y))
 
   // --------------------------------------------------------------------------
   private static function layout_topToBottom(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
@@ -206,4 +206,4 @@ public class StackLayout implements IFrameLayout
         childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
         childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + marginAndPadding.topRight()) * LayoutScalars.topRight)
     
-    childFrame.layout(vec2(size.x - marginAndPadding.width(), childFrame.getMeasuredSize().y))
+    childFrame.arrange(vec2(size.x - marginAndPadding.width(), childFrame.getMeasuredSize().y))

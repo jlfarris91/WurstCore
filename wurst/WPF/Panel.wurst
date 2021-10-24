@@ -5,7 +5,6 @@ import Layout
 // ============================================================================
 public class Panel extends Frame
   private IFrameLayout m_layout
-  private bool m_layingOut
 
   // --------------------------------------------------------------------------
   construct()
@@ -44,25 +43,21 @@ public class Panel extends Frame
            : super.measureOverride(availableSize)
 
   // --------------------------------------------------------------------------
-  override function layout()
-    if (m_layingOut)
-      return
-    m_layingOut = true
-    super.layout()
-    m_layingOut = false
+  override function arrange()
+    super.arrange()
 
   // --------------------------------------------------------------------------
-  override function layout(vec2 availableSize)
-    super.layout(availableSize)
+  override function arrange(vec2 availableSize)
+    super.arrange(availableSize)
 
   // --------------------------------------------------------------------------
-  override function layoutOverride(vec2 layoutSize) returns vec2
+  override function arrangeOverride(vec2 layoutSize) returns vec2
     let paddedLayoutSize = layoutSize - getPadding().size()
     vec2 result
     if (m_layout != null)
-      result = m_layout.layout(this, paddedLayoutSize)
+      result = m_layout.arrange(this, paddedLayoutSize)
       getFrameHandle().setSize(result)
     else
-      super.layoutOverride(paddedLayoutSize)
+      super.arrangeOverride(paddedLayoutSize)
       result = paddedLayoutSize
     return result

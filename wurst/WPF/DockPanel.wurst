@@ -12,7 +12,7 @@ public enum Dock
 
 // ============================================================================
 public class DockPanel extends Panel
-  static constant LightweightProperty<Dock> dockProperty = new LightweightProperty<Dock>(Dock.LEFT, g_invalidateFrameLayoutOnPropertyChanged)
+  static constant LightweightProperty<Dock> dockProperty = new LightweightProperty<Dock>(Dock.LEFT, frame -> onDockPropertyChanged(frame))
   private DockLayout m_layout
 
   // --------------------------------------------------------------------------
@@ -39,7 +39,7 @@ public class DockPanel extends Panel
   function setLastChildFills(bool value)
     if (m_layout.getLastChildFills() != value)
       m_layout.setLastChildFills(value)
-      invalidateLayout()
+      invalidateArrange()
 
 // ============================================================================
 public function Frame.getDock() returns Dock
@@ -92,7 +92,7 @@ public class DockLayout implements IFrameLayout
     return parentSize
 
   // --------------------------------------------------------------------------
-  override function layout(Frame frame, vec2 layoutSize) returns vec2
+  override function arrange(Frame frame, vec2 layoutSize) returns vec2
 
     let parentHandle = frame.getFrameHandle()
     let children = frame.getChildren()
@@ -145,9 +145,18 @@ public class DockLayout implements IFrameLayout
       //}
 
       child.getFrameHandle().setSize(childSize)
-      child.layout(childSize)
+      child.arrange(childSize)
 
       i++
     //}
 
     return layoutSize
+
+// ============================================================================
+function onDockPropertyChanged(Frame frame)
+  var p = frame.getParent()
+  while p != null
+    if (p.typeId == DockPanel.typeId)
+      p.invalidateMeasure()
+      break
+    p = p.getParent()

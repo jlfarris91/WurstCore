@@ -5,19 +5,31 @@ import Layout
 import Action
 import public FramehandleExtensions
 import Object
+import Flags
+import ClosureTimers
+import ErrorHandling
+import Execute
 
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 
-public constant Action1<Frame> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
 Action1<Frame> g_playerChanged = context -> context.onPlayerChanged()
 LinkedList<ILightweightProperty> g_allLightweightProperties
 
 // ============================================================================
+class FrameFlags
+  static constant int measureDirty          = 0x01
+  static constant int arrangeDirty          = 0x02
+  static constant int measureInProgress     = 0x04
+  static constant int arrangeInProgress     = 0x08
+  static constant int neverMeasured         = 0x10
+  static constant int neverArranged         = 0x20
+  static constant int measureDuringArrange  = 0x40
+
+// ============================================================================
 public class Frame
-  static constant LightweightProperty<Object>         dataContextProperty   = new LightweightProperty<Object>(null, g_invalidateFrameLayoutOnPropertyChanged)
-  static constant LightweightProperty<IFrameFactory>  frameFactoryProperty  = new LightweightProperty<IFrameFactory>(null, null)
-  static constant LightweightProperty<Thickness>      marginProperty        = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
-  static constant LightweightProperty<Thickness>      paddingProperty       = new LightweightProperty<Thickness>(null, g_invalidateFrameLayoutOnPropertyChanged)
+  static constant LightweightProperty<Object>         dataContextProperty   = new LightweightProperty<Object>(null, null)
+  static constant LightweightProperty<Thickness>      marginProperty        = new LightweightProperty<Thickness>(null, null)..setAffectsMeasure(true)
+  static constant LightweightProperty<Thickness>      paddingProperty       = new LightweightProperty<Thickness>(null, null)..setAffectsMeasure(true)
   static constant LightweightProperty<player>         playerProperty        = new LightweightProperty<player>(null, null)
 
   private framehandle m_frameHandle
@@ -25,12 +37,16 @@ public class Frame
   private LinkedList<Frame> m_children
   private HorizontalLayoutMode m_horizontalLayoutMode
   private VerticalLayoutMode m_verticalLayoutMode
-  private bool m_fitToContents
-  private int m_ignoreLayout
   private vec2 m_desiredSize = ZERO2
   private vec2 m_measuredSize = ZERO2
-  private vec2 m_lastMeasureAvailableSize = ZERO2
-  private vec2 m_lastLayoutAvailableSize = ZERO2
+  private vec2 m_prevMeasureAvailableSize = ZERO2
+  private vec2 m_prevArrangeSize = ZERO2
+  private int m_flags = 0x30 // neverMeasured | neverArranged
+  private Frame m_rootFrame = null
+  private int m_treeLevel = 0
+
+  protected LayoutRequest m_measureRequest = null
+  protected LayoutRequest m_arrangeRequest = null
 
   // --------------------------------------------------------------------------
   function log(string message)
@@ -43,7 +59,6 @@ public class Frame
     m_parent = null
     m_horizontalLayoutMode = HorizontalLayoutMode.STRETCH
     m_verticalLayoutMode = VerticalLayoutMode.STRETCH
-    m_fitToContents = false
     m_desiredSize = frameHandle.getSize()
 
   // --------------------------------------------------------------------------
@@ -93,13 +108,32 @@ public class Frame
     if (m_parent != null)
       m_parent.m_children.remove(this)
 
+    let prevParent = value
     m_parent = value
 
     if (m_parent != null)
       m_parent.m_children.add(this)
       m_frameHandle.setParent(value.m_frameHandle)
+      m_parent.invalidateMeasure()
+      if (prevParent == null)
+        resinsertIntoLayoutQueue()
 
-    invalidateLayout()
+    onParentChanged()
+
+  // --------------------------------------------------------------------------
+  protected function onParentChanged()
+    m_treeLevel = m_parent != null ? m_parent.getTreeLevel() + 1 : 1
+    m_rootFrame = m_parent != null ? m_parent.getRootFrame() : this
+    for child in m_children
+      child.onParentChanged()
+
+  // --------------------------------------------------------------------------
+  function getTreeLevel() returns int
+    return m_treeLevel
+
+  // --------------------------------------------------------------------------
+  function getRootFrame() returns Frame
+    return m_rootFrame
   
   // --------------------------------------------------------------------------
   function getChildren() returns LinkedList<Frame>
@@ -109,13 +143,11 @@ public class Frame
   function addChild(Frame childFrame)
     if (childFrame.m_parent != this)
       childFrame.setParent(this)
-      invalidateLayout()
 
   // --------------------------------------------------------------------------
   function removeChild(Frame childFrame)
     if (childFrame.m_parent == this)
       childFrame.setParent(null)
-      invalidateLayout()
 
   // --------------------------------------------------------------------------
   function isPanel() returns bool
@@ -127,10 +159,9 @@ public class Frame
   
   // --------------------------------------------------------------------------
   function setWidth(real value)
-    if (m_frameHandle.getWidth() != value)
+    if (m_frameHandle.getWidth() != value or m_desiredSize.x != value)
       m_frameHandle.setWidth(value)
       setDesiredWidth(value)
-      invalidateLayout()
   
   // --------------------------------------------------------------------------
   function getHeight() returns real
@@ -138,10 +169,9 @@ public class Frame
   
   // --------------------------------------------------------------------------
   function setHeight(real value)
-    if (m_frameHandle.getHeight() != value)
+    if (m_frameHandle.getHeight() != value or m_desiredSize.y != value)
       m_frameHandle.setHeight(value)
       setDesiredHeight(value)
-      invalidateLayout()
   
   // --------------------------------------------------------------------------
   function getSize() returns vec2
@@ -149,11 +179,9 @@ public class Frame
   
   // --------------------------------------------------------------------------
   function setSize(vec2 value)
-    if (m_frameHandle.getWidth() != value.x or m_frameHandle.getHeight() != value.y)
-      m_frameHandle.setWidth(value.x)
-      m_frameHandle.setHeight(value.y)
+    if (m_frameHandle.getSize() != value or m_desiredSize != value)
+      m_frameHandle.setSize(value)
       setDesiredSize(value)
-      invalidateLayout()
 
   // --------------------------------------------------------------------------
   function setAbsArea(rectr area)
@@ -166,8 +194,7 @@ public class Frame
   // --------------------------------------------------------------------------
   function setAbsArea(framepointtype framepoint, vec2 pos, vec2 size)
     m_frameHandle.setAbsPoint(framepoint, pos)
-    measure(size)
-    layout(size)
+    arrange(size)
 
   // --------------------------------------------------------------------------
   function setText(string value)
@@ -189,7 +216,19 @@ public class Frame
   function setDesiredSize(vec2 value)
     if (m_desiredSize != value)
       m_desiredSize = value
-      invalidateLayout()
+      invalidateMeasure()
+      if (m_parent != null)
+        arrange(value)
+
+  // --------------------------------------------------------------------------
+  function resinsertIntoLayoutQueue()
+    let requiresMeasure = getMeasureDirty() and not getNeverMeasured() and m_measureRequest == null
+    if (requiresMeasure)
+      LayoutManager.measureQueue.add(this)
+
+    let requiresArrange = getArrangeDirty() and not getNeverArranged() and m_arrangeRequest == null
+    if (requiresArrange)
+      LayoutManager.arrangeQueue.add(this)
 
   // --------------------------------------------------------------------------
   function getDesiredWidth() returns real
@@ -232,16 +271,8 @@ public class Frame
       dataContextProperty.setValue(this, valueObject)
     else if (valueObject.getObject() != value)
       valueObject.setObject(value)
-      dataContextProperty.raisePropertyChanged(this)
+      dataContextProperty.onPropertyChanged(this)
     dataContextProperty.setValue(this, valueObject)
-
-  // --------------------------------------------------------------------------
-  function getFrameFactory() returns IFrameFactory
-    return frameFactoryProperty.getValue(this)
-
-  // --------------------------------------------------------------------------
-  function setFrameFactory(IFrameFactory value)
-    frameFactoryProperty.setValue(this, value)
 
   // --------------------------------------------------------------------------
   function getHorizontalLayoutMode() returns HorizontalLayoutMode
@@ -251,7 +282,7 @@ public class Frame
   function setHorizontalLayoutMode(HorizontalLayoutMode value)
     if (m_horizontalLayoutMode != value)
       m_horizontalLayoutMode = value
-      invalidateLayout()
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   function getVerticalLayoutMode() returns VerticalLayoutMode    
@@ -261,7 +292,7 @@ public class Frame
   function setVerticalLayoutMode(VerticalLayoutMode value)
     if (m_verticalLayoutMode != value)
       m_verticalLayoutMode = value
-      invalidateLayout()
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   function getMargin() returns thickness
@@ -276,7 +307,7 @@ public class Frame
       marginProperty.setValue(this, valueObject)
     else if (valueObject.value != value)
       valueObject.value = value
-      marginProperty.raisePropertyChanged(this)
+      marginProperty.onPropertyChanged(this)
 
   // --------------------------------------------------------------------------
   function getPadding() returns thickness
@@ -291,7 +322,7 @@ public class Frame
       paddingProperty.setValue(this, valueObject)
     else if (valueObject.value != value)
       valueObject.value = value
-      paddingProperty.raisePropertyChanged(this)
+      paddingProperty.onPropertyChanged(this)
 
   // --------------------------------------------------------------------------
   function getPlayer() returns player
@@ -314,14 +345,16 @@ public class Frame
     let wasVisible = m_frameHandle.isVisible()
     m_frameHandle.show()
     if (wasVisible == false)
-      invalidateLayout()
+      signalDesiredSizeChanged()
+      invalidateArrange()
   
   // --------------------------------------------------------------------------
   function show(player _player)
     let wasVisible = m_frameHandle.isVisible()
     m_frameHandle.show(_player)
     if (wasVisible == false)
-      invalidateLayout()
+      signalDesiredSizeChanged()
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   function showOnly(player _player)
@@ -329,7 +362,8 @@ public class Frame
     m_frameHandle.hide()
     m_frameHandle.show(_player)
     if (wasVisible == false)
-      invalidateLayout()
+      signalDesiredSizeChanged()
+      invalidateArrange()
 
   // --------------------------------------------------------------------------
   function hide()
@@ -349,39 +383,94 @@ public class Frame
     m_frameHandle.clearFocus()
 
   // --------------------------------------------------------------------------
-  function beginBatchLayout()
-    m_ignoreLayout++
+  function invalidateMeasure()
+    if (getMeasureDirty() or getMeasureInProgress())
+      return
+    if (m_measureRequest != null)
+      error("Can't be clean and still have a measure request")
+    if (not getNeverMeasured())
+      LayoutManager.measureQueue.add(this)
+    setMeasureDirty(true)
 
   // --------------------------------------------------------------------------
-  function endBatchLayout()
-    if (m_ignoreLayout == 0)
-      Log.error("Frame", "endBatchLayout", getFullName(), "Batch layout call mismatch")
-    m_ignoreLayout--
-    if (m_ignoreLayout == 0)
-      invalidateLayout()
+  protected function invalidateMeasureInternal()
+    setMeasureDirty(true)
 
   // --------------------------------------------------------------------------
-  function invalidateLayout()
-    
-    // if (m_ignoreLayout > 0)
-    //   return
+  function invalidateArrange()
+    if (getArrangeDirty() or getArrangeInProgress())
+      return
+    if (m_arrangeRequest != null)
+      error("Can't be clean and still have an arrange request")
+    if (not getNeverArranged())
+      LayoutManager.arrangeQueue.add(this)
+    setArrangeDirty(true)
 
-    // if (m_parent != null)
-    //   m_parent.invalidateLayout()
+  // --------------------------------------------------------------------------
+  protected function invalidateArrangeInternal()
+    setArrangeDirty(true)
 
-    // layout()
+  // --------------------------------------------------------------------------
+  function signalDesiredSizeChanged()
+    if (m_parent != null)
+      m_parent.onChildMeasuredSizeChanged(this)
+
+  // --------------------------------------------------------------------------
+  protected function onChildMeasuredSizeChanged(Frame _child)
+    if (not getMeasureDirty())
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function measure()
-    if (m_lastMeasureAvailableSize == ZERO2)
-      return
-    measure(m_lastMeasureAvailableSize)
+    measure(m_prevMeasureAvailableSize)
 
   // --------------------------------------------------------------------------
   function measure(vec2 availableSize)
+
+    let isCloseToPrevMeasure = availableSize == m_prevMeasureAvailableSize
+
+    if (not getMeasureDirty() and not getNeverMeasured() and isCloseToPrevMeasure)
+      return
+
+    if (not isVisible())
+      if (m_measureRequest != null)
+        LayoutManager.measureQueue.remove(this)
+      if (not isCloseToPrevMeasure)
+        invalidateMeasureInternal()
+        m_prevMeasureAvailableSize = availableSize
+      return
+
+    let prevMeasuredSize = m_measuredSize
     let marginSize = getMargin().size()
-    m_measuredSize = measureOverride(availableSize - marginSize)
-    m_lastMeasureAvailableSize = availableSize
+
+    invalidateArrange()
+
+    setMeasureInProgress(true)
+
+    LayoutManager.enterMeasure()
+    let measuredSize = measureOverride(availableSize - marginSize)
+    LayoutManager.exitMeasure()
+
+    setMeasureInProgress(false)
+    
+    setMeasureDirty(false)
+    setNeverMeasured(false)
+
+    if (m_measureRequest != null)
+      LayoutManager.measureQueue.remove(this)
+
+    if (measuredSize.x == REAL_MAX)
+      Log.error("Measured width cannot be REAL_MAX")
+
+    if (measuredSize.y == REAL_MAX)
+      Log.error("Measured height cannot be REAL_MAX")
+
+    m_measuredSize = measuredSize
+    m_prevMeasureAvailableSize = availableSize
+
+    if (m_parent != null and prevMeasuredSize != measuredSize
+        and not m_parent.getMeasureInProgress() and not getMeasureDuringArrange())
+      m_parent.onChildMeasuredSizeChanged(this)
 
   // --------------------------------------------------------------------------
   protected function measureOverride(vec2 availableSize) returns vec2
@@ -399,32 +488,73 @@ public class Frame
     return desiredSize
 
   // --------------------------------------------------------------------------
-  function layout()
-    if (m_lastLayoutAvailableSize == ZERO2)
+  function arrange()
+    arrange(m_prevArrangeSize)
+
+  // --------------------------------------------------------------------------
+  function arrange(vec2 availableSize)
+
+    if (availableSize.x == REAL_MAX)
+      Log.error("Arrange width cannot be REAL_MAX")
+
+    if (availableSize.y == REAL_MAX)
+      Log.error("Arrange width cannot be REAL_MAX")
+
+    if (not isVisible())
+      if (m_arrangeRequest != null)
+        LayoutManager.arrangeQueue.remove(this)
+      m_prevArrangeSize = availableSize
       return
-    layout(m_lastLayoutAvailableSize)
+
+    let neverMeasured = getNeverMeasured()
+
+    if (getMeasureDirty() or neverMeasured)
+      setMeasureDuringArrange(true)
+      if (neverMeasured)
+        measure(availableSize)
+      else
+        measure()
+      setMeasureDuringArrange(false)
+
+    if (not getArrangeDirty() and not getNeverArranged() and m_prevArrangeSize == availableSize)
+      return
+
+    setArrangeInProgress(true)
+      
+    LayoutManager.enterArrange()
+    arrangeOverride(availableSize)
+    LayoutManager.exitArrange()
+
+    setArrangeInProgress(false)
+
+    m_prevArrangeSize = availableSize
+
+    setArrangeDirty(false)
+    setNeverArranged(false)
+
+    if (m_arrangeRequest != null)
+      LayoutManager.arrangeQueue.remove(this)
 
   // --------------------------------------------------------------------------
-  function layout(vec2 availableSize)
-    layoutOverride(availableSize)
-    m_lastLayoutAvailableSize = availableSize
-
-  // --------------------------------------------------------------------------
-  protected function layoutOverride(vec2 availableSize) returns vec2
+  protected function arrangeOverride(vec2 availableSize) returns vec2
 
     let padding = getPadding()
     for child in m_children
     //{
       if (child.isVisible())
         let marginAndPadding = padding + child.getMargin()
-        Frame.layoutFrame(this, child, marginAndPadding)
-        child.layout(availableSize - marginAndPadding.size())          
+        Frame.arrangeFrame(this, child, marginAndPadding)
+        child.arrange(availableSize - marginAndPadding.size())          
     //}
 
     return availableSize
+
+  // --------------------------------------------------------------------------
+  function updateLayout()
+    LayoutManager.updateLayout()
       
   // --------------------------------------------------------------------------
-  static function layoutFrame(Frame parentFrame, Frame childFrame, thickness padding)
+  static function arrangeFrame(Frame parentFrame, Frame childFrame, thickness padding)
 
     let parentHandle = parentFrame.getFrameHandle()
     let childHandle = childFrame.getFrameHandle()
@@ -484,6 +614,72 @@ public class Frame
     else
       Log.error("H: " + horizontalLayoutMode.toString() + " v: " + verticalLayoutMode.toString())
 
+  // --------------------------------------------------------------------------
+  protected function getMeasureDirty() returns bool
+    return readFlag(FrameFlags.measureDirty)
+
+  // --------------------------------------------------------------------------
+  protected function setMeasureDirty(bool value)
+    writeFlag(FrameFlags.measureDirty, value)
+
+  // --------------------------------------------------------------------------
+  protected function getArrangeDirty() returns bool
+    return readFlag(FrameFlags.arrangeDirty)
+
+  // --------------------------------------------------------------------------
+  protected function setArrangeDirty(bool value)
+    writeFlag(FrameFlags.arrangeDirty, value)
+
+  // --------------------------------------------------------------------------
+  protected function getMeasureInProgress() returns bool
+    return readFlag(FrameFlags.measureInProgress)
+
+  // --------------------------------------------------------------------------
+  protected function setMeasureInProgress(bool value)
+    writeFlag(FrameFlags.measureInProgress, value)
+
+  // --------------------------------------------------------------------------
+  protected function getArrangeInProgress() returns bool
+    return readFlag(FrameFlags.arrangeInProgress)
+
+  // --------------------------------------------------------------------------
+  protected function setArrangeInProgress(bool value)
+    writeFlag(FrameFlags.arrangeInProgress, value)
+
+  // --------------------------------------------------------------------------
+  protected function getNeverMeasured() returns bool
+    return readFlag(FrameFlags.neverMeasured)
+
+  // --------------------------------------------------------------------------
+  protected function setNeverMeasured(bool value)
+    writeFlag(FrameFlags.neverMeasured, value)
+
+  // --------------------------------------------------------------------------
+  protected function getNeverArranged() returns bool
+    return readFlag(FrameFlags.neverArranged)
+
+  // --------------------------------------------------------------------------
+  protected function setNeverArranged(bool value)
+    writeFlag(FrameFlags.neverArranged, value)
+
+  // --------------------------------------------------------------------------
+  protected function getMeasureDuringArrange() returns bool
+    return readFlag(FrameFlags.measureDuringArrange)
+
+  // --------------------------------------------------------------------------
+  protected function setMeasureDuringArrange(bool value)
+    writeFlag(FrameFlags.measureDuringArrange, value)
+
+  // --------------------------------------------------------------------------
+  @inline
+  protected function readFlag(int flag) returns bool
+    return m_flags.readFlag8(flag)
+
+  // --------------------------------------------------------------------------
+  @inline
+  protected function writeFlag(int flag, bool value)
+    m_flags = m_flags.writeFlag8(flag, value)
+
 // ============================================================================
 public interface IFrameFactory
   function createFrame(framehandle frameHandle) returns Frame
@@ -499,7 +695,7 @@ public class DefaultFrameFactory implements IFrameFactory
 // ============================================================================
 public interface IFrameLayout
   function measure(Frame frame, vec2 size) returns vec2
-  function layout(Frame frame, vec2 size) returns vec2
+  function arrange(Frame frame, vec2 size) returns vec2
 
 // ============================================================================
 public interface IFrameTemplate
@@ -638,6 +834,13 @@ public class LightweightProperty<T> implements ILightweightProperty
   private HashMap<Frame, T> m_effectiveValues
   private Action1<Frame> m_propertyChanged
   private T m_defaultValue
+  private int m_flags = 0
+
+  static class Flags
+    static constant int affectsMeasure        = 0x01
+    static constant int affectsArrange        = 0x02
+    static constant int affectsParentMeasure  = 0x04
+    static constant int affectsParentArrange  = 0x08
 
   // --------------------------------------------------------------------------
   construct(T defaultValue, Action1<Frame> propertyChanged)
@@ -647,6 +850,38 @@ public class LightweightProperty<T> implements ILightweightProperty
     if (g_allLightweightProperties == null)
       g_allLightweightProperties = new LinkedList<ILightweightProperty>()
     g_allLightweightProperties.add(this)
+
+  // --------------------------------------------------------------------------
+  function getAffectsMeasure() returns bool
+    return readFlag(Flags.affectsMeasure)
+
+  // --------------------------------------------------------------------------
+  function setAffectsMeasure(bool value)
+    writeFlag(Flags.affectsMeasure, value)
+
+  // --------------------------------------------------------------------------
+  function getAffectsArrange() returns bool
+    return readFlag(Flags.affectsArrange)
+
+  // --------------------------------------------------------------------------
+  function setAffectsArrange(bool value)
+    writeFlag(Flags.affectsArrange, value)
+
+  // --------------------------------------------------------------------------
+  function getAffectsParentMeasure() returns bool
+    return readFlag(Flags.affectsParentMeasure)
+
+  // --------------------------------------------------------------------------
+  function setAffectsParentMeasure(bool value)
+    writeFlag(Flags.affectsParentMeasure, value)
+
+  // --------------------------------------------------------------------------
+  function getAffectsParentArrange() returns bool
+    return readFlag(Flags.affectsParentArrange)
+
+  // --------------------------------------------------------------------------
+  function setAffectsParentArrange(bool value)
+    writeFlag(Flags.affectsParentArrange, value)
 
   // --------------------------------------------------------------------------
   override function hasValue(Frame context) returns bool
@@ -665,7 +900,7 @@ public class LightweightProperty<T> implements ILightweightProperty
     if (m_effectiveValues.has(context) == false or
         m_effectiveValues.get(context) != value)
       m_effectiveValues.put(context, value)
-      raisePropertyChanged(context)
+      onPropertyChanged(context)
   
   // --------------------------------------------------------------------------
   override function clearValue(Frame context)
@@ -676,6 +911,236 @@ public class LightweightProperty<T> implements ILightweightProperty
         m_effectiveValues = null
 
   // --------------------------------------------------------------------------
-  protected function raisePropertyChanged(Frame context)
+  protected function onPropertyChanged(Frame context)
+
     if (m_propertyChanged != null)
       m_propertyChanged.call(context)
+
+    let affectsMeasure = getAffectsMeasure()
+    let affectsArrange = getAffectsArrange()
+    let affectsParentMeasure = getAffectsParentMeasure()
+    let affectsParentArrange = getAffectsParentArrange()
+
+    if (affectsParentMeasure or affectsParentArrange)
+      let layoutParent = context.getParent()
+      if (layoutParent != null)
+        if (affectsParentMeasure)
+          layoutParent.invalidateMeasure()
+        if (affectsParentArrange)
+          layoutParent.invalidateArrange()
+
+    if (affectsMeasure)
+      context.invalidateMeasure()
+
+    if (affectsArrange)
+      context.invalidateArrange()
+
+  // --------------------------------------------------------------------------
+  @inline
+  protected function readFlag(int flag) returns bool
+    return m_flags.readFlag8(flag)
+
+  // --------------------------------------------------------------------------
+  @inline
+  protected function writeFlag(int flag, bool value)
+    m_flags = m_flags.writeFlag8(flag, value)
+
+// ============================================================================
+abstract class LayoutQueue
+  private LayoutRequest m_head = null
+
+  abstract function getRequest(Frame frame) returns LayoutRequest
+  abstract function setRequest(Frame frame, LayoutRequest request)
+  abstract function invalidate(Frame frame)
+
+  // --------------------------------------------------------------------------
+  function add(Frame frame)
+    let request = getRequest(frame)
+    if (request != null)
+      return
+    removeOrphans(frame)
+
+    var f = frame
+    while f != null
+      let p = f.getRootFrame()
+      invalidate(f)
+      if (p != null and p.isVisible())
+        remove(f)
+      else if (getRequest(f) == null)
+        removeOrphans(f)
+        addRequest(f)
+      f = p
+
+    LayoutManager.dispatchUpdateLayout()
+
+  // --------------------------------------------------------------------------
+  function remove(Frame frame)
+    let request = getRequest(frame)
+    if (request == null)
+      return
+    removeRequest(request)
+    setRequest(frame, null)
+
+  // --------------------------------------------------------------------------
+  function isEmpty() returns bool
+    return m_head == null
+
+  // --------------------------------------------------------------------------
+  function getTopMost() returns Frame
+    Frame found = null
+    int treeLevel = INT_MAX
+    var request = m_head
+    while request != null
+      let frame = request.target
+      let level = frame.getTreeLevel()
+      if (level < treeLevel)
+        treeLevel = level
+        found = frame
+      request = request.next
+    return found
+
+  // --------------------------------------------------------------------------
+  private function addRequest(Frame frame)
+    let request = getNewRequest(frame)
+    if (request == null)
+      return
+    request.next = m_head
+    if (m_head != null)
+      m_head.prev = request
+    m_head = request
+    setRequest(frame, request)
+
+  // --------------------------------------------------------------------------
+  private function getNewRequest(Frame frame) returns LayoutRequest
+    let request = new LayoutRequest()
+    request.target = frame
+    return request
+
+  // --------------------------------------------------------------------------
+  private function removeRequest(LayoutRequest request)
+    if (request.prev == null)
+      m_head = request.next
+    else
+      request.prev.next = request.next
+    if (request.next != null)
+      request.next.prev = request.prev
+    destroy request
+
+  // --------------------------------------------------------------------------
+  private function removeOrphans(Frame parent)
+    var request = m_head
+    while request != null
+    //{
+      let child = request.target
+      let next = request.next
+
+      if (child.getTreeLevel() == parent.getTreeLevel() + 1 and
+          child.getRootFrame() == parent)
+        removeRequest(getRequest(child))
+        setRequest(child, null)
+
+      request = next
+    //}
+
+// ============================================================================
+class LayoutRequest
+  Frame target = null
+  LayoutRequest next = null
+  LayoutRequest prev = null
+
+// ============================================================================
+class MeasureQueue extends LayoutQueue
+
+  // --------------------------------------------------------------------------
+  override function getRequest(Frame frame) returns LayoutRequest
+    return frame.m_measureRequest
+    
+  // --------------------------------------------------------------------------
+  override function setRequest(Frame frame, LayoutRequest request)
+    frame.m_measureRequest = request
+
+  // --------------------------------------------------------------------------
+  override function invalidate(Frame frame)
+    frame.invalidateMeasureInternal()
+
+// ============================================================================
+class ArrangeQueue extends LayoutQueue
+
+  // --------------------------------------------------------------------------
+  override function getRequest(Frame frame) returns LayoutRequest
+    return frame.m_arrangeRequest
+    
+  // --------------------------------------------------------------------------
+  override function setRequest(Frame frame, LayoutRequest request)
+    frame.m_arrangeRequest = request
+
+  // --------------------------------------------------------------------------
+  override function invalidate(Frame frame)
+    frame.invalidateArrangeInternal()
+
+// ============================================================================
+public class LayoutManager
+  static constant LayoutQueue measureQueue = new MeasureQueue()
+  static constant LayoutQueue arrangeQueue = new ArrangeQueue()
+
+  private static int s_measureStack = 0
+  private static int s_arrangeStack = 0
+  private static bool s_isInUpdateLayout = false
+
+  // --------------------------------------------------------------------------
+  static function enterMeasure()
+    s_measureStack++
+  
+  // --------------------------------------------------------------------------
+  static function exitMeasure()
+    s_measureStack--
+
+  // --------------------------------------------------------------------------
+  static function enterArrange()
+    s_arrangeStack++
+  
+  // --------------------------------------------------------------------------
+  static function exitArrange()
+    s_arrangeStack--
+
+  // --------------------------------------------------------------------------
+  protected static function dispatchUpdateLayout()
+    if (s_isInUpdateLayout or s_measureStack > 0 or s_arrangeStack > 0)
+      return
+    nullTimer(() -> updateLayout())
+
+  // --------------------------------------------------------------------------
+  protected static function updateLayout()
+    if (s_isInUpdateLayout or s_measureStack > 0 or s_arrangeStack > 0)
+      return
+
+    let succeeded = try() -> 
+      Frame currentFrame
+
+      while (measureQueue.isEmpty() == false or arrangeQueue.isEmpty() == false)
+      //{
+        s_isInUpdateLayout = true
+
+        while (true)
+        //{
+          currentFrame = measureQueue.getTopMost()
+          if (currentFrame == null)
+            break
+          currentFrame.measure()
+        //}
+
+        while (true)
+        //{
+          currentFrame = arrangeQueue.getTopMost()
+          if (currentFrame == null)
+            break
+          currentFrame.arrange()
+        //}
+
+        if (measureQueue.isEmpty())
+          s_isInUpdateLayout = false
+      //}
+  
+    if (not succeeded)
+      Log.error("LayerManager", "updateLayout", "", "failed to update layout")
+      error(lastError)

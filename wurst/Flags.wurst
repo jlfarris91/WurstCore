@@ -1,0 +1,22 @@
+package Flags
+import public Bitwise
+
+// ============================================================================
+@inline
+public function int.readFlag8(int flag) returns bool
+  return this.and8(flag) != 0
+
+// ============================================================================
+@inline
+public function int.readFlag32(int flag) returns bool
+  return this.and32(flag) != 0
+
+// ============================================================================
+@inline
+public function int.writeFlag8(int flag, bool value) returns int
+  return value ? this.or8(flag) : this.and8(flag.not8())
+
+// ============================================================================
+@inline
+public function int.writeFlag32(int flag, bool value) returns int
+  return value ? this.or32(flag) : this.and32(flag.not32())
