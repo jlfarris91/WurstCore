@@ -1,7 +1,6 @@
 package StackPanel
 import Frame
 import Panel
-import StackLayout
 import Layout
 
 // ============================================================================
@@ -28,3 +27,183 @@ public class StackPanel extends Panel
   // --------------------------------------------------------------------------
   function getOrientation() returns LayoutOrientation
     return m_layout.getOrientation()
+
+// ============================================================================
+tuple processData(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginPadding)
+
+// ============================================================================
+interface ProcessCallback
+  function call(processData data)
+
+// ============================================================================
+public class StackLayout implements IFrameLayout
+  private LayoutOrientation m_orientation
+
+  private static constant ProcessCallback s_layoutCallback_leftToRight = (processData data) -> StackLayout.layout_leftToRight(data.parentFrame, data.childFrame, data.size, data.uv, data.marginPadding)
+  private static constant ProcessCallback s_layoutCallback_topToBottom = (processData data) -> StackLayout.layout_topToBottom(data.parentFrame, data.childFrame, data.size, data.uv, data.marginPadding)
+  private static constant ProcessCallback s_layoutCallback_rightToLeft = (processData data) -> StackLayout.layout_rightToLeft(data.parentFrame, data.childFrame, data.size, data.uv, data.marginPadding)
+  private static constant ProcessCallback s_layoutCallback_bottomToTop = (processData data) -> StackLayout.layout_bottomToTop(data.parentFrame, data.childFrame, data.size, data.uv, data.marginPadding)
+
+  private static constant ProcessCallback array[4] s_layoutCallbacks = [
+    s_layoutCallback_leftToRight,
+    s_layoutCallback_topToBottom,
+    s_layoutCallback_rightToLeft,
+    s_layoutCallback_bottomToTop
+  ]
+
+  // --------------------------------------------------------------------------
+  function setOrientation(LayoutOrientation value)
+    m_orientation = value
+
+  // --------------------------------------------------------------------------
+  function getOrientation() returns LayoutOrientation
+    return m_orientation
+
+  // --------------------------------------------------------------------------
+  private function isHorizontal() returns bool
+    return m_orientation == LEFTTORIGHT or m_orientation == RIGHTTOLEFT
+
+  // --------------------------------------------------------------------------
+  override function measure(Frame frame, vec2 availableSize) returns vec2
+
+    let children = frame.getChildren()
+    let padding = frame.getPadding()
+    let isHorizontal = isHorizontal()
+    
+    var childConstraint = availableSize
+    if (isHorizontal())
+      childConstraint.x = REAL_MAX
+    else
+      childConstraint.y = REAL_MAX
+
+    var panelDesiredSize = ZERO2
+
+    for child in children
+    //{
+      let margin = child.getMargin()
+      let marginPadding = margin + padding
+
+      child.measure(childConstraint - marginPadding.size())
+      
+      let childMeasuredSize = child.getMeasuredSize()
+
+      if (isHorizontal)
+        panelDesiredSize.x += childMeasuredSize.x
+        panelDesiredSize.y = max(panelDesiredSize.y, childMeasuredSize.y)
+      else
+        panelDesiredSize.x = max(panelDesiredSize.x, childMeasuredSize.x)
+        panelDesiredSize.y += childMeasuredSize.y
+    //}
+
+    return panelDesiredSize
+
+  // --------------------------------------------------------------------------
+  override function layout(Frame frame, vec2 finalSize) returns vec2
+
+    let children = frame.getChildren()
+    let padding = frame.getPadding()
+    let isHorizontal = isHorizontal()
+
+    var uv = ZERO2
+    var panelDesiredSize = ZERO2
+
+    for child in children
+    //{
+      let margin = child.getMargin()
+      let marginPadding = margin + padding
+
+      s_layoutCallbacks[m_orientation castTo int].call(processData(frame, child, finalSize, uv, marginPadding))
+      
+      let childMeasuredSize = child.getMeasuredSize()
+
+      if (isHorizontal)
+        uv.x += childMeasuredSize.x
+        panelDesiredSize.x = uv.x
+        panelDesiredSize.y = max(panelDesiredSize.y, childMeasuredSize.y)
+      else
+        uv.y += childMeasuredSize.y
+        panelDesiredSize.x = max(panelDesiredSize.x, childMeasuredSize.x)
+        panelDesiredSize.y = uv.y
+    //}
+
+    return finalSize   
+
+  // --------------------------------------------------------------------------
+  private static function layout_leftToRight(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
+    let parentHandle = parentFrame.getFrameHandle()
+    let childHandle = childFrame.getFrameHandle()
+
+    childHandle.clearAllPoints()
+    
+    switch (childFrame.getVerticalLayoutMode())
+      case BOTTOM
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
+      case TOP
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
+      case CENTER
+        childHandle.setPoint(FRAMEPOINT_LEFT, parentHandle, FRAMEPOINT_LEFT, uv + vec2(marginAndPadding.left, 0) /* * leftScalar */)
+      case STRETCH
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
+    
+    childFrame.layout(vec2(childFrame.getMeasuredSize().x, size.y - marginAndPadding.height()))
+
+  // --------------------------------------------------------------------------
+  private static function layout_rightToLeft(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
+    let parentHandle = parentFrame.getFrameHandle()
+    let childHandle = childFrame.getFrameHandle()
+
+    childHandle.clearAllPoints()
+    
+    switch (childFrame.getVerticalLayoutMode())
+      case BOTTOM
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
+      case TOP
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + marginAndPadding.topRight()) * LayoutScalars.topRight)
+      case CENTER
+        childHandle.setPoint(FRAMEPOINT_RIGHT, parentHandle, FRAMEPOINT_RIGHT, (uv + vec2(marginAndPadding.right, 0)) * LayoutScalars.right)
+      case STRETCH
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + marginAndPadding.topRight()) * LayoutScalars.topRight)
+    
+    childFrame.layout(vec2(childFrame.getMeasuredSize().x, size.y - marginAndPadding.height()))
+
+  // --------------------------------------------------------------------------
+  private static function layout_bottomToTop(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
+    let parentHandle = parentFrame.getFrameHandle()
+    let childHandle = childFrame.getFrameHandle()
+
+    childHandle.clearAllPoints()
+    
+    switch (childFrame.getHorizontalLayoutMode())
+      case LEFT
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
+      case RIGHT
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
+      case CENTER
+        childHandle.setPoint(FRAMEPOINT_BOTTOM, parentHandle, FRAMEPOINT_BOTTOM, (uv + vec2(0, marginAndPadding.bottom)) /* * bottomScalar */)
+      case STRETCH
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
+        childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
+    
+    childFrame.layout(vec2(size.x - marginAndPadding.width(), childFrame.getMeasuredSize().y))
+
+  // --------------------------------------------------------------------------
+  private static function layout_topToBottom(Frame parentFrame, Frame childFrame, vec2 size, vec2 uv, thickness marginAndPadding)
+    let parentHandle = parentFrame.getFrameHandle()
+    let childHandle = childFrame.getFrameHandle()
+
+    childHandle.clearAllPoints()
+
+    switch (childFrame.getHorizontalLayoutMode())
+      case LEFT
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
+      case RIGHT
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + marginAndPadding.topRight()) * LayoutScalars.topRight)
+      case CENTER
+        childHandle.setPoint(FRAMEPOINT_TOP, parentHandle, FRAMEPOINT_TOP, (uv + vec2(0, marginAndPadding.top)) * LayoutScalars.top)
+      case STRETCH
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (uv + marginAndPadding.topRight()) * LayoutScalars.topRight)
+    
+    childFrame.layout(vec2(size.x - marginAndPadding.width(), childFrame.getMeasuredSize().y))

@@ -1,5 +1,6 @@
 package Layout
 
+/** Represents a rectangle in screen-space where (x,y) is the bottom left corner of the rectangle. */
 public tuple rectr(real x, real y, real width, real height)
 public tuple thickness(real left, real bottom, real right, real top)
 
@@ -225,6 +226,26 @@ public function rectr.getFramePointOffset(framepointtype framepoint) returns vec
   if (framepoint == FRAMEPOINT_BOTTOM)
     return vec2(0, this.bottom())
   return this.center()
+
+// ============================================================================
+public function rectr(framepointtype framepoint, vec2 origin, vec2 size) returns rectr
+  if (framepoint == FRAMEPOINT_BOTTOMLEFT)
+    return rectr(origin, size)
+  if (framepoint == FRAMEPOINT_BOTTOMRIGHT)
+    return rectr(origin - vec2(size.x, 0), size)
+  if (framepoint == FRAMEPOINT_TOPLEFT)
+    return rectr(origin - vec2(0, size.y), size)
+  if (framepoint == FRAMEPOINT_TOPRIGHT)
+    return rectr(origin - size, size)
+  if (framepoint == FRAMEPOINT_LEFT)
+    return rectr(origin - vec2(0, size.y / 2), size)
+  if (framepoint == FRAMEPOINT_RIGHT)
+    return rectr(origin - vec2(size.x, size.y / 2), size)
+  if (framepoint == FRAMEPOINT_TOP)
+    return rectr(origin - vec2(size.x / 2, size.y), size)
+  if (framepoint == FRAMEPOINT_BOTTOM)
+    return rectr(origin - vec2(size.x / 2 , 0), size)
+  return rectr(origin - size / 2, size)
 
 // ============================================================================
 public enum Orientation

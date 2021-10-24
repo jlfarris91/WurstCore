@@ -1,7 +1,10 @@
 package WrapPanel
 import Panel
-import WrapLayout
 import Layout
+import Frame
+import LinkedList
+import Vector
+import Action
 
 // ============================================================================
 public class WrapPanel extends Panel
@@ -37,3 +40,204 @@ public class WrapPanel extends Panel
     if (getStretchItems() != value)
       m_layout.setStretchItems(value)
       invalidateLayout()
+
+tuple uvsize(Orientation orientation, real u, real v)
+
+// ============================================================================
+function uvsize(Orientation orientation) returns uvsize
+  return uvsize(orientation, 0, 0)
+
+// ============================================================================
+function uvsize(Orientation orientation, vec2 size) returns uvsize
+  return uvsize(orientation,
+                orientation == HORIZONTAL ? size.x : size.y,
+                orientation == HORIZONTAL ? size.y : size.x)
+
+// ============================================================================
+function uvsize.getWidth() returns real
+  return this.orientation == Orientation.HORIZONTAL ? this.u : this.v
+
+// ============================================================================
+function uvsize.setWidth(real value) returns uvsize
+  if (this.orientation == Orientation.HORIZONTAL)
+    return uvsize(this.orientation, value, this.v)
+  else
+    return uvsize(this.orientation, this.u, value)
+
+// ============================================================================
+function uvsize.getHeight() returns real
+  return this.orientation == Orientation.HORIZONTAL ? this.v : this.u
+
+// ============================================================================
+function uvsize.setHeight(real value) returns uvsize
+  if (this.orientation == Orientation.HORIZONTAL)
+    return uvsize(this.orientation, this.u, value)
+  else
+    return uvsize(this.orientation, value, this.v)
+
+// ============================================================================
+function uvsize.getSize() returns vec2
+  return vec2(this.getWidth(), this.getHeight())
+
+// ============================================================================
+public class WrapLayout implements IFrameLayout
+  private Orientation m_orientation
+  private bool m_stretchItems = false
+  private Vector<Frame> m_lineScratchpad = new Vector<Frame>()
+  private vec2 m_itemSize = vec2(REAL_MAX, REAL_MAX)
+
+  // --------------------------------------------------------------------------
+  function getOrientation() returns Orientation
+    return m_orientation
+
+  // --------------------------------------------------------------------------
+  function setOrientation(Orientation value)
+    if (m_orientation != value)
+      m_orientation = value
+
+  // --------------------------------------------------------------------------
+  function getStretchItems() returns bool
+    return m_stretchItems
+
+  // --------------------------------------------------------------------------
+  function setStretchItems(bool value)
+    m_stretchItems = value
+
+  // --------------------------------------------------------------------------
+  function getItemWidth() returns real
+    return m_itemSize.x
+
+  // --------------------------------------------------------------------------
+  function getItemHeight() returns real
+    return m_itemSize.y
+
+  // --------------------------------------------------------------------------
+  override function measure(Frame frame, vec2 availableSize) returns vec2
+   
+    let children = frame.getChildren()
+    var curLineSizeUV = uvsize(m_orientation)
+    var panelSizeUV = uvsize(m_orientation)
+    var uvAvailableSize = uvsize(m_orientation, availableSize)
+
+    let itemWidthSet = getItemWidth() != REAL_MAX
+    let itemHeightSet = getItemHeight() != REAL_MAX
+    
+    let childConstraint = vec2(
+      itemWidthSet ? m_itemSize.x : availableSize.x,
+      itemHeightSet ? m_itemSize.y : availableSize.y)
+
+    for child in children
+    //{
+      if (child.isVisible())
+      //{
+        child.measure(childConstraint)
+        
+        let uvChildSize = uvsize(m_orientation, vec2(
+            itemWidthSet ? m_itemSize.x : child.getMeasuredWidth(),
+            itemHeightSet ? m_itemSize.y : child.getMeasuredHeight()))
+
+        if (curLineSizeUV.u + uvChildSize.u > uvAvailableSize.u)
+        //{
+          panelSizeUV.u = max(curLineSizeUV.u, panelSizeUV.u)
+          panelSizeUV.v += curLineSizeUV.v
+          curLineSizeUV = uvChildSize
+
+          if (uvChildSize.u > uvAvailableSize.u)
+          //{
+            panelSizeUV.u = max(uvChildSize.u, panelSizeUV.u)
+            uvAvailableSize.v += uvChildSize.v
+            curLineSizeUV = uvsize(m_orientation)
+          //}
+        //}
+        else
+          curLineSizeUV.u += uvChildSize.u
+          curLineSizeUV.v = max(uvChildSize.v, curLineSizeUV.v)
+        //}
+      //}
+    //}
+
+    panelSizeUV.u = max(curLineSizeUV.u, panelSizeUV.u)
+    panelSizeUV.v += curLineSizeUV.v
+
+    return panelSizeUV.getSize()
+
+  // --------------------------------------------------------------------------
+  override function layout(Frame frame, vec2 finalSize) returns vec2
+
+    let children = frame.getChildren()
+    var curLineSize = uvsize(m_orientation)
+    var uvFinalSize = uvsize(m_orientation, finalSize)
+
+    let itemWidthSet = getItemWidth() != REAL_MAX
+    let itemHeightSet = getItemHeight() != REAL_MAX
+    
+    uvFinalSize.v = 0.
+
+    m_lineScratchpad.clear()
+
+    for child in children
+    //{
+      if (child.isVisible())
+      //{
+        let uvChildSize = uvsize(m_orientation, vec2(
+            itemWidthSet ? m_itemSize.x : child.getMeasuredWidth(),
+            itemHeightSet ? m_itemSize.y : child.getMeasuredHeight()))
+
+        if (curLineSize.u + uvChildSize.u > uvFinalSize.u)
+        //{
+          layoutLine(frame, curLineSize, uvFinalSize)
+          uvFinalSize.v += curLineSize.v
+          curLineSize = uvChildSize
+
+          if (uvChildSize.u > uvFinalSize.u)
+          //{
+            m_lineScratchpad.add(child)
+            layoutLine(frame, uvChildSize, uvFinalSize)
+            uvFinalSize.v += uvChildSize.v
+            curLineSize = uvsize(m_orientation)
+          //}
+        //}
+        else
+          m_lineScratchpad.add(child)
+          curLineSize.u += uvChildSize.u
+          curLineSize.v = max(uvChildSize.v, curLineSize.v)
+      //}
+    //}
+
+    if (m_lineScratchpad.isEmpty() == false)
+      layoutLine(frame, curLineSize, uvFinalSize)
+      uvFinalSize.v += curLineSize.v
+
+    return finalSize
+
+  // --------------------------------------------------------------------------
+  private function layoutLine(Frame parent, uvsize uvLine, uvsize total)
+    let isHorizontal = m_orientation == HORIZONTAL
+    let remainingU = (total.u - uvLine.u) / max(m_lineScratchpad.getCount(), 1)
+    real u = 0
+
+    let parentHandle = parent.getFrameHandle()
+
+    for child in m_lineScratchpad
+    //{
+      let childHandle = child.getFrameHandle()
+
+      let uvChildSize = uvsize(m_orientation, child.getSize())
+      var layoutSlotU = uvChildSize.u
+
+      if (m_stretchItems)
+        layoutSlotU += remainingU
+
+      childHandle.clearAllPoints()
+
+      if (isHorizontal)
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, vec2(u, -(total.v + uvLine.v)))
+      else
+        childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, vec2(total.v, -(u + layoutSlotU)))
+
+      child.setSize(vec2(isHorizontal ? layoutSlotU : uvLine.v, isHorizontal ? uvLine.v : layoutSlotU))
+
+      u += layoutSlotU
+    //}
+    
+    m_lineScratchpad.clear()

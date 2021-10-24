@@ -108,6 +108,10 @@ public class Vector<T>
 
   // --------------------------------------------------------------------------
   function clear()
+    m_count = 0
+
+  // --------------------------------------------------------------------------
+  function clearAndNull()
     for i = 0 to m_count - 1
       m_array.setItem(i, null)
     m_count = 0

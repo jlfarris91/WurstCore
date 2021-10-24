@@ -1,6 +1,7 @@
 package Panel
 import Frame
 import Layout
+import VectorExtensions
 
 // ============================================================================
 public class Panel extends Frame
@@ -38,28 +39,31 @@ public class Panel extends Frame
     m_layout = value
 
   // --------------------------------------------------------------------------
+  override function measureOverride(vec2 availableSize) returns vec2
+    return m_layout != null
+           ? m_layout.measure(this, availableSize)
+           : super.measureOverride(availableSize)
+
+  // --------------------------------------------------------------------------
   override function layout()
     if (m_layingOut)
       return
     m_layingOut = true
     super.layout()
-    if (m_layout != null)
-      m_layout.layout(this)
-    else
-    //{
-      let children = getChildren()
-      let padding = getPadding()
-      let parentHandle = getFrameHandle()
-      for child in children
-      //{
-        if (child.isVisible())
-          if (child.isPanel())
-            let marginAndPadding = padding + child.getMargin()
-            child.getFrameHandle().setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, marginAndPadding.bottomLeft())
-            child.getFrameHandle().setSize(getSize() - marginAndPadding.size())
-            child.layout()
-          else
-            Frame.layoutFrame(this, child, padding)
-      //}
-    //}
     m_layingOut = false
+
+  // --------------------------------------------------------------------------
+  override function layout(vec2 availableSize)
+    super.layout(availableSize)
+
+  // --------------------------------------------------------------------------
+  override function layoutOverride(vec2 layoutSize) returns vec2
+    let paddedLayoutSize = layoutSize - getPadding().size()
+    vec2 result
+    if (m_layout != null)
+      result = m_layout.layout(this, paddedLayoutSize)
+      getFrameHandle().setSize(result)
+    else
+      super.layoutOverride(paddedLayoutSize)
+      result = paddedLayoutSize
+    return result

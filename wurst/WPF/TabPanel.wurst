@@ -42,7 +42,6 @@ public class TabPanel extends DockPanel
     ..setDock(Dock.TOP)
     ..setOrientation(Orientation.HORIZONTAL)
     ..setStretchItems(true)
-    ..setFitToContents(true)
     ..setMargin(thickness(0, -0.005, 0, 0))
     ..setHeight(0.03)
     ..setWidth(0.03)

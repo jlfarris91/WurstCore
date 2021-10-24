@@ -8,7 +8,7 @@ import Object
 
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 
-Action1<Frame> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
+public constant Action1<Frame> g_invalidateFrameLayoutOnPropertyChanged = context -> context.invalidateLayout()
 Action1<Frame> g_playerChanged = context -> context.onPlayerChanged()
 LinkedList<ILightweightProperty> g_allLightweightProperties
 
@@ -27,7 +27,12 @@ public class Frame
   private VerticalLayoutMode m_verticalLayoutMode
   private bool m_fitToContents
   private int m_ignoreLayout
+  private vec2 m_desiredSize = ZERO2
+  private vec2 m_measuredSize = ZERO2
+  private vec2 m_lastMeasureAvailableSize = ZERO2
+  private vec2 m_lastLayoutAvailableSize = ZERO2
 
+  // --------------------------------------------------------------------------
   function log(string message)
     Log.info("[{0}] {1}".format(getFullName(), message))
 
@@ -39,6 +44,7 @@ public class Frame
     m_horizontalLayoutMode = HorizontalLayoutMode.STRETCH
     m_verticalLayoutMode = VerticalLayoutMode.STRETCH
     m_fitToContents = false
+    m_desiredSize = frameHandle.getSize()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -123,6 +129,7 @@ public class Frame
   function setWidth(real value)
     if (m_frameHandle.getWidth() != value)
       m_frameHandle.setWidth(value)
+      setDesiredWidth(value)
       invalidateLayout()
   
   // --------------------------------------------------------------------------
@@ -133,39 +140,34 @@ public class Frame
   function setHeight(real value)
     if (m_frameHandle.getHeight() != value)
       m_frameHandle.setHeight(value)
+      setDesiredHeight(value)
       invalidateLayout()
   
   // --------------------------------------------------------------------------
   function getSize() returns vec2
-    return vec2(m_frameHandle.getWidth(), m_frameHandle.getHeight())
+    return m_frameHandle.getSize()
   
   // --------------------------------------------------------------------------
   function setSize(vec2 value)
     if (m_frameHandle.getWidth() != value.x or m_frameHandle.getHeight() != value.y)
       m_frameHandle.setWidth(value.x)
       m_frameHandle.setHeight(value.y)
+      setDesiredSize(value)
       invalidateLayout()
 
   // --------------------------------------------------------------------------
   function setAbsArea(rectr area)
-    setAbsArea(area, FRAMEPOINT_TOPLEFT)
+    setAbsArea(FRAMEPOINT_BOTTOMLEFT, area)
 
   // --------------------------------------------------------------------------
-  function setAbsArea(rectr area, framepointtype framepoint)
-    m_frameHandle.setAbsPoint(framepoint, area.getFramePointOffset(framepoint))
-    m_frameHandle.setWidth(area.width)
-    m_frameHandle.setHeight(area.height)
-    invalidateLayout()
+  function setAbsArea(framepointtype framepoint, rectr area)
+    setAbsArea(framepoint, area.getFramePointOffset(framepoint), area.size())
 
   // --------------------------------------------------------------------------
-  function getFitToContents() returns bool
-    return m_fitToContents
-
-  // --------------------------------------------------------------------------
-  function setFitToContents(bool value)
-    if (m_fitToContents != value)
-      m_fitToContents = value
-      invalidateLayout()
+  function setAbsArea(framepointtype framepoint, vec2 pos, vec2 size)
+    m_frameHandle.setAbsPoint(framepoint, pos)
+    measure(size)
+    layout(size)
 
   // --------------------------------------------------------------------------
   function setText(string value)
@@ -176,25 +178,46 @@ public class Frame
     return m_frameHandle.getText()
 
   // --------------------------------------------------------------------------
-  function isVisible() returns bool
-    return m_frameHandle.isVisible()
-
-  // --------------------------------------------------------------------------
-  function setVisible(bool value)
-    if (isVisible() != value)
-      if (value)
-        let _player = getPlayer()
-        if (_player != null)
-          m_frameHandle.show(_player)
-        else
-          m_frameHandle.show()
-        invalidateLayout()
-      else
-        m_frameHandle.hide()
-
-  // --------------------------------------------------------------------------
   function getEnabled() returns bool
     return m_frameHandle.isEnabled()
+
+  // --------------------------------------------------------------------------
+  function getDesiredSize() returns vec2
+    return m_desiredSize
+
+  // --------------------------------------------------------------------------
+  function setDesiredSize(vec2 value)
+    if (m_desiredSize != value)
+      m_desiredSize = value
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function getDesiredWidth() returns real
+    return m_desiredSize.x
+
+  // --------------------------------------------------------------------------
+  function setDesiredWidth(real value)
+    setDesiredSize(vec2(value, m_desiredSize.y))
+
+  // --------------------------------------------------------------------------
+  function getDesiredHeight() returns real
+    return m_desiredSize.y
+
+  // --------------------------------------------------------------------------
+  function setDesiredHeight(real value)
+    setDesiredSize(vec2(m_desiredSize.x, value))
+
+  // --------------------------------------------------------------------------
+  function getMeasuredSize() returns vec2
+    return m_measuredSize
+
+  // --------------------------------------------------------------------------
+  function getMeasuredWidth() returns real
+    return m_measuredSize.x
+
+  // --------------------------------------------------------------------------
+  function getMeasuredHeight() returns real
+    return m_measuredSize.y
 
   // --------------------------------------------------------------------------
   function getDataContext() returns object
@@ -283,20 +306,43 @@ public class Frame
     skip
 
   // --------------------------------------------------------------------------
+  function isVisible() returns bool
+    return m_frameHandle.isVisible()
+
+  // --------------------------------------------------------------------------
   function show()
-    setVisible(true)
+    let wasVisible = m_frameHandle.isVisible()
+    m_frameHandle.show()
+    if (wasVisible == false)
+      invalidateLayout()
   
   // --------------------------------------------------------------------------
-  function show(player thisPlayer)
-    m_frameHandle.show(thisPlayer)
+  function show(player _player)
+    let wasVisible = m_frameHandle.isVisible()
+    m_frameHandle.show(_player)
+    if (wasVisible == false)
+      invalidateLayout()
+
+  // --------------------------------------------------------------------------
+  function showOnly(player _player)
+    let wasVisible = m_frameHandle.isVisible()
+    m_frameHandle.hide()
+    m_frameHandle.show(_player)
+    if (wasVisible == false)
+      invalidateLayout()
 
   // --------------------------------------------------------------------------
   function hide()
-    setVisible(false)
+    m_frameHandle.hide()
 
   // --------------------------------------------------------------------------
-  function hide(player thisPlayer)
-    m_frameHandle.hide(thisPlayer)
+  function hide(player _player)
+    m_frameHandle.hide(_player)
+
+  // --------------------------------------------------------------------------
+  function hideOnly(player _player)
+    show()
+    m_frameHandle.hide(_player)
 
   // --------------------------------------------------------------------------
   function clearFocus()
@@ -316,20 +362,66 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function invalidateLayout()
-
-    if (m_ignoreLayout > 0)
-      return
     
-    if (m_parent != null)
-      m_parent.invalidateLayout()
+    // if (m_ignoreLayout > 0)
+    //   return
 
-    layout()
+    // if (m_parent != null)
+    //   m_parent.invalidateLayout()
+
+    // layout()
 
   // --------------------------------------------------------------------------
-  // protected function layout()
+  function measure()
+    if (m_lastMeasureAvailableSize == ZERO2)
+      return
+    measure(m_lastMeasureAvailableSize)
+
+  // --------------------------------------------------------------------------
+  function measure(vec2 availableSize)
+    let marginSize = getMargin().size()
+    m_measuredSize = measureOverride(availableSize - marginSize)
+    m_lastMeasureAvailableSize = availableSize
+
+  // --------------------------------------------------------------------------
+  protected function measureOverride(vec2 availableSize) returns vec2
+    if (m_children.isEmpty())
+      return m_desiredSize
+    var desiredSize = m_desiredSize
+    for child in m_children
+    //{
+      if (child.isVisible())
+        child.measure(availableSize)
+        let childMeasuredSize = child.getMeasuredSize()
+        desiredSize.x = max(desiredSize.x, childMeasuredSize.x)
+        desiredSize.y = max(desiredSize.y, childMeasuredSize.y)         
+    //}
+    return desiredSize
+
+  // --------------------------------------------------------------------------
   function layout()
-    if (m_parent != null and not m_parent.isPanel())
-      layoutFrame(m_parent, this, m_parent.getPadding())
+    if (m_lastLayoutAvailableSize == ZERO2)
+      return
+    layout(m_lastLayoutAvailableSize)
+
+  // --------------------------------------------------------------------------
+  function layout(vec2 availableSize)
+    layoutOverride(availableSize)
+    m_lastLayoutAvailableSize = availableSize
+
+  // --------------------------------------------------------------------------
+  protected function layoutOverride(vec2 availableSize) returns vec2
+
+    let padding = getPadding()
+    for child in m_children
+    //{
+      if (child.isVisible())
+        let marginAndPadding = padding + child.getMargin()
+        Frame.layoutFrame(this, child, marginAndPadding)
+        child.layout(availableSize - marginAndPadding.size())          
+    //}
+
+    return availableSize
       
   // --------------------------------------------------------------------------
   static function layoutFrame(Frame parentFrame, Frame childFrame, thickness padding)
@@ -406,7 +498,8 @@ public class DefaultFrameFactory implements IFrameFactory
 
 // ============================================================================
 public interface IFrameLayout
-  function layout(Frame frame)
+  function measure(Frame frame, vec2 size) returns vec2
+  function layout(Frame frame, vec2 size) returns vec2
 
 // ============================================================================
 public interface IFrameTemplate

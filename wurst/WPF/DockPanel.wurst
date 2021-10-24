@@ -1,9 +1,18 @@
 package DockPanel
 import Panel
-import public DockLayout
+import Frame
+import Layout
+
+// ============================================================================
+public enum Dock
+  LEFT
+  RIGHT
+  BOTTOM
+  TOP
 
 // ============================================================================
 public class DockPanel extends Panel
+  static constant LightweightProperty<Dock> dockProperty = new LightweightProperty<Dock>(Dock.LEFT, g_invalidateFrameLayoutOnPropertyChanged)
   private DockLayout m_layout
 
   // --------------------------------------------------------------------------
@@ -32,4 +41,113 @@ public class DockPanel extends Panel
       m_layout.setLastChildFills(value)
       invalidateLayout()
 
-  
+// ============================================================================
+public function Frame.getDock() returns Dock
+  return DockPanel.dockProperty.getValue(this)
+
+// ============================================================================
+public function Frame.setDock(Dock dock)
+  DockPanel.dockProperty.setValue(this, dock)
+
+// ============================================================================
+public class DockLayout implements IFrameLayout
+  private bool m_lastChildFills
+
+  // --------------------------------------------------------------------------
+  function getLastChildFills() returns bool
+    return m_lastChildFills
+
+  // --------------------------------------------------------------------------
+  function setLastChildFills(bool value)
+    m_lastChildFills = value
+
+  // --------------------------------------------------------------------------
+  override function measure(Frame frame, vec2 availableSize) returns vec2
+
+    let children = frame.getChildren()
+    var parentSize = ZERO2
+    var accumulatedSize = frame.getPadding().size()
+
+    for childFrame in children
+    //{
+      let childConstraint = vec2(
+        max(0, availableSize.x - accumulatedSize.x),
+        max(0, availableSize.y - accumulatedSize.y))
+
+      childFrame.measure(childConstraint)
+      let childMeasuredSize = childFrame.getMeasuredSize()
+
+      switch (childFrame.getDock())
+        case LEFT | RIGHT
+          parentSize.y = max(parentSize.y, accumulatedSize.y + childMeasuredSize.y)
+          accumulatedSize.x += childMeasuredSize.x
+        case BOTTOM | TOP
+          parentSize.x = max(parentSize.x, accumulatedSize.x + childMeasuredSize.x)
+          accumulatedSize.y += childMeasuredSize.y
+    //}
+
+    parentSize.x = max(parentSize.x, accumulatedSize.x)
+    parentSize.y = max(parentSize.y, accumulatedSize.y)
+
+    return parentSize
+
+  // --------------------------------------------------------------------------
+  override function layout(Frame frame, vec2 layoutSize) returns vec2
+
+    let parentHandle = frame.getFrameHandle()
+    let children = frame.getChildren()
+    let nonFillChildrenCount = children.size() - (m_lastChildFills ? 1 : 0)
+    
+    let padding = frame.getPadding()
+    var accumulated = padding
+
+    var i = 0
+    for child in children
+    //{
+      let childHandle = child.getFrameHandle()
+      let margin = child.getMargin()
+      let childMeasuredSize = child.getMeasuredSize()
+
+      var childSize = vec2(
+        max(0, layoutSize.x - accumulated.width()),
+        max(0, layoutSize.y - accumulated.height()))
+
+      childHandle.clearAllPoints()
+
+      if (i < nonFillChildrenCount)
+      //{
+        switch (child.getDock())
+          case Dock.LEFT
+            childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (vec2(accumulated.left, padding.bottom) + margin.bottomLeft()) * LayoutScalars.bottomLeft)
+            childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT,(vec2(accumulated.left, padding.top) + margin.topLeft()) * LayoutScalars.topLeft)
+            childSize.x = childMeasuredSize.x
+            accumulated.left += childMeasuredSize.x
+          case Dock.RIGHT
+            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (vec2(accumulated.right, padding.bottom) + margin.bottomRight()) * LayoutScalars.bottomRight)
+            childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (vec2(accumulated.right, padding.top) + margin.topRight()) * LayoutScalars.topRight)
+            childSize.x = childMeasuredSize.x
+            accumulated.right += childMeasuredSize.x
+          case Dock.BOTTOM
+            childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (accumulated.bottomRight() + margin.bottomRight()) * LayoutScalars.bottomRight)
+            childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (accumulated.bottomLeft() + margin.bottomLeft()) * LayoutScalars.bottomLeft)
+            childSize.y = childMeasuredSize.y
+            accumulated.bottom += childMeasuredSize.y
+          case Dock.TOP
+            childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (accumulated.topLeft() + margin.topLeft()) * LayoutScalars.topLeft)
+            childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (accumulated.topRight() + margin.topRight()) * LayoutScalars.topRight)
+            childSize.y = childMeasuredSize.y
+            accumulated.top += childMeasuredSize.y
+      //}
+      else
+      //{
+        childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (accumulated.bottomLeft() + margin.bottomLeft()) * LayoutScalars.bottomLeft)
+        childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (accumulated.topRight() + margin.topRight()) * LayoutScalars.topRight)
+      //}
+
+      child.getFrameHandle().setSize(childSize)
+      child.layout(childSize)
+
+      i++
+    //}
+
+    return layoutSize
