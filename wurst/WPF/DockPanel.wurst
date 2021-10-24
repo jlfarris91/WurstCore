@@ -144,7 +144,6 @@ public class DockLayout implements IFrameLayout
         childHandle.setPoint(FRAMEPOINT_TOPRIGHT, parentHandle, FRAMEPOINT_TOPRIGHT, (accumulated.topRight() + margin.topRight()) * LayoutScalars.topRight)
       //}
 
-      child.getFrameHandle().setSize(childSize)
       child.arrange(childSize)
 
       i++

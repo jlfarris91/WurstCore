@@ -1,6 +1,5 @@
 package Panel
 import Frame
-import Layout
 
 // ============================================================================
 public class Panel extends Frame
@@ -38,9 +37,7 @@ public class Panel extends Frame
 
   // --------------------------------------------------------------------------
   override function measureOverride(vec2 availableSize) returns vec2
-    return m_layout != null
-           ? m_layout.measure(this, availableSize)
-           : super.measureOverride(availableSize)
+    return m_layout != null ? m_layout.measure(this, availableSize) : super.measureOverride(availableSize)
 
   // --------------------------------------------------------------------------
   override function arrange()
@@ -52,12 +49,10 @@ public class Panel extends Frame
 
   // --------------------------------------------------------------------------
   override function arrangeOverride(vec2 layoutSize) returns vec2
-    let paddedLayoutSize = layoutSize - getPadding().size()
     vec2 result
     if (m_layout != null)
-      result = m_layout.arrange(this, paddedLayoutSize)
-      getFrameHandle().setSize(result)
+      result = m_layout.arrange(this, layoutSize)
     else
-      super.arrangeOverride(paddedLayoutSize)
-      result = paddedLayoutSize
+      super.arrangeOverride(layoutSize)
+      result = layoutSize
     return result

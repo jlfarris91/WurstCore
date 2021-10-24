@@ -52,6 +52,7 @@ public class TabPanel extends DockPanel
     ..setAllPoints(m_buttonPanel.getFrameHandle())
 
     m_fillPanel = new Panel("FP")
+    ..setDock(Dock.BOTTOM)
     ..setPadding(thickness(0.01))
     addChild(m_fillPanel)
     

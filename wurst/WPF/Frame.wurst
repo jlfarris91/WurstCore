@@ -218,7 +218,7 @@ public class Frame
       m_desiredSize = value
       invalidateMeasure()
       if (m_parent != null)
-        arrange(value)
+        measure(value)
 
   // --------------------------------------------------------------------------
   function resinsertIntoLayoutQueue()
@@ -275,7 +275,7 @@ public class Frame
     dataContextProperty.setValue(this, valueObject)
 
   // --------------------------------------------------------------------------
-  function getHorizontalLayoutMode() returns HorizontalLayoutMode
+  function getHorizontalAlignment() returns HorizontalLayoutMode
     return m_horizontalLayoutMode
 
   // --------------------------------------------------------------------------
@@ -285,7 +285,7 @@ public class Frame
       invalidateArrange()
 
   // --------------------------------------------------------------------------
-  function getVerticalLayoutMode() returns VerticalLayoutMode    
+  function getVerticalAlignment() returns VerticalLayoutMode    
     return m_verticalLayoutMode
 
   // --------------------------------------------------------------------------
@@ -522,7 +522,7 @@ public class Frame
     setArrangeInProgress(true)
       
     LayoutManager.enterArrange()
-    arrangeOverride(availableSize)
+    arrangeCore(availableSize)
     LayoutManager.exitArrange()
 
     setArrangeInProgress(false)
@@ -536,17 +536,47 @@ public class Frame
       LayoutManager.arrangeQueue.remove(this)
 
   // --------------------------------------------------------------------------
+  private function arrangeCore(vec2 availableSize)
+
+    let margin = getMargin()
+    let marginWidth = margin.width()
+    let marginHeight = margin.height()
+
+    var arrangeSize = vec2(
+      max(0, availableSize.x - marginWidth),
+      max(0, availableSize.y - marginHeight))
+
+    let desiredSizeMarginAdjusted = vec2(
+      max(0, m_desiredSize.x - marginWidth),
+      max(0, m_desiredSize.y - marginHeight))
+
+    if (arrangeSize.x < desiredSizeMarginAdjusted.x)
+      arrangeSize.x = desiredSizeMarginAdjusted.x
+
+    if (arrangeSize.y < desiredSizeMarginAdjusted.y)
+      arrangeSize.y = desiredSizeMarginAdjusted.y
+    
+    if (getHorizontalAlignment() != STRETCH)
+      arrangeSize.x = desiredSizeMarginAdjusted.x
+    
+    if (getVerticalAlignment() != STRETCH)
+      arrangeSize.y = desiredSizeMarginAdjusted.y
+
+    // TODO: max size?
+
+    let finalSize = arrangeOverride(arrangeSize)
+    m_frameHandle.setSize(finalSize)
+
+  // --------------------------------------------------------------------------
   protected function arrangeOverride(vec2 availableSize) returns vec2
-
-    let padding = getPadding()
-    for child in m_children
-    //{
-      if (child.isVisible())
-        let marginAndPadding = padding + child.getMargin()
-        Frame.arrangeFrame(this, child, marginAndPadding)
-        child.arrange(availableSize - marginAndPadding.size())          
-    //}
-
+    if (m_children.isEmpty() == false)
+      let padding = getPadding()
+      for child in m_children
+      //{
+        if (child.isVisible())
+          Frame.arrangeFrame(this, child, padding)
+          child.arrange(availableSize - padding.size())          
+      //}
     return availableSize
 
   // --------------------------------------------------------------------------
@@ -561,8 +591,8 @@ public class Frame
 
     childHandle.clearAllPoints()
 
-    let horizontalLayoutMode = childFrame.getHorizontalLayoutMode()
-    let verticalLayoutMode = childFrame.getVerticalLayoutMode()
+    let horizontalLayoutMode = childFrame.getHorizontalAlignment()
+    let verticalLayoutMode = childFrame.getVerticalAlignment()
     let marginAndPadding = childFrame.getMargin() + padding
 
     if (horizontalLayoutMode == STRETCH and verticalLayoutMode == STRETCH)

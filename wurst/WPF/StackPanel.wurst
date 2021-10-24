@@ -135,7 +135,7 @@ public class StackLayout implements IFrameLayout
 
     childHandle.clearAllPoints()
     
-    switch (childFrame.getVerticalLayoutMode())
+    switch (childFrame.getVerticalAlignment())
       case BOTTOM
         childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
       case TOP
@@ -155,7 +155,7 @@ public class StackLayout implements IFrameLayout
 
     childHandle.clearAllPoints()
     
-    switch (childFrame.getVerticalLayoutMode())
+    switch (childFrame.getVerticalAlignment())
       case BOTTOM
         childHandle.setPoint(FRAMEPOINT_BOTTOMRIGHT, parentHandle, FRAMEPOINT_BOTTOMRIGHT, (uv + marginAndPadding.bottomRight()) * LayoutScalars.bottomRight)
       case TOP
@@ -175,7 +175,7 @@ public class StackLayout implements IFrameLayout
 
     childHandle.clearAllPoints()
     
-    switch (childFrame.getHorizontalLayoutMode())
+    switch (childFrame.getHorizontalAlignment())
       case LEFT
         childHandle.setPoint(FRAMEPOINT_BOTTOMLEFT, parentHandle, FRAMEPOINT_BOTTOMLEFT, (uv + marginAndPadding.bottomLeft()) * LayoutScalars.bottomLeft)
       case RIGHT
@@ -195,7 +195,7 @@ public class StackLayout implements IFrameLayout
 
     childHandle.clearAllPoints()
 
-    switch (childFrame.getHorizontalLayoutMode())
+    switch (childFrame.getHorizontalAlignment())
       case LEFT
         childHandle.setPoint(FRAMEPOINT_TOPLEFT, parentHandle, FRAMEPOINT_TOPLEFT, (uv + marginAndPadding.topLeft()) * LayoutScalars.topLeft)
       case RIGHT
