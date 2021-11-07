@@ -393,7 +393,6 @@ public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
     for comp in compositionManager
       if (Meta.is(comp.typeId, typeId_ISerializable))
         numSerializableComponents++
-      else
 
     writer.write(numSerializableComponents)
 

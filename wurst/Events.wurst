@@ -57,8 +57,8 @@ public class Event implements IHandleProvider
     for callback in m_callbacks
       if (callback.markedForRemoval == false)
         callback.call()
-      else
-        // Log.info("Event", "call", "", "Callback marked for removal. Skipping.")
+      //else
+      //  Log.info("Event", "call", "", "Callback marked for removal. Skipping.")
 
     m_callStackDepth--
     if (m_callStackDepth == 0)
