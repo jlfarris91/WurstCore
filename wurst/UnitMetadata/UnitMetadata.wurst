@@ -186,6 +186,13 @@ public function unit.getMetadataRequired() returns IUnitMetadata
   return g_unitMetadatas[index]
 
 // ============================================================================
+public function unit.getComponent(int componentTypeId) returns IComponent
+  let metadata = this.getMetadata()
+  if (metadata == null)
+    return null
+  return metadata.getComponent(componentTypeId)
+
+// ============================================================================
 public function registerUnitMetadataFactory(IUnitMetadataFactory factory)
   if (factory == null)
     argumentNullError("factory")

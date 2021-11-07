@@ -25,7 +25,7 @@ public class Event implements IHandleProvider
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(EventCallback callback) returns Handle
+  function register(EventCallback callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
     
@@ -34,10 +34,10 @@ public class Event implements IHandleProvider
     
     callback.markedForRemoval = false
 
-    return Handle(callback castTo int)
+    return _handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(Handle callbackHandle)
+  function unregister(_handle callbackHandle)
     if (callbackHandle.id castTo EventCallback == null)
       // Log.info("Event", "unregister", "", "callbackHandle.id castTo EventCallback == null")
       return
@@ -76,7 +76,7 @@ public class Event implements IHandleProvider
         index++
 
   // --------------------------------------------------------------------------
-  override function isHandleValid(Handle h) returns bool
+  override function isHandleValid(_handle h) returns bool
     return h.id castTo EventCallback != null and
            m_callbacks.contains(h.id castTo EventCallback)
 
@@ -101,7 +101,7 @@ public class Event1<TArg1> implements IHandleProvider
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Event1Callback<TArg1> callback) returns Handle
+  function register(Event1Callback<TArg1> callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
     
@@ -110,10 +110,10 @@ public class Event1<TArg1> implements IHandleProvider
     
     callback.markedForRemoval = false
 
-    return Handle(callback castTo int)
+    return _handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(Handle callbackHandle)
+  function unregister(_handle callbackHandle)
     if (callbackHandle.id castTo EventCallback == null)
       return
     let index = m_callbacks.indexOf(callbackHandle.id castTo Event1Callback<TArg1>)
@@ -146,7 +146,7 @@ public class Event1<TArg1> implements IHandleProvider
         index++
 
   // --------------------------------------------------------------------------
-  override function isHandleValid(Handle h) returns bool
+  override function isHandleValid(_handle h) returns bool
     return h.id castTo EventCallback != null and
            m_callbacks.contains(h.id castTo Event1Callback<TArg1>)
 
@@ -171,7 +171,7 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Event2Callback<TArg1, TArg2> callback) returns Handle
+  function register(Event2Callback<TArg1, TArg2> callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
     
@@ -180,10 +180,10 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
     
     callback.markedForRemoval = false
 
-    return Handle(callback castTo int)
+    return _handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(Handle callbackHandle)
+  function unregister(_handle callbackHandle)
     if (callbackHandle.id castTo EventCallback == null)
       return
     let index = m_callbacks.indexOf(callbackHandle.id castTo Event2Callback<TArg1, TArg2>)
@@ -216,7 +216,7 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
         index++
 
   // --------------------------------------------------------------------------
-  override function isHandleValid(Handle h) returns bool
+  override function isHandleValid(_handle h) returns bool
     return h.id castTo EventCallback != null and
            m_callbacks.contains(h.id castTo Event2Callback<TArg1, TArg2>)
 
@@ -266,7 +266,7 @@ public abstract class Event2Callback<TArg1, TArg2>
 // ============================================================================
 class Foo
   Event m_action
-  Handle registration
+  _handle registration
   Foo m_other
   int m_index
   bool m_shouldNotBeExecuted
@@ -320,7 +320,7 @@ Foo array g_foos
 // ============================================================================
 class Test
   int a = 0
-  Handle handleToUnregister = HANDLE_INVALID
+  _handle handleToUnregister = HANDLE_INVALID
 @test function unregister_unregisteringExecutingCallbackCallsRemainingCallbacks()
 
   let pool = new Vector<EventCallback>()

@@ -1,11 +1,11 @@
 package UnitComponent
 import public UnitMetadata
 import public initlater Component
-import Action
 import ClosureTimers
 import ErrorHandling
 import Meta
 import Object
+import Events
 
 // ============================================================================
 public class UnitComponentCreationContext
@@ -64,55 +64,111 @@ public abstract class UnitComponent extends Component
     skip
 
   // --------------------------------------------------------------------------
-  protected function dispatch<TComp>(Action1<TComp> work) returns CallbackSingle
-    return dispatch(0., true, work)
+  protected function dispatch(Action work)
+    dispatch(true, work)
 
   // --------------------------------------------------------------------------
-  protected function dispatch<TComp>(bool requireEnabled, Action1<TComp> work) returns CallbackSingle
-    return dispatch(0., requireEnabled, work)
+  protected function dispatch(bool requireEnabled, Action work)
+    dispatch(getOwnerUnit(), this.typeId, requireEnabled, work)
 
   // --------------------------------------------------------------------------
-  protected function dispatch<TComp>(real seconds, Action1<TComp> work) returns CallbackSingle
+  protected static function dispatch(unit ownerUnit, int compTypeId, bool requireEnabled, Action work)
+    if (ownerUnit != null and ownerUnit.isAlive())
+      let comp = ownerUnit.getComponent(compTypeId)
+      if (comp != null)
+        if (not requireEnabled or comp.getEnabled())
+          work.call()
+    /*
+        else
+          Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Component must be enabled")
+      else
+        Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit has no component of type " + Meta.typeIdToTypeName(compTypeId))
+    else
+      Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit is dead")
+    */
+    if (work.getDestroyAfterUse())
+      destroy work
+
+  // --------------------------------------------------------------------------
+  protected function dispatch(real seconds, Action work) returns CallbackSingle
     return dispatch(seconds, true, work)
 
   // --------------------------------------------------------------------------
-  protected function dispatch<TComp>(real seconds, bool requireEnabled, Action1<TComp> work) returns CallbackSingle
+  protected function dispatch(real seconds, bool requireEnabled, Action work) returns CallbackSingle
     return dispatch(getOwnerUnit(), this.typeId, seconds, requireEnabled, work)
 
   // --------------------------------------------------------------------------
-  protected static function dispatch<TComp>(unit ownerUnit, int compTypeId, real seconds, bool requireEnabled, Action1<TComp> work) returns CallbackSingle
+  protected static function dispatch(unit ownerUnit, int compTypeId, real seconds, bool requireEnabled, Action work) returns CallbackSingle
     if (ownerUnit == null)
       argumentNullError("ownerUnit")
     if (work == null)
       argumentNullError("work")
-    let callback = doAfter(seconds) () ->
-    //{
-      if (ownerUnit != null and ownerUnit.isAlive())
-        let metadata = ownerUnit.getMetadata()
-        if (metadata != null)
-          let comp = metadata.getComponent(compTypeId)
-          if (comp != null)
-            let compTyped = (comp castTo int) castTo TComp
-            if (compTyped != null)
-              if (not requireEnabled or comp.getEnabled())
-                work.call(compTyped)
-      /*
-              else
-                Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Component must be enabled")
-            else
-              Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Could not convert component to type " + Meta.typeIdToTypeName(compTypeId))
-          else
-            Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit metadata has no component of type " + Meta.typeIdToTypeName(compTypeId))
-        else
-          Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit has no metadata")
-      else
-        Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit is dead")
-      */
+    return doAfter(seconds, new DispatchedCallbackSingle(ownerUnit, compTypeId, requireEnabled, work))
 
-      // TODO: work will leak if the callback is destroyed before it executes this code
-      destroy work
-    //}
-    return callback
+// ============================================================================
+public function Event.registerDispatched(UnitComponent comp, Action handler) returns _handle
+  return this.registerDispatched(comp, true, handler)
+
+// ============================================================================
+public function Event.registerDispatched(UnitComponent comp, bool requireEnabled, Action handler) returns _handle
+  return this.register(new DispatchedEventCallback(comp.getOwnerUnit(), comp.typeId, requireEnabled, handler))
+
+// ============================================================================
+module DispatchedWorkModule
+  protected unit m_ownerUnit
+  protected int m_compTypeId
+  protected bool m_requireEnabled
+  protected Action m_work
+
+  // --------------------------------------------------------------------------
+  function _construct(unit ownerUnit, int compTypeId, bool requireEnabled, Action work)
+    if (m_ownerUnit == null)
+      argumentNullError("ownerUnit")
+    if (work == null)
+      argumentNullError("work")
+    m_ownerUnit = ownerUnit
+    m_compTypeId = compTypeId
+    m_requireEnabled = requireEnabled
+    m_work = work..setDestroyAfterUse(false)
+  
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_work != null)
+      destroy m_work
+
+// ============================================================================
+class DispatchedCallbackSingle extends CallbackSingle
+  use DispatchedWorkModule
+
+  // --------------------------------------------------------------------------
+  construct(unit ownerUnit, int compTypeId, bool requireEnabled, Action work)
+    _construct(ownerUnit, compTypeId, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_work != null)
+      destroy m_work
+
+  // --------------------------------------------------------------------------
+  override function call()
+    UnitComponent.dispatch(m_ownerUnit, m_compTypeId, m_requireEnabled, m_work)
+
+// ============================================================================
+class DispatchedEventCallback extends EventCallback
+  use DispatchedWorkModule
+
+  // --------------------------------------------------------------------------
+  construct(unit ownerUnit, int compTypeId, bool requireEnabled, Action work)
+    _construct(ownerUnit, compTypeId, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_work != null)
+      destroy m_work
+
+  // --------------------------------------------------------------------------
+  override function call()
+    UnitComponent.dispatch(m_ownerUnit, m_compTypeId, m_requireEnabled, m_work)
 
 // ============================================================================
 init
