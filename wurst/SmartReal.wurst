@@ -50,10 +50,16 @@ public class SmartReal
   // --------------------------------------------------------------------------
   ondestroy
     if (m_relative != null)
+      while (m_relative.isEmpty() == false)
+        destroy m_relative.pop()
       destroy m_relative
     if (m_absolute != null)
+      while (m_absolute.isEmpty() == false)
+        destroy m_absolute.pop()
       destroy m_absolute
     if (m_final != null)
+      while (m_final.isEmpty() == false)
+        destroy m_final.pop()
       destroy m_final    
 
   // --------------------------------------------------------------------------
