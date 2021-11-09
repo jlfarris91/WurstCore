@@ -154,6 +154,11 @@ public function unit.getOwnerMetadata() returns IPlayerMetadata
   return g_PlayerMetadata.get(this.getOwner())
 
 // ============================================================================
+public function player.getComponent(int componentTypeId) returns IComponent
+  let metadata = this.getMetadata()
+  return metadata != null ? metadata.getComponent(componentTypeId) : null
+
+// ============================================================================
 public function registerPlayerMetadata(IPlayerMetadata playerMetadata)
   g_PlayerMetadata.put(playerMetadata.getPlayer(), playerMetadata)
 

@@ -3,6 +3,9 @@ import PlayerMetadata
 import Composition
 import Meta
 import Object
+import ClosureTimers
+import ErrorHandling
+import Events
 
 // ============================================================================
 public class PlayerComponentCreationContext
@@ -37,6 +40,115 @@ public abstract class PlayerComponent extends Component
   // --------------------------------------------------------------------------
   function getOwnerPlayer() returns player
     return m_owner.getPlayer()
+
+  // --------------------------------------------------------------------------
+  protected function dispatch(Action work)
+    dispatch(true, work)
+
+  // --------------------------------------------------------------------------
+  protected function dispatch(bool requireEnabled, Action work)
+    dispatch(getOwnerPlayer(), this.typeId, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  protected static function dispatch(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
+    if (ownerPlayer != null and ownerPlayer.getSlotState() == PLAYER_SLOT_STATE_PLAYING)
+      let comp = ownerPlayer.getComponent(componentTypeId)
+      if (comp != null)
+        if (not requireEnabled or comp.getEnabled())
+          work.call()
+    if (work.getDestroyAfterUse())
+      destroy work
+
+  // --------------------------------------------------------------------------
+  protected static function dispatch(player ownerPlayer, int componentTypeId, bool requireEnabled, Action1<IComponent> work)
+    if (ownerPlayer != null and ownerPlayer.getSlotState() == PLAYER_SLOT_STATE_PLAYING)
+      let comp = ownerPlayer.getComponent(componentTypeId)
+      if (comp != null)
+        if (not requireEnabled or comp.getEnabled())
+          work.call(comp)
+    if (work.getDestroyAfterUse())
+      destroy work
+
+  // --------------------------------------------------------------------------
+  protected function dispatch(real seconds, Action work) returns CallbackSingle
+    return dispatch(seconds, true, work)
+
+  // --------------------------------------------------------------------------
+  protected function dispatch(real seconds, bool requireEnabled, Action work) returns CallbackSingle
+    return dispatch(getOwnerPlayer(), this.typeId, seconds, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  protected static function dispatch(player ownerPlayer, int componentTypeId, real seconds, bool requireEnabled, Action work) returns CallbackSingle
+    if (ownerPlayer == null)
+      argumentNullError("ownerPlayer")
+    if (work == null)
+      argumentNullError("work")
+    return doAfter(seconds, new DispatchedCallbackSingle(ownerPlayer, componentTypeId, requireEnabled, work))
+
+// --------------------------------------------------------------------------
+public function player.dispatch(int componentTypeId, Action1<IComponent> work)
+  this.dispatch(componentTypeId, true, work)
+
+// --------------------------------------------------------------------------
+public function player.dispatch(int componentTypeId, bool requireEnabled, Action1<IComponent> work)
+  PlayerComponent.dispatch(this, componentTypeId, requireEnabled, work)
+
+// ============================================================================
+module DispatchedWorkModule
+  protected player m_ownerPlayer
+  protected int m_componentTypeId
+  protected bool m_requireEnabled
+  protected Action m_work
+
+  // --------------------------------------------------------------------------
+  function _construct(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
+    if (ownerPlayer == null)
+      argumentNullError("ownerPlayer")
+    if (work == null)
+      argumentNullError("work")
+    m_ownerPlayer = ownerPlayer
+    m_componentTypeId = componentTypeId
+    m_requireEnabled = requireEnabled
+    m_work = work..setDestroyAfterUse(false)
+  
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_work != null)
+      destroy m_work
+
+// ============================================================================
+class DispatchedCallbackSingle extends CallbackSingle
+  use DispatchedWorkModule
+
+  // --------------------------------------------------------------------------
+  construct(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
+    _construct(ownerPlayer, componentTypeId, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_work != null)
+      destroy m_work
+
+  // --------------------------------------------------------------------------
+  override function call()
+    PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
+
+// ============================================================================
+class DispatchedEventCallback extends EventCallback
+  use DispatchedWorkModule
+
+  // --------------------------------------------------------------------------
+  construct(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
+    _construct(ownerPlayer, componentTypeId, requireEnabled, work)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_work != null)
+      destroy m_work
+
+  // --------------------------------------------------------------------------
+  override function call()
+    PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
 
 // ============================================================================
 init

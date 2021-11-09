@@ -1,0 +1,43 @@
+package HandlePool
+import HashMap
+import Handle
+import Func
+
+// ============================================================================
+public class HandlePool<T> implements IHandleProviderT<T>
+  private int m_handleCounter = 0
+  private HashMap<_handle, T> m_activeHandles = new HashMap<_handle, T>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_activeHandles
+
+  // --------------------------------------------------------------------------
+  function add(T value) returns _handle
+    m_handleCounter++
+    let h = _handle(m_handleCounter)
+    m_activeHandles.put(h, value)
+    return h
+
+  // --------------------------------------------------------------------------
+  function add(Func1<_handle, T> factory) returns _handle
+    m_handleCounter++
+    let h = _handle(m_handleCounter)
+    m_activeHandles.put(h, factory.call(h))
+    return h
+
+  // --------------------------------------------------------------------------
+  function remove(_handle h) returns T
+    T value = null
+    if (m_activeHandles.has(h))
+      value = m_activeHandles.get(h)
+      m_activeHandles.remove(h)
+    return value
+
+  // --------------------------------------------------------------------------
+  override function get(_handle h) returns T
+    return m_activeHandles.get(h)
+
+  // --------------------------------------------------------------------------
+  override function isHandleValid(_handle h) returns bool
+    return m_activeHandles.has(h)

@@ -1,0 +1,148 @@
+package SmartReal
+import LinkedList
+import Handle
+import TimerUtils
+import ClosureTimers
+import Func
+
+public enum SmartRealAffectorType
+  RELATIVE
+  ABSOLUTE
+  FINAL
+
+// ============================================================================
+class SmartRealAffector
+  Func1<real, real> m_action = null
+  CallbackManual m_callback = null
+
+  // --------------------------------------------------------------------------
+  construct (SmartReal owner, Func1<real, real> action, real duration)
+    m_action = action
+    if (duration > 0.0)
+      m_callback = getTimer().doManual(duration, true, () -> owner.removeAffector(_handle(this castTo int)))
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_action.getDestroyAfterUse())
+      destroy m_action
+    if (m_callback != null)
+      destroy m_callback
+
+  // --------------------------------------------------------------------------
+  function affect(real value) returns real
+    return m_action.call(value)
+
+// ============================================================================
+public class SmartReal
+  private real m_base
+  private LinkedList<SmartRealAffector> m_relative = null
+  private LinkedList<SmartRealAffector> m_absolute = null
+  private LinkedList<SmartRealAffector> m_final = null
+
+  // --------------------------------------------------------------------------
+  construct ()
+    m_base = 0.0
+
+  // --------------------------------------------------------------------------
+  construct (real initialBaseValue)
+    m_base = initialBaseValue
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_relative != null)
+      destroy m_relative
+    if (m_absolute != null)
+      destroy m_absolute
+    if (m_final != null)
+      destroy m_final    
+
+  // --------------------------------------------------------------------------
+  function setBaseValue(real value)
+    m_base = value
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    
+    var value = m_base
+
+    if (m_relative != null)
+      for affector in m_relative
+        value = affector.affect(value)
+
+    if (m_absolute != null)
+      for affector in m_absolute
+        value = affector.affect(value)
+    
+    if (m_final != null)
+      for affector in m_final
+        value = affector.affect(value)
+    
+    return value
+
+  // --------------------------------------------------------------------------
+  function addAffector(SmartRealAffectorType affectorType, real value) returns _handle
+    return addAffector(affectorType, value, -1)
+  
+  // --------------------------------------------------------------------------
+  function addAffector(SmartRealAffectorType affectorType, Func1<real, real> action) returns _handle
+    return addAffector(affectorType, action, -1)
+  
+  // --------------------------------------------------------------------------
+  function addAffector(SmartRealAffectorType affectorType, real value, real duration) returns _handle
+    return addAffector(affectorType, value, duration)
+  
+  // --------------------------------------------------------------------------
+  function addAffector(SmartRealAffectorType affectorType, Func1<real, real> action, real duration) returns _handle
+    let affector = new SmartRealAffector(this, action, duration)
+    let h = _handle(affector castTo int)
+    switch (affectorType)
+      case RELATIVE
+        if (m_relative == null)
+          m_relative = new LinkedList<SmartRealAffector>()
+        m_relative.add(affector)
+      case ABSOLUTE
+        if (m_absolute == null)
+          m_absolute = new LinkedList<SmartRealAffector>()
+        m_absolute.add(affector)
+      case FINAL
+        if (m_final == null)
+          m_final = new LinkedList<SmartRealAffector>()
+        m_final.add(affector)
+    return h
+
+  // --------------------------------------------------------------------------
+  function removeAffector(_handle h) returns bool
+    if (removeAffector(m_relative, h))
+      return true
+    if (removeAffector(m_absolute, h))
+      return true
+    return removeAffector(m_final, h)
+
+  // --------------------------------------------------------------------------
+  private function removeAffector(LinkedList<SmartRealAffector> affectors, _handle h) returns bool
+    let iterator = affectors.iterator()
+    while iterator.hasNext()
+      let affector = iterator.current
+      if ((affector castTo int) == h.id)
+        iterator.remove()
+        destroy affector
+        return true
+    return false   
+
+  // --------------------------------------------------------------------------
+  function getAffector(_handle h) returns SmartRealAffector
+    var affector = getAffector(m_relative, h)
+    if (affector != null)
+      return affector
+    affector = getAffector(m_absolute, h)
+    if (affector != null)
+      return affector
+    return getAffector(m_final, h)
+
+  // --------------------------------------------------------------------------
+  private function getAffector(LinkedList<SmartRealAffector> affectors, _handle h) returns SmartRealAffector
+    for affector in affectors
+      if ((affector castTo int) == h.id)
+        return affector
+    return null
+    
