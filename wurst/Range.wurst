@@ -8,6 +8,7 @@ public tuple rangeInt(int min, int max)
 // ============================================================================
 public constant rangeInt INT_RANGE_ZERO = rangeInt(0, 0)
 public constant rangeReal REAL_RANGE_ZERO = rangeReal(0.0, 0.0)
+public constant rangeInt RANGE_ONE_TO_TEN = rangeInt(1, 10)
 
 // ============================================================================
 public function rangeReal.getRandom() returns real

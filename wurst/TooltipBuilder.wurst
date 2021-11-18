@@ -10,27 +10,72 @@ constant int MAX_TOOLTIP_ITEM_COUNT = 32
 constant colorA ITEM_NAME_COLOR = fromHexString("FF3B97D3")
 constant colorA ITEM_VALUE_COLOR = COLOR_GOLD
 
-tuple tooltipItemValue(string valueStr, Func1<int, string> valueGetter)
+tuple presetGetter(string value, Func1<int, string> getter)
+
+// ============================================================================
+function presetGetter.getValue(int level) returns string
+  if (this.getter != null)
+    return this.getter.call(level)
+  return this.value
+
+// ============================================================================
+function presetGetter.setValue(string value) returns presetGetter
+  var result = this.destr()
+  result.value = value
+  return result
+
+// ============================================================================
+function presetGetter.setValue(Func1<int, string> getter) returns presetGetter
+  var result = this.destr()
+  result.getter = getter
+  return result
+
+// ============================================================================
+function presetGetter.destr() returns presetGetter
+  var result = this
+  if (result.getter != null and result.getter.getDestroyAfterUse())
+    destroy result.getter
+  result.getter = null
+  result.value = null
+  return result
 
 // ============================================================================
 public class TooltipItem
-  private string m_name
-  private tooltipItemValue array[MAX_TOOLTIP_ITEM_COUNT] m_values
+  private presetGetter m_name
+  private presetGetter array[MAX_TOOLTIP_ITEM_COUNT] m_values
   private int m_valueCount
 
   // --------------------------------------------------------------------------
   construct(string name)
-    m_name = name
+    m_name = presetGetter(name, null)
 
   // --------------------------------------------------------------------------
   construct(string name, string value)
-    m_name = name
+    m_name = presetGetter(name, null)
     addValue(value)
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<int, string> getter)
-    m_name = name
+    m_name = presetGetter(name, null)
     addValue(getter)
+
+  // --------------------------------------------------------------------------
+  construct(Func1<int, string> name)
+    m_name = presetGetter(null, name)
+
+  // --------------------------------------------------------------------------
+  construct(Func1<int, string> name, string value)
+    m_name = presetGetter(null, name)
+    addValue(value)
+
+  // --------------------------------------------------------------------------
+  construct(Func1<int, string> name, Func1<int, string> getter)
+    m_name = presetGetter(null, name)
+    addValue(getter)
+
+  // --------------------------------------------------------------------------
+  private construct(presetGetter name)
+    m_name = name
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -38,17 +83,18 @@ public class TooltipItem
 
   // --------------------------------------------------------------------------
   function clear()
-    m_name = null
+    m_name = m_name.destr()
     for i = 0 to m_valueCount-1
-      m_values[i].valueStr = null
-      if (m_values[i].valueGetter != null and m_values[i].valueGetter.getDestroyAfterUse())
-        destroy m_values[i].valueGetter
-      m_values[i].valueGetter = null
+      m_values[i] = m_values[i].destr()
     m_valueCount = 0
 
   // --------------------------------------------------------------------------
   function getName() returns string
-    return m_name
+    return getName(1)
+
+  // --------------------------------------------------------------------------
+  function getName(int level) returns string
+    return m_name.getValue(level)
 
   // --------------------------------------------------------------------------
   function getValue(int index) returns string
@@ -58,9 +104,7 @@ public class TooltipItem
   function getValue(int index, int level) returns string
     if (index < 0 or index > m_valueCount - 1)
       return null
-    if (m_values[index].valueGetter != null)
-      return m_values[index].valueGetter.call(level)
-    return m_values[index].valueStr
+    return m_values[index].getValue(level)
   
   // --------------------------------------------------------------------------
   function getValueCount() returns int
@@ -68,23 +112,29 @@ public class TooltipItem
 
   // --------------------------------------------------------------------------
   function addValue(string value)
-    addValueOrValueGetter(value, null)      
+    addValue(presetGetter(value, null))
 
   // --------------------------------------------------------------------------
   function addValue(Func1<int, string> getter)
-    addValueOrValueGetter(null, getter)
+    addValue(presetGetter(null, getter))
 
   // --------------------------------------------------------------------------
-  private function addValueOrValueGetter(string valueStr, Func1<int, string> valueGetter)
+  function clone() returns TooltipItem
+    let clone = new TooltipItem(m_name)
+    for i = 0 to m_valueCount - 1
+      clone.addValue(m_values[i])
+    return clone
+
+  // --------------------------------------------------------------------------
+  private function addValue(presetGetter value)
     if (m_valueCount == MAX_TOOLTIP_ITEM_COUNT)
       error("Reached limit of number of values " + I2S(MAX_TOOLTIP_ITEM_COUNT))
-    m_values[m_valueCount].valueStr = valueStr
-    m_values[m_valueCount].valueGetter = valueGetter
+    m_values[m_valueCount] = value
     m_valueCount++
 
 // ============================================================================
 public class TooltipBuilder
-  private string m_description
+  private presetGetter m_description
   private LinkedList<TooltipItem> m_items
 
   // --------------------------------------------------------------------------
@@ -100,7 +150,7 @@ public class TooltipBuilder
 
   // --------------------------------------------------------------------------
   function clear()
-    m_description = null
+    m_description = m_description.destr()
     for itm in m_items
       destroy itm
     m_items.clear()
@@ -122,19 +172,26 @@ public class TooltipBuilder
 
   // --------------------------------------------------------------------------
   function getDescription() returns string
-    return m_description
+    return m_description.getValue(1)
 
   // --------------------------------------------------------------------------
-  function setDescription(string description) returns TooltipBuilder
-    m_description = description
-    return this
-    
-  // --------------------------------------------------------------------------  
-  function getTooltipBasic() returns string
-    return m_description
+  function getDescription(int level) returns string
+    return m_description.getValue(level)
+
+  // --------------------------------------------------------------------------
+  function setDescription(string description)
+    m_description = m_description.setValue(description)
+
+  // --------------------------------------------------------------------------
+  function setDescription(Func1<int, string> getter)
+    m_description = m_description.setValue(getter)
 
   // --------------------------------------------------------------------------  
   function getTooltipExtended() returns string
+    return getTooltipExtended(1)
+
+  // --------------------------------------------------------------------------  
+  function getTooltipExtended(int level) returns string
     let sb = new StringBuilder()
 
     let padStr = " "
@@ -145,15 +202,15 @@ public class TooltipBuilder
       if (index > 0)
         sb.appendLine()
 
-      sb.append(itm.getName().colorize(ITEM_NAME_COLOR))
+      sb.append(itm.getName(level).colorize(ITEM_NAME_COLOR))
 
       let itemValueCount = itm.getValueCount()
       if (itemValueCount == 1)
-        sb.append(itm.getValue(0).colorize(ITEM_VALUE_COLOR))
+        sb.append(itm.getValue(0, level).colorize(ITEM_VALUE_COLOR))
       else
         for j = 0 to itemValueCount - 1
           sb.appendLine()
-          sb.append("- " + itm.getValue(j).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
+          sb.append("- " + itm.getValue(j, level).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
 
       index++
     //}
