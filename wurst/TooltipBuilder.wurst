@@ -4,71 +4,92 @@ import ErrorHandling
 import StringBuilder
 import StringExtensions
 import ColorUtility
+import Func
 
 constant int MAX_TOOLTIP_ITEM_COUNT = 32
 constant colorA ITEM_NAME_COLOR = fromHexString("FF3B97D3")
 constant colorA ITEM_VALUE_COLOR = COLOR_GOLD
 
-// ============================================================================
-public interface ITooltipItem
-  function getName() returns string
-  function getValue(int index) returns string
-  function getValueCount() returns int
+tuple tooltipItemValue(string valueStr, Func1<int, string> valueGetter)
 
 // ============================================================================
-public class TooltipItem implements ITooltipItem
+public class TooltipItem
   private string m_name
-  private LinkedList<string> m_values
+  private tooltipItemValue array[MAX_TOOLTIP_ITEM_COUNT] m_values
+  private int m_valueCount
 
   // --------------------------------------------------------------------------
   construct(string name)
-    m_values = new LinkedList<string>()
     m_name = name
 
   // --------------------------------------------------------------------------
   construct(string name, string value)
-    m_values = new LinkedList<string>()
     m_name = name
     addValue(value)
 
   // --------------------------------------------------------------------------
+  construct(string name, Func1<int, string> getter)
+    m_name = name
+    addValue(getter)
+
+  // --------------------------------------------------------------------------
   ondestroy
     clear()
-    destroy m_values
-    m_values = null
 
   // --------------------------------------------------------------------------
   function clear()
     m_name = null
-    m_values.clear()
+    for i = 0 to m_valueCount-1
+      m_values[i].valueStr = null
+      if (m_values[i].valueGetter != null and m_values[i].valueGetter.getDestroyAfterUse())
+        destroy m_values[i].valueGetter
+      m_values[i].valueGetter = null
+    m_valueCount = 0
 
   // --------------------------------------------------------------------------
-  override function getName() returns string
+  function getName() returns string
     return m_name
 
   // --------------------------------------------------------------------------
-  override function getValue(int index) returns string
-    return m_values.get(index)
-  
-  // --------------------------------------------------------------------------
-  override function getValueCount() returns int
-    return m_values.size()
+  function getValue(int index) returns string
+    return getValue(index, 1)
 
   // --------------------------------------------------------------------------
-  function addValue(string value) returns TooltipItem
-    if (m_values.size() == MAX_TOOLTIP_ITEM_COUNT)
+  function getValue(int index, int level) returns string
+    if (index < 0 or index > m_valueCount - 1)
+      return null
+    if (m_values[index].valueGetter != null)
+      return m_values[index].valueGetter.call(level)
+    return m_values[index].valueStr
+  
+  // --------------------------------------------------------------------------
+  function getValueCount() returns int
+    return m_valueCount
+
+  // --------------------------------------------------------------------------
+  function addValue(string value)
+    addValueOrValueGetter(value, null)      
+
+  // --------------------------------------------------------------------------
+  function addValue(Func1<int, string> getter)
+    addValueOrValueGetter(null, getter)
+
+  // --------------------------------------------------------------------------
+  private function addValueOrValueGetter(string valueStr, Func1<int, string> valueGetter)
+    if (m_valueCount == MAX_TOOLTIP_ITEM_COUNT)
       error("Reached limit of number of values " + I2S(MAX_TOOLTIP_ITEM_COUNT))
-    m_values.add(value)
-    return this
+    m_values[m_valueCount].valueStr = valueStr
+    m_values[m_valueCount].valueGetter = valueGetter
+    m_valueCount++
 
 // ============================================================================
 public class TooltipBuilder
   private string m_description
-  private LinkedList<ITooltipItem> m_items
+  private LinkedList<TooltipItem> m_items
 
   // --------------------------------------------------------------------------
   construct()
-    m_items = new LinkedList<ITooltipItem>()
+    m_items = new LinkedList<TooltipItem>()
 
   // --------------------------------------------------------------------------
   ondestroy 
@@ -93,7 +114,7 @@ public class TooltipBuilder
     return addItem(new TooltipItem(name, value))
 
   // --------------------------------------------------------------------------
-  function addItem(ITooltipItem itm) returns TooltipBuilder
+  function addItem(TooltipItem itm) returns TooltipBuilder
     if (m_items.size() == MAX_TOOLTIP_ITEM_COUNT)
       error("Reached limit of tooltip items " + I2S(MAX_TOOLTIP_ITEM_COUNT))
     m_items.add(itm)
