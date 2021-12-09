@@ -109,12 +109,13 @@ module DispatchedWorkModule
     m_ownerPlayer = ownerPlayer
     m_componentTypeId = componentTypeId
     m_requireEnabled = requireEnabled
-    m_work = work..setDestroyAfterUse(false)
+    m_work = work
   
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_work != null)
+    if (m_work != null and m_work.getDestroyAfterUse())
       destroy m_work
+    m_work = null
 
 // ============================================================================
 class DispatchedCallbackSingle extends CallbackSingle
@@ -125,13 +126,9 @@ class DispatchedCallbackSingle extends CallbackSingle
     _construct(ownerPlayer, componentTypeId, requireEnabled, work)
 
   // --------------------------------------------------------------------------
-  ondestroy
-    if (m_work != null)
-      destroy m_work
-
-  // --------------------------------------------------------------------------
   override function call()
     PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
+    m_work = null
 
 // ============================================================================
 class DispatchedEventCallback extends EventCallback
@@ -142,13 +139,9 @@ class DispatchedEventCallback extends EventCallback
     _construct(ownerPlayer, componentTypeId, requireEnabled, work)
 
   // --------------------------------------------------------------------------
-  ondestroy
-    if (m_work != null)
-      destroy m_work
-
-  // --------------------------------------------------------------------------
   override function call()
     PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
+    m_work = null
 
 // ============================================================================
 init
