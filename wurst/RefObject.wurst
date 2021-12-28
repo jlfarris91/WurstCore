@@ -1,0 +1,59 @@
+package RefObject
+
+// ============================================================================
+public module RefObject
+  private int m_refs = 1
+
+  // --------------------------------------------------------------------------
+  function get() returns thistype
+    m_refs++
+    return this
+
+  // --------------------------------------------------------------------------
+  function release()
+    m_refs--
+    if (m_refs == 0)
+      destroy this
+
+  // --------------------------------------------------------------------------
+  function getRefCount() returns int
+    return m_refs
+
+// ============================================================================
+class TestClass
+  static int counter = 0
+  use RefObject
+  construct()
+    counter++
+  ondestroy
+    counter--
+
+// ============================================================================
+@test function newObjectsAreAutomaticallyReferenced()
+  let test = new TestClass()
+  assertTrue(test.getRefCount() == 1)
+
+// ============================================================================
+@test function getIncreasesRefCount()
+  let test = new TestClass()
+  let testPtr = test.get()
+  assertTrue(testPtr.getRefCount() == 2)
+
+// ============================================================================
+@test function releaseDecreasesRefCount()
+  let test = new TestClass()
+  let testPtr = test.get()
+  testPtr.release()
+  assertTrue(test.getRefCount() == 1)
+
+// ============================================================================
+@test function releaseAutomaticallyDestroysObjectWhenRefCountReachesZero()
+  assertTrue(TestClass.counter == 0)
+  let test = new TestClass()
+  assertTrue(TestClass.counter == 1)
+  let testPtr = test.get()
+  assertTrue(TestClass.counter == 1)
+  testPtr.release()
+  assertTrue(TestClass.counter == 1)
+  test.release()
+  assertTrue(TestClass.counter == 0)

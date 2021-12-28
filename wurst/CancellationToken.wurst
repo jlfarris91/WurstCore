@@ -1,0 +1,21 @@
+package CancellationToken
+import RefObject
+
+// ============================================================================
+public class CancellationToken
+  private bool m_canceled = false
+
+  use RefObject
+
+  // --------------------------------------------------------------------------
+  function isCanceled() returns bool
+    return m_canceled
+
+  // --------------------------------------------------------------------------
+  function cancel()
+    m_canceled = true
+
+  // --------------------------------------------------------------------------
+  function cancelAndRelease()
+    cancel()
+    release()

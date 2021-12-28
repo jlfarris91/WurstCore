@@ -44,11 +44,11 @@ public function unit.resetLevelAndSetXP(int xp, bool showEyeCandy)
   this.addXp(xp, showEyeCandy)
 
 // ============================================================================
-public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
-  return replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod, true)
+public function replaceUnitFixed(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
+  return replaceUnitFixed(whichUnit, newUnitId, unitStateMethod, true)
 
 // ============================================================================
-public function replaceUnitFixedTLS(unit whichUnit, integer newUnitId, integer unitStateMethod, bool persistXp) returns unit
+public function replaceUnitFixed(unit whichUnit, integer newUnitId, integer unitStateMethod, bool persistXp) returns unit
   let oldUnit = whichUnit
 
   // If we have bogus data, don't attempt the replace.

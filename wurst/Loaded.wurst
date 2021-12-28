@@ -2,10 +2,12 @@ package Loaded
 import RegisterEvents
 import HashMap
 import Orders
+import ErrorHandling
 
 HashMap<unit, unit> g_loadedUnits = new HashMap<unit, unit>()
 trigger g_unitUnloadedTrigger = CreateTrigger()
-unit g_unloadedUnit
+unit array g_unloadedUnitStack
+int g_unloadedUnitStackCount
 
 // ============================================================================
 /** Register a callback for the event of a unit being unloaded.
@@ -18,7 +20,7 @@ public function registerUnitUnloadedEvent(code callback)
 // ============================================================================
 /** Gets the unit being unloaded for the unit unloaded event */
 public function getUnloadedUnit() returns unit
-  return g_unloadedUnit
+  return peekUnloadedUnit()
 
 // ============================================================================
 /** Gets a value indicating whether the given unit is being held by another */
@@ -31,11 +33,29 @@ public function getTransportUnit(unit loadedUnit) returns unit
   return g_loadedUnits.get(loadedUnit)
 
 // ============================================================================
+function pushUnloadedUnit(unit unloadedUnit)
+  g_unloadedUnitStack[g_unloadedUnitStackCount] = unloadedUnit
+  g_unloadedUnitStackCount++
+
+// ============================================================================
+function peekUnloadedUnit() returns unit
+  return g_unloadedUnitStackCount > 0 ? g_unloadedUnitStack[g_unloadedUnitStackCount-1] : null
+
+// ============================================================================
+function popUnloadedUnit() returns unit
+  if (g_unloadedUnitStackCount == 0)
+    error("Attempting to pop the unloaded unit stack even though it is empty")
+  let result = g_unloadedUnitStack[g_unloadedUnitStackCount]
+  g_unloadedUnitStack[g_unloadedUnitStackCount] = null
+  g_unloadedUnitStackCount--
+  return result
+
+// ============================================================================
 function raiseUnitUnloadedEvent(unit _unit)
   Log.debug("Unit " + _unit.getName() + " unloaded from unit " + getTransportUnit(_unit).getName())
-  g_unloadedUnit = _unit
+  pushUnloadedUnit(_unit)
   g_unitUnloadedTrigger.evaluate()
-  g_unloadedUnit = null
+  popUnloadedUnit()
 
 // ============================================================================
 function onUnitLoaded()

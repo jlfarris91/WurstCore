@@ -1,0 +1,103 @@
+package CancellableClosureTimers
+import TimerUtils
+import CancellationToken
+import ErrorHandling
+
+// ============================================================================
+public abstract class CancellableCallbackSingle
+  protected CancellationToken m_cancellationToken = null
+  protected CancellableCallbackSingle m_prev = null
+  protected CancellableCallbackSingle m_next = null
+  protected CancellableCallbackSingle m_nextCallback = null
+  protected real m_nextDelay = 0.
+  private timer m_timer = null
+
+  // --------------------------------------------------------------------------
+  abstract function call()
+
+  // --------------------------------------------------------------------------
+  private function doCall()
+    if (m_cancellationToken.isCanceled() == false)
+      call()
+    
+    // If we should dispatch another action, do so now. The dispatched callback
+    // will be responsible for cleaning up this callback.
+    if (m_nextCallback != null)
+      if (m_cancellationToken.isCanceled() == false)
+        m_next = doAfter(m_cancellationToken, m_nextDelay, m_nextCallback)
+        m_next.m_prev = this
+        m_nextCallback = null
+      else
+        destroy m_nextCallback
+
+    // If there is no follow up action then delete this callback now
+    if (m_next == null)
+      destroy this
+
+  // --------------------------------------------------------------------------
+  protected function start(timer whichTimer, CancellationToken ct, real time)
+    m_cancellationToken = ct.get()
+    m_timer = whichTimer
+    m_timer.setData(this castTo int)
+    m_timer.start(time, () -> staticCallback())
+
+  // --------------------------------------------------------------------------
+  private static function staticCallback()
+    let t = GetExpiredTimer()
+    let cb = t.getData() castTo thistype
+    cb.doCall()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_prev != null)
+      destroy m_prev
+    m_next = null
+    m_timer.release()
+    m_cancellationToken.release()
+
+// ============================================================================
+public function timer.doAfter(CancellationToken ct, real timeToWait, CancellableCallbackSingle cb) returns CancellableCallbackSingle
+  cb.start(this, ct, timeToWait)
+  return cb
+
+// ============================================================================
+public function doAfter(CancellationToken ct, real timeToWait, CancellableCallbackSingle cb) returns CancellableCallbackSingle
+  return getTimer().doAfter(ct, timeToWait, cb)
+
+// ============================================================================
+public function nullTimer(CancellationToken ct, CancellableCallbackSingle cb) returns CancellableCallbackSingle
+  return doAfter(ct, 0, cb)
+
+// ============================================================================
+public function CancellableCallbackSingle.continueWith(CancellableCallbackSingle cb) returns CancellableCallbackSingle
+  return this.continueWith(0., cb)
+
+// ============================================================================
+public function CancellableCallbackSingle.continueWith(real timeToWait, CancellableCallbackSingle cb) returns CancellableCallbackSingle
+  this.m_nextCallback = cb
+  this.m_nextDelay = timeToWait
+  return cb
+
+// ============================================================================
+@test function nullTimer_canceledImmediately()
+  let ct = new CancellationToken()
+  ct.cancel()
+  nullTimer(ct, () -> error("This shouldn't be called"))
+
+// ============================================================================
+@test function nullTimer_canceledImmediately2()
+  let ct = new CancellationToken()
+  nullTimer(ct, () -> error("This shouldn't be called"))
+  ct.cancel()
+
+// ============================================================================
+@test function doAfter_canceledImmediately()
+  let ct = new CancellationToken()
+  doAfter(ct, 1.0, () -> error("This shouldn't be called"))
+  ct.cancel()
+
+// ============================================================================
+@test function doAfter_canceledBeforeCallback()
+  let ct = new CancellationToken()
+  doAfter(ct, 1.0, () -> error("This shouldn't be called"))
+  doAfter(ct, 0.1, () -> ct.cancel())

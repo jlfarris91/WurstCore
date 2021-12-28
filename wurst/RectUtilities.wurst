@@ -1,0 +1,9 @@
+package RectUtilities
+
+// ============================================================================
+public function rectFromPosHalfSize(vec2 pos, real halfSize) returns rect
+  return Rect(pos.x - halfSize, pos.y - halfSize, pos.x + halfSize, pos.y + halfSize)
+
+// ============================================================================
+public function rect.destr()
+  RemoveRect(this)

@@ -3,6 +3,10 @@ package GroupExtensions
 group g_workingGroup = CreateGroup()
 
 // ============================================================================
+public function group.getFirst() returns unit
+  return FirstOfGroup(this)
+
+// ============================================================================
 public function group.getClosestUnit(vec2 pos) returns unit
   var closestDistSq = REAL_MAX
   unit closestUnit = null

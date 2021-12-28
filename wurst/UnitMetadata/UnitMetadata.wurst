@@ -265,7 +265,7 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   else
     logDebug("[replaceUnitTLS] Replacing unit " + whichUnit.getName() + " with no attached metadata")
 
-  let newUnit = replaceUnitFixedTLS(whichUnit, newUnitId, unitStateMethod, persistXp)
+  let newUnit = replaceUnitFixed(whichUnit, newUnitId, unitStateMethod, persistXp)
 
   if (newUnit.hasMetadata())
     error("Unit should not have metadata yet")

@@ -85,3 +85,18 @@ public function player.controlsUnit(unit targetUnit) returns bool
   let targetUnitOwner = targetUnit.getOwner()
   return this == targetUnitOwner or
          GetPlayerAlliance(this, targetUnitOwner, ALLIANCE_SHARED_ADVANCED_CONTROL)
+
+// ============================================================================
+public enum AllianceState
+  UNALLIED
+  UNALLIED_VISION
+  ALLIED
+  ALLIED_VISION
+  ALLIED_UNITS
+  ALLIED_ADVUNITS
+  NEUTRAL
+  NEUTRAL_VISION
+
+// ============================================================================
+public function player.setAllianceState(player otherPlayer, AllianceState allianceState)
+  SetPlayerAllianceStateBJ(this, otherPlayer, allianceState castTo int)
