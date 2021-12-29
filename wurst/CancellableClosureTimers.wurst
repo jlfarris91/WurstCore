@@ -20,8 +20,10 @@ public abstract class CancellableCallbackSingle
     if (m_prev != null)
       m_prev.release()
     m_next = null
-    m_timer.release()
-    m_cancellationToken.release()
+    if (m_timer != null)
+      m_timer.release()
+    if (m_cancellationToken != null)
+      m_cancellationToken.release()
 
   // --------------------------------------------------------------------------
   abstract function call()
