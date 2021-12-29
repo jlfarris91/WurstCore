@@ -3,6 +3,7 @@ import Time
 import RealtimeUpdate
 import Math
 import Runnable
+import ErrorHandling
 
 public TimeOfDayProgress g_dayProgress
 public TimeOfDayProgress g_nightProgress
@@ -10,7 +11,7 @@ public TimeOfDayProgress g_nightProgress
 // ============================================================================
 public class TimeOfDayProgress extends Runnable implements IRealtimeListener
   private time m_timeOfDayOnStart
-  private timespan m_duration
+  private timespan m_duration = timespan(1)
   private time m_startTime
   private int m_specificDay = -1
 
@@ -24,6 +25,8 @@ public class TimeOfDayProgress extends Runnable implements IRealtimeListener
 
   // --------------------------------------------------------------------------
   function setDuration(timespan duration)
+    if (m_duration.ticks == 0)
+      error("Duration ticks must not be zero")
     m_duration = duration
 
   // --------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import ErrorHandling
 import Meta
 import Object
 import Events
+import Action
 
 // ============================================================================
 public class UnitComponentCreationContext
@@ -73,6 +74,7 @@ public abstract class UnitComponent extends Component
 
   // --------------------------------------------------------------------------
   protected static function dispatch(unit ownerUnit, int compTypeId, bool requireEnabled, Action work)
+    work.acquire()
     if (ownerUnit != null and ownerUnit.isAlive())
       let comp = ownerUnit.getComponent(compTypeId)
       if (comp != null)
@@ -86,8 +88,7 @@ public abstract class UnitComponent extends Component
     else
       Log.debug("UnitComponent", "dispatch", ownerUnit.getName(), "Unit is dead")
     */
-    if (work.getDestroyAfterUse())
-      destroy work
+    work.release()
 
   // --------------------------------------------------------------------------
   protected function dispatch(real seconds, Action work) returns CallbackSingle
@@ -129,12 +130,12 @@ module DispatchedWorkModule
     m_ownerUnit = ownerUnit
     m_compTypeId = compTypeId
     m_requireEnabled = requireEnabled
-    m_work = work
+    m_work = work.acquire()
   
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_work != null and m_work.getDestroyAfterUse())
-      destroy m_work
+    if (m_work != null)
+      m_work.release()
     m_work = null
 
 // ============================================================================
@@ -148,7 +149,6 @@ class DispatchedCallbackSingle extends CallbackSingle
   // --------------------------------------------------------------------------
   override function call()
     UnitComponent.dispatch(m_ownerUnit, m_compTypeId, m_requireEnabled, m_work)
-    m_work = null
 
 // ============================================================================
 class DispatchedEventCallback extends EventCallback
@@ -161,7 +161,6 @@ class DispatchedEventCallback extends EventCallback
   // --------------------------------------------------------------------------
   override function call()
     UnitComponent.dispatch(m_ownerUnit, m_compTypeId, m_requireEnabled, m_work)
-    m_work = null
 
 // ============================================================================
 init

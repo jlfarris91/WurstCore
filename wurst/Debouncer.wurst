@@ -11,6 +11,8 @@ public class Debouncer
 
   // --------------------------------------------------------------------------
   function debounce(Action action, real interval)
+    action.acquire()
     if (m_timer.getRemaining() == 0)
       action.call()
+    action.release()
     m_timer.start(interval, null)

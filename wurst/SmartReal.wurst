@@ -17,14 +17,13 @@ class SmartRealAffector
 
   // --------------------------------------------------------------------------
   construct (SmartReal owner, Func1<real, real> action, real duration)
-    m_action = action
+    m_action = action.acquire()
     if (duration > 0.0)
       m_callback = getTimer().doManual(duration, true, () -> owner.removeAffector(_handle(this castTo int)))
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_action.getDestroyAfterUse())
-      destroy m_action
+    m_action.release()
     if (m_callback != null)
       destroy m_callback
 

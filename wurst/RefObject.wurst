@@ -1,18 +1,40 @@
 package RefObject
+import ErrorHandling
 
 // ============================================================================
+/**
+  The RefObject module provides conveniencies around automatically managing the
+  lifetime of an object. An internal reference count is tracked and the object
+  is destroyed when the reference count reaches zero. Acquiring a reference to
+  the object is done explicitly using acquire(), which will increase the reference
+  count by one, and releasing the reference to the object is done similarly using
+  release(), which decreases the reference count by one.
+
+  Remarks:
+  - A RefObject has a reference count of zero at construction time. This means it
+    is up to the owner of the object to acquire() a reference to it before calling
+    release().
+  - Take care not to mismatch calls to acquire() and release().
+*/
 public module RefObject
-  private int m_refs = 1
+  private int m_refs = 0
 
   // --------------------------------------------------------------------------
-  function get() returns thistype
+  ondestroy
+    if (m_refs > 0)
+      error("RefObject destroyed while still referenced ({0})".format(m_refs.toString()))
+    if (m_refs < 0)
+      error("RefObject get-release mismatch ({0})".format(m_refs.toString()))
+
+  // --------------------------------------------------------------------------
+  function acquire() returns thistype
     m_refs++
     return this
 
   // --------------------------------------------------------------------------
   function release()
     m_refs--
-    if (m_refs == 0)
+    if (m_refs <= 0)
       destroy this
 
   // --------------------------------------------------------------------------
@@ -29,31 +51,37 @@ class TestClass
     counter--
 
 // ============================================================================
-@test function newObjectsAreAutomaticallyReferenced()
+@test function newObjectsAreNotAutomaticallyReferenced()
   let test = new TestClass()
-  assertTrue(test.getRefCount() == 1)
+  assertTrue(test.getRefCount() == 0)
+  destroy test
 
 // ============================================================================
 @test function getIncreasesRefCount()
   let test = new TestClass()
-  let testPtr = test.get()
-  assertTrue(testPtr.getRefCount() == 2)
+  let testPtr = test.acquire()
+  assertTrue(testPtr.getRefCount() == 1)
+  test.release()
 
 // ============================================================================
 @test function releaseDecreasesRefCount()
   let test = new TestClass()
-  let testPtr = test.get()
+  let testPtr = test.acquire()
+  test.getRefCount().assertEquals(1)
+  testPtr.acquire()
+  test.getRefCount().assertEquals(2)
   testPtr.release()
-  assertTrue(test.getRefCount() == 1)
+  test.getRefCount().assertEquals(1)
+  testPtr.release()
+  //test.getRefCount().assertEquals(1) // object is already destroyed, tested by releaseAutomaticallyDestroysObjectWhenRefCountReachesZero()
 
 // ============================================================================
 @test function releaseAutomaticallyDestroysObjectWhenRefCountReachesZero()
-  assertTrue(TestClass.counter == 0)
+  TestClass.counter.assertEquals(0)
   let test = new TestClass()
-  assertTrue(TestClass.counter == 1)
-  let testPtr = test.get()
-  assertTrue(TestClass.counter == 1)
+  TestClass.counter.assertEquals(1)
+  let testPtr = test.acquire()
+  TestClass.counter.assertEquals(1)
+  test.getRefCount().assertEquals(1)
   testPtr.release()
-  assertTrue(TestClass.counter == 1)
-  test.release()
-  assertTrue(TestClass.counter == 0)
+  TestClass.counter.assertEquals(0)

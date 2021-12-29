@@ -6,6 +6,7 @@ import Object
 import ClosureTimers
 import ErrorHandling
 import Events
+import Action
 
 // ============================================================================
 public class PlayerComponentCreationContext
@@ -51,23 +52,23 @@ public abstract class PlayerComponent extends Component
 
   // --------------------------------------------------------------------------
   protected static function dispatch(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
+    work.acquire()
     if (ownerPlayer != null and ownerPlayer.getSlotState() == PLAYER_SLOT_STATE_PLAYING)
       let comp = ownerPlayer.getComponent(componentTypeId)
       if (comp != null)
         if (not requireEnabled or comp.getEnabled())
           work.call()
-    if (work.getDestroyAfterUse())
-      destroy work
+    work.release()
 
   // --------------------------------------------------------------------------
   protected static function dispatch(player ownerPlayer, int componentTypeId, bool requireEnabled, Action1<IComponent> work)
+    work.acquire()
     if (ownerPlayer != null and ownerPlayer.getSlotState() == PLAYER_SLOT_STATE_PLAYING)
       let comp = ownerPlayer.getComponent(componentTypeId)
       if (comp != null)
         if (not requireEnabled or comp.getEnabled())
           work.call(comp)
-    if (work.getDestroyAfterUse())
-      destroy work
+    work.release()
 
   // --------------------------------------------------------------------------
   protected function dispatch(real seconds, Action work) returns CallbackSingle
@@ -109,12 +110,12 @@ module DispatchedWorkModule
     m_ownerPlayer = ownerPlayer
     m_componentTypeId = componentTypeId
     m_requireEnabled = requireEnabled
-    m_work = work
+    m_work = work.acquire()
   
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_work != null and m_work.getDestroyAfterUse())
-      destroy m_work
+    if (m_work != null)
+      m_work.release()
     m_work = null
 
 // ============================================================================
@@ -128,7 +129,6 @@ class DispatchedCallbackSingle extends CallbackSingle
   // --------------------------------------------------------------------------
   override function call()
     PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
-    m_work = null
 
 // ============================================================================
 class DispatchedEventCallback extends EventCallback
@@ -141,7 +141,6 @@ class DispatchedEventCallback extends EventCallback
   // --------------------------------------------------------------------------
   override function call()
     PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
-    m_work = null
 
 // ============================================================================
 init

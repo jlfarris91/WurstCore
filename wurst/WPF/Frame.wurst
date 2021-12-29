@@ -13,7 +13,6 @@ import Execute
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 @configurable public string FRAME_LOG_FILTER_STRING = null
 
-Action1<Frame> g_playerChanged = context -> context.onPlayerChanged()
 LinkedList<ILightweightProperty> g_allLightweightProperties
 
 // ============================================================================
@@ -804,6 +803,14 @@ public class FrameTemplate implements IFrameTemplate
   private Action1<Frame> m_initializer
 
   // --------------------------------------------------------------------------
+  ondestroy
+    m_frameDef = null
+    m_frameFactory = null
+    if (m_initializer != null)
+      m_initializer.release()
+      m_initializer = null
+
+  // --------------------------------------------------------------------------
   override function getFrameDefinition() returns FrameDefinition
     return m_frameDef
   
@@ -825,7 +832,7 @@ public class FrameTemplate implements IFrameTemplate
   
   // --------------------------------------------------------------------------
   function setInitializer(Action1<Frame> value)
-    m_initializer = value
+    m_initializer = value.acquire()
 
   // --------------------------------------------------------------------------
   override function createFrame() returns Frame

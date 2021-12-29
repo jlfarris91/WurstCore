@@ -1,8 +1,8 @@
 package Events
-import public Action
 import ErrorHandling
 import Vector
 import public Handle
+import RefObject
 
 // ============================================================================
 public class Event implements IHandleProvider
@@ -16,11 +16,13 @@ public class Event implements IHandleProvider
   // --------------------------------------------------------------------------
   construct(Vector<EventCallback> callbacks)
     m_callbacks = callbacks
+    for callback in m_callbacks
+      callback.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     for callback in m_callbacks
-      destroy callback
+      callback.release()
     destroy m_callbacks
     m_callbacks = null
 
@@ -30,7 +32,7 @@ public class Event implements IHandleProvider
       argumentNullError("callback")
     
     if (m_callbacks.contains(callback) == false)
-      m_callbacks.add(callback)
+      m_callbacks.add(callback.acquire())
     
     callback.markedForRemoval = false
 
@@ -70,7 +72,7 @@ public class Event implements IHandleProvider
     while index < m_callbacks.getCount()
       let callback = m_callbacks.getItem(index)
       if (callback.markedForRemoval)
-        destroy m_callbacks.removeAt(index)
+        m_callbacks.removeAt(index).release()
         // Log.info("Event", "cleanup", "", "Callback at index {0} destroyed.".format(index.toString()))
       else
         index++
@@ -92,11 +94,13 @@ public class Event1<TArg1> implements IHandleProvider
   // --------------------------------------------------------------------------
   construct(Vector<Event1Callback<TArg1>> callbacks)
     m_callbacks = callbacks
+    for callback in m_callbacks
+      callback.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     for callback in m_callbacks
-      destroy callback
+      callback.release()
     destroy m_callbacks
     m_callbacks = null
 
@@ -106,7 +110,7 @@ public class Event1<TArg1> implements IHandleProvider
       argumentNullError("callback")
     
     if (m_callbacks.contains(callback) == false)
-      m_callbacks.add(callback)
+      m_callbacks.add(callback.acquire())
     
     callback.markedForRemoval = false
 
@@ -141,7 +145,7 @@ public class Event1<TArg1> implements IHandleProvider
     while index < m_callbacks.getCount()
       let callback = m_callbacks.getItem(index)
       if (callback.markedForRemoval)
-        destroy m_callbacks.removeAt(index)
+        m_callbacks.removeAt(index).release()
       else
         index++
 
@@ -162,11 +166,13 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
   // --------------------------------------------------------------------------
   construct(Vector<Event2Callback<TArg1, TArg2>> callbacks)
     m_callbacks = callbacks
+    for callback in m_callbacks
+      callback.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     for callback in m_callbacks
-      destroy callback
+      callback.release()
     destroy m_callbacks
     m_callbacks = null
 
@@ -174,9 +180,9 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
   function register(Event2Callback<TArg1, TArg2> callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
-    
+
     if (m_callbacks.contains(callback) == false)
-      m_callbacks.add(callback)
+      m_callbacks.add(callback.acquire())
     
     callback.markedForRemoval = false
 
@@ -211,7 +217,7 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
     while index < m_callbacks.getCount()
       let callback = m_callbacks.getItem(index)
       if (callback.markedForRemoval)
-        destroy m_callbacks.removeAt(index)
+        m_callbacks.removeAt(index).release()
       else
         index++
 
@@ -223,16 +229,19 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
 // ============================================================================
 public abstract class EventCallback
   protected bool markedForRemoval
+  use RefObject
   abstract function call()
 
 // ============================================================================
 public abstract class Event1Callback<TArg1>
   protected bool markedForRemoval
+  use RefObject
   abstract function call(TArg1 arg1)
 
 // ============================================================================
 public abstract class Event2Callback<TArg1, TArg2>
   protected bool markedForRemoval
+  use RefObject
   abstract function call(TArg1 arg1, TArg2 arg2)
 
 // ============================================================================

@@ -2,13 +2,15 @@ package ObjectEnumerable
 import Object
 import Func
 import Enumerable
+import RefObject
 
 import initlater LinkedList
 import initlater HashList
 import initlater Vector
 
 // ============================================================================
-public interface IObjectAction
+public abstract class IObjectAction
+  use RefObject
   function call(object object)
 
 // ============================================================================
@@ -24,10 +26,12 @@ public interface IObjectEnumerable
 
 // ============================================================================
 public function IObjectEnumerable.forEach(IObjectAction action)
+  action.acquire()
   let enumerator = this.iterator()
   while (enumerator.hasNext())
     action.call(enumerator.next())
   destroy enumerator
+  action.release()
 
 // ============================================================================
 public function IObjectEnumerable.cast<T>(int objectTypeId, bool owns) returns IEnumerable<T>
@@ -270,14 +274,14 @@ public class RangeObjectEnumerator<T> implements IObjectEnumerator
 
   // --------------------------------------------------------------------------
   construct(Func1<int, T> iterator, int objectTypeId, int startIndex, int endIndex)
-    m_iterator = iterator
+    m_iterator = iterator.acquire()
     m_objectTypeId = objectTypeId
     m_curr = startIndex
     m_end = endIndex
 
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_iterator
+    m_iterator.release()
 
   // --------------------------------------------------------------------------
   override function hasNext() returns bool

@@ -2,6 +2,7 @@ package CancellableClosureTimers
 import TimerUtils
 import CancellationToken
 import ErrorHandling
+import RefObject
 
 // ============================================================================
 public abstract class CancellableCallbackSingle
@@ -11,6 +12,16 @@ public abstract class CancellableCallbackSingle
   protected CancellableCallbackSingle m_nextCallback = null
   protected real m_nextDelay = 0.
   private timer m_timer = null
+
+  use RefObject
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_prev != null)
+      m_prev.release()
+    m_next = null
+    m_timer.release()
+    m_cancellationToken.release()
 
   // --------------------------------------------------------------------------
   abstract function call()
@@ -24,19 +35,20 @@ public abstract class CancellableCallbackSingle
     // will be responsible for cleaning up this callback.
     if (m_nextCallback != null)
       if (m_cancellationToken.isCanceled() == false)
+        m_nextCallback.acquire()
         m_next = doAfter(m_cancellationToken, m_nextDelay, m_nextCallback)
         m_next.m_prev = this
         m_nextCallback = null
       else
-        destroy m_nextCallback
+        m_nextCallback.release()
 
     // If there is no follow up action then delete this callback now
     if (m_next == null)
-      destroy this
+      this.release()
 
   // --------------------------------------------------------------------------
   protected function start(timer whichTimer, CancellationToken ct, real time)
-    m_cancellationToken = ct.get()
+    m_cancellationToken = ct.acquire()
     m_timer = whichTimer
     m_timer.setData(this castTo int)
     m_timer.start(time, () -> staticCallback())
@@ -46,14 +58,6 @@ public abstract class CancellableCallbackSingle
     let t = GetExpiredTimer()
     let cb = t.getData() castTo thistype
     cb.doCall()
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_prev != null)
-      destroy m_prev
-    m_next = null
-    m_timer.release()
-    m_cancellationToken.release()
 
 // ============================================================================
 public function timer.doAfter(CancellationToken ct, real timeToWait, CancellableCallbackSingle cb) returns CancellableCallbackSingle

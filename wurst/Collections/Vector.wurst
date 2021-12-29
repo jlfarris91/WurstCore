@@ -148,10 +148,10 @@ public class Vector<T>
 
 // ============================================================================
 public function Vector<T>.forEach<T>(Action1<T> action)
+  action.acquire()
   for _item in this
     action.call(_item)
-  if (action.getDestroyAfterUse())
-    destroy action
+  action.release()
 
 // ============================================================================
 public function Vector<T>.getRandom<T>() returns T
@@ -256,6 +256,7 @@ public function Vector<T>.swap<T>(int indexA, int indexB)
 
 // ============================================================================
 function Vector<T>.quickSortPartition<T>(int low, int high, Func2<T, T, bool> comparator) returns int
+  comparator.acquire()
   let pivot = this.getItem(high)
   let count = this.getCount()
   var i = low - 1
@@ -266,14 +267,17 @@ function Vector<T>.quickSortPartition<T>(int low, int high, Func2<T, T, bool> co
       this.swap(i, j)
     j++
   this.swap(i + 1,high)
+  comparator.release()
   return i + 1
 
 // ============================================================================
 function Vector<T>.quickSort<T>(int left, int right, Func2<T, T, bool> comparator)
   if (left < right)
+    comparator.acquire()
     let partition = this.quickSortPartition(left, right, comparator)
     this.quickSort(left, partition-1, comparator)
     this.quickSort(partition+1, right, comparator)
+    comparator.release()
 
 // ============================================================================
 public function Vector<T>.sort<T>(Func2<T, T, bool> comparator)

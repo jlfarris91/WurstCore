@@ -23,7 +23,7 @@ public class HandlePool<T> implements IHandleProviderT<T>
   function add(Func1<_handle, T> factory) returns _handle
     m_handleCounter++
     let h = _handle(m_handleCounter)
-    m_activeHandles.put(h, factory.call(h))
+    m_activeHandles.put(h, factory.acquireCallRelease(h))
     return h
 
   // --------------------------------------------------------------------------

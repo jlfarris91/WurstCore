@@ -6,14 +6,14 @@ import HashMap
 @configurable public constant real TIME_OF_NIGHT = 18.0
 @configurable public constant real TIME_SECONDS_PER_DAY = 480.0
 
+public constant TICKS_PER_MINUTE = 1
+public constant TICKS_PER_HOUR = 60
+public constant TICKS_PER_DAY = 1440
+
 public constant time DAY_TIME = makeTime(0, TIME_OF_DAY)
 public constant time NIGHT_TIME = makeTime(0, TIME_OF_NIGHT)
 public constant timespan DAY_LENGTH = makeTimespan(0, 12, 0)
 public constant timespan NIGHT_LENGTH = makeTimespan(0, 12, 0)
-
-public constant TICKS_PER_MINUTE = 1
-public constant TICKS_PER_HOUR = 60
-public constant TICKS_PER_DAY = 1440
 
 public constant time TIME_GAME_START = time(0)
 
@@ -261,6 +261,7 @@ function onNewDay()
 // ============================================================================
 init
   registerTimeOfDayEvent(0.0, function onNewDay)
+  Log.info("night length: " + NIGHT_LENGTH.toString())
 
 // ============================================================================
 //

@@ -26,6 +26,7 @@ function presetGetter.setValue(string value) returns presetGetter
 
 // ============================================================================
 function presetGetter.setValue(Func1<int, string> getter) returns presetGetter
+  getter.acquire()
   var result = this.destr()
   result.getter = getter
   return result
@@ -33,8 +34,8 @@ function presetGetter.setValue(Func1<int, string> getter) returns presetGetter
 // ============================================================================
 function presetGetter.destr() returns presetGetter
   var result = this
-  if (result.getter != null and result.getter.getDestroyAfterUse())
-    destroy result.getter
+  if (result.getter != null)
+    result.getter.release()
   result.getter = null
   result.value = null
   return result
@@ -116,7 +117,7 @@ public class TooltipItem
 
   // --------------------------------------------------------------------------
   function addValue(Func1<int, string> getter)
-    addValue(presetGetter(null, getter))
+    addValue(presetGetter(null, getter.acquire()))
 
   // --------------------------------------------------------------------------
   function clone() returns TooltipItem

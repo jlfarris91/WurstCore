@@ -1,5 +1,6 @@
 package Range
 import Math
+import RefObject
 
 // ============================================================================
 public tuple rangeReal(real min, real max)
@@ -163,233 +164,31 @@ public function rangeInt.toDamageRangeString() returns string
   return "{0} - {1}".format(I2S(this.min), I2S(this.max))
 
 // ============================================================================
-public interface RangeRealFunc<T>
+public interface RangeRealFunc
+  use RefObject
   function call() returns rangeReal
 
 // ============================================================================
 public interface RangeRealFunc1<T>
+  use RefObject
   function call(T arg1) returns rangeReal
 
 // ============================================================================
 public interface RangeRealAction
+  use RefObject
   function call(rangeReal arg)
 
 // ============================================================================
-public interface RangeRealAction1<T>
-  function call(rangeReal arg1, T arg2)
-
-// ============================================================================
-public interface RangeIntFunc<T>
+public interface RangeIntFunc
+  use RefObject
   function call() returns rangeInt
 
 // ============================================================================
 public interface RangeIntFunc1<T>
+  use RefObject
   function call(T arg1) returns rangeInt
 
 // ============================================================================
 public interface RangeIntAction
+  use RefObject
   function call(rangeInt arg)
-
-// ============================================================================
-public interface RangeIntAction1<T>
-  function call(rangeInt arg1, T arg2)
-
-// ============================================================================
-public class FunctionalRangeReal
-  private RangeRealFunc m_getter
-  private RangeRealAction m_setter
-  private rangeReal m_value
-
-  // --------------------------------------------------------------------------
-  construct(rangeReal value)
-    m_value = value
-
-  // --------------------------------------------------------------------------
-  construct(RangeRealFunc getter)
-    m_getter = getter
-    m_setter = null
-
-  // --------------------------------------------------------------------------
-  construct(RangeRealFunc getter, RangeRealAction setter)
-    m_getter = getter
-    m_setter = setter
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_getter != null)
-      destroy m_getter
-      m_getter = null
-
-    if (m_setter != null)
-      destroy m_setter
-      m_setter = null
-
-  // --------------------------------------------------------------------------
-  function getValue() returns rangeReal
-    if (m_getter != null)
-      m_value = m_getter.call()
-    return m_value
-
-  // --------------------------------------------------------------------------
-  function setValue(rangeReal value)
-    m_value = value
-    if (m_setter != null)
-      m_setter.call(value)
-
-  // --------------------------------------------------------------------------
-  static function fromValue(rangeReal value) returns FunctionalRangeReal
-    return new FunctionalRangeReal(value)
-
-  // --------------------------------------------------------------------------
-  static function fromFunc(RangeRealFunc func) returns FunctionalRangeReal
-    return new FunctionalRangeReal(func, null)
-
-// ============================================================================
-public class FunctionalRangeRealT
-  private RangeRealFunc1<real> m_getter
-  private RangeRealAction1<real> m_setter
-  private rangeReal m_value
-
-  // --------------------------------------------------------------------------
-  construct(rangeReal value)
-    m_value = value
-
-  // --------------------------------------------------------------------------
-  construct(RangeRealFunc1<real> getter)
-    m_getter = getter
-    m_setter = null
-
-  // --------------------------------------------------------------------------
-  construct(RangeRealFunc1<real> getter, RangeRealAction1<real> setter)
-    m_getter = getter
-    m_setter = setter
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_getter != null)
-      destroy m_getter
-      m_getter = null
-
-    if (m_setter != null)
-      destroy m_setter
-      m_setter = null
-
-  // --------------------------------------------------------------------------
-  function getValue(real time) returns rangeReal
-    if (m_getter != null)
-      m_value = m_getter.call(time)
-    return m_value
-
-  // --------------------------------------------------------------------------
-  function setValue(real time, rangeReal value)
-    m_value = value
-    if (m_setter != null)
-      m_setter.call(value, time)
-
-  // --------------------------------------------------------------------------
-  static function fromValue(rangeReal value) returns FunctionalRangeRealT
-    return new FunctionalRangeRealT(value)
-
-  // --------------------------------------------------------------------------
-  static function fromFunc(RangeRealFunc1<real> func) returns FunctionalRangeRealT
-    return new FunctionalRangeRealT(func, null)
-
-// ============================================================================
-public class FunctionalRangeInt
-  private RangeIntFunc m_getter
-  private RangeIntAction m_setter
-  private rangeInt m_value
-
-  // --------------------------------------------------------------------------
-  construct(rangeInt value)
-    m_value = value
-
-  // --------------------------------------------------------------------------
-  construct(RangeIntFunc getter)
-    m_getter = getter
-    m_setter = null
-
-  // --------------------------------------------------------------------------
-  construct(RangeIntFunc getter, RangeIntAction setter)
-    m_getter = getter
-    m_setter = setter
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_getter != null)
-      destroy m_getter
-      m_getter = null
-
-    if (m_setter != null)
-      destroy m_setter
-      m_setter = null
-
-  // --------------------------------------------------------------------------
-  function getValue() returns rangeInt
-    if (m_getter != null)
-      m_value = m_getter.call()
-    return m_value
-
-  // --------------------------------------------------------------------------
-  function setValue(rangeInt value)
-    m_value = value
-    if (m_setter != null)
-      m_setter.call(value)
-
-  // --------------------------------------------------------------------------
-  static function fromValue(rangeInt value) returns FunctionalRangeInt
-    return new FunctionalRangeInt(value)
-
-  // --------------------------------------------------------------------------
-  static function fromFunc(RangeIntFunc func) returns FunctionalRangeInt
-    return new FunctionalRangeInt(func, null)
-
-// ============================================================================
-public class FunctionalRangeIntT
-  private RangeIntFunc1<real> m_getter
-  private RangeIntAction1<real> m_setter
-  private rangeInt m_value
-
-  // --------------------------------------------------------------------------
-  construct(rangeInt value)
-    m_value = value
-
-  // --------------------------------------------------------------------------
-  construct(RangeIntFunc1<real> getter)
-    m_getter = getter
-    m_setter = null
-
-  // --------------------------------------------------------------------------
-  construct(RangeIntFunc1<real> getter, RangeIntAction1<real> setter)
-    m_getter = getter
-    m_setter = setter
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_getter != null)
-      destroy m_getter
-      m_getter = null
-
-    if (m_setter != null)
-      destroy m_setter
-      m_setter = null
-
-  // --------------------------------------------------------------------------
-  function getValue(real time) returns rangeInt
-    if (m_getter != null)
-      m_value = m_getter.call(time)
-    return m_value
-
-  // --------------------------------------------------------------------------
-  function setValue(real time, rangeInt value)
-    m_value = value
-    if (m_setter != null)
-      m_setter.call(value, time)
-
-  // --------------------------------------------------------------------------
-  static function fromValue(rangeInt value) returns FunctionalRangeIntT
-    return new FunctionalRangeIntT(value)
-
-  // --------------------------------------------------------------------------
-  static function fromFunc(RangeIntFunc1<real> func) returns FunctionalRangeIntT
-    return new FunctionalRangeIntT(func, null)

@@ -68,29 +68,29 @@ public class StringPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, string> getter)
     super(name, "string")
-    m_getter = getter
+    m_getter = getter.acquire()
     m_setter = null
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, string> getter, Action2<T, string> setter)
     super(name, "string")
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, string> getter, Action2<T, string> setter, string editorType)
     super(name, editorType)
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_getter != null)
-      destroy m_getter
+      m_getter.release()
       m_getter = null
 
     if (m_setter != null)
-      destroy m_setter
+      m_setter.release()
       m_setter = null
 
     if (m_contextResolver != null)
@@ -134,29 +134,29 @@ public class IntPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, int> getter)
     super(name, "int")
-    m_getter = getter
+    m_getter = getter.acquire()
     m_setter = null
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, int> getter, Action2<T, int> setter)
     super(name, "int")
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, int> getter, Action2<T, int> setter, string editorType)
     super(name, editorType)
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_getter != null)
-      destroy m_getter
+      m_getter.release()
       m_getter = null
 
     if (m_setter != null)
-      destroy m_setter
+      m_setter.release()
       m_setter = null
 
     if (m_contextResolver != null)
@@ -209,29 +209,29 @@ public class RealPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, real> getter)
     super(name, "real")
-    m_getter = getter
+    m_getter = getter.acquire()
     m_setter = null
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, real> getter, Action2<T, real> setter)
     super(name, "real")
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, real> getter, Action2<T, real> setter, string editorType)
     super(name, editorType)
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_getter != null)
-      destroy m_getter
+      m_getter.release()
       m_getter = null
 
     if (m_setter != null)
-      destroy m_setter
+      m_setter.release()
       m_setter = null
 
     if (m_contextResolver != null)
@@ -282,29 +282,29 @@ public class BoolPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, bool> getter)
     super(name, "bool")
-    m_getter = getter
+    m_getter = getter.acquire()
     m_setter = null
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, bool> getter, Action2<T, bool> setter)
     super(name, "bool")
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, bool> getter, Action2<T, bool> setter, string editorType)
     super(name, editorType)
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_getter != null)
-      destroy m_getter
+      m_getter.release()
       m_getter = null
 
     if (m_setter != null)
-      destroy m_setter
+      m_setter.release()
       m_setter = null
 
     if (m_contextResolver != null)
@@ -347,29 +347,29 @@ public class UnitPropertyDescriptor<T> extends PropertyDescriptor
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, unit> getter)
     super(name, "unit")
-    m_getter = getter
+    m_getter = getter.acquire()
     m_setter = null
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, unit> getter, Action2<T, unit> setter)
     super(name, "unit")
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   construct(string name, Func1<T, unit> getter, Action2<T, unit> setter, string editorType)
     super(name, editorType)
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_getter != null)
-      destroy m_getter
+      m_getter.release()
       m_getter = null
 
     if (m_setter != null)
-      destroy m_setter
+      m_setter.release()
       m_setter = null
 
     if (m_contextResolver != null)

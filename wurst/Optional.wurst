@@ -112,8 +112,7 @@ public function optionalInt.reduce(int ifNone) returns int
 public function optionalInt.reduce(Func<int> ifNone) returns int
   var value = this.value
   if (not this.hasValue)
-    value = ifNone.call()
-  destroy ifNone
+    value = ifNone.acquireCallRelease()
   return value
 
 // ============================================================================
@@ -124,8 +123,7 @@ public function optionalReal.reduce(real ifNone) returns real
 public function optionalReal.reduce(Func<real> ifNone) returns real
   var value = this.value
   if (not this.hasValue)
-    value = ifNone.call()
-  destroy ifNone
+    value = ifNone.acquireCallRelease()
   return value
 
 // ============================================================================
@@ -136,8 +134,7 @@ public function optionalString.reduce(string ifNone) returns string
 public function optionalString.reduce(Func<string> ifNone) returns string
   var value = this.value
   if (not this.hasValue)
-    value = ifNone.call()
-  destroy ifNone
+    value = ifNone.acquireCallRelease()
   return value
 
 // ============================================================================
@@ -148,8 +145,7 @@ public function optionalBool.reduce(bool ifNone) returns bool
 public function optionalBool.reduce(Func<bool> ifNone) returns bool
   var value = this.value
   if (not this.hasValue)
-    value = ifNone.call()
-  destroy ifNone
+    value = ifNone.acquireCallRelease()
   return value
 
 // ============================================================================
@@ -160,8 +156,7 @@ public function optionalVec2.reduce(vec2 ifNone) returns vec2
 public function optionalVec2.reduce(FuncVec2 ifNone) returns vec2
   var value = this.value
   if (not this.hasValue)
-    value = ifNone.call()
-  destroy ifNone
+    value = ifNone.acquireCallRelease()
   return value
 
 // ============================================================================
@@ -172,6 +167,5 @@ public function optionalVec3.reduce(vec3 ifNone) returns vec3
 public function optionalVec3.reduce(FuncVec3 ifNone) returns vec3
   var value = this.value
   if (not this.hasValue)
-    value = ifNone.call()
-  destroy ifNone
+    value = ifNone.acquireCallRelease()
   return value

@@ -31,10 +31,12 @@ public function IEnumerable<T>.read<T>() returns IEnumerable<T>
 
 // ============================================================================
 public function IEnumerable<T>.forEach<T>(Action1<T> action)
+  action.acquire()
   let enumerator = this.iterator()
   while (enumerator.hasNext())
     action.call(enumerator.next())
   destroy enumerator
+  action.release()
 
 // ============================================================================
 class EmptyEnumerable<T> extends IEnumerable<T>
@@ -272,13 +274,13 @@ public class RangeEnumerator<T> extends IEnumerator<T>
   
   // --------------------------------------------------------------------------
   construct(Func1<int, T> iterator, int startIndex, int endIndex)
-    m_iterator = iterator
+    m_iterator = iterator.acquire()
     m_curr = startIndex
     m_end = endIndex
   
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_iterator
+    m_iterator.release()
   
   // --------------------------------------------------------------------------
   override function hasNext() returns bool

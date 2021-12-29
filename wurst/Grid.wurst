@@ -86,11 +86,11 @@ public class Grid implements IGrid
     
   // --------------------------------------------------------------------------
   function forEachCell(Action2<int, int> action)
+    action.acquire()
     for r = 0 to m_height - 1
       for c = 0 to m_width - 1
         action.call(r, c)
-    if (action.getDestroyAfterUse())
-      destroy action
+    action.release()
 
   // --------------------------------------------------------------------------
   function getArea(bounds bounds) returns span

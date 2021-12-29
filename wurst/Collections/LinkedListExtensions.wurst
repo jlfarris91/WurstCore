@@ -45,12 +45,13 @@ public function LinkedList<T>.take<T>(int count) returns LinkedList<T>
 public function LinkedList<TElem>.toWeightedSet<TElem>(Func1<TElem, real> selector) returns WeightedSet<TElem>
   if (selector == null)
     argumentNullError("selector")
+
+  selector.acquire()
   
   let output = new WeightedSet<TElem>()
   this.forEach(elem -> output.add(elem, selector.call(elem)))
- 
-  if (selector.getDestroyAfterUse())
-    destroy selector
+
+  selector.release()
   
   return output
 
@@ -60,18 +61,21 @@ public function LinkedList<TElem>.getLast<TElem>() returns TElem
 
 // ============================================================================
 public function LinkedList<TElem>.select<TElem, TRet>(Func1<TElem, TRet> selector) returns LinkedList<TRet>
+  selector.acquire()
+
   let result = new LinkedList<TRet>
   for elem in this
     result.add(selector.call(elem))
-  
-  if (selector.getDestroyAfterUse())
-    destroy selector
+
+  selector.release()
 
   return result
 
 // ============================================================================
 // Automatically destroys the selected LinkedList<> after enumerating
 public function LinkedList<TElem>.selectMany<TElem, TRet>(Func1<TElem, LinkedList<TRet>> selector) returns LinkedList<TRet>
+  selector.acquire()
+
   let result = new LinkedList<TRet>
   for elem in this
     let selectedElems = selector.call(elem)
@@ -79,24 +83,24 @@ public function LinkedList<TElem>.selectMany<TElem, TRet>(Func1<TElem, LinkedLis
       for selectedElem in selectedElems
         result.add(selectedElem)
       destroy selectedElems
-  
-  if (selector.getDestroyAfterUse())
-    destroy selector
+
+  selector.release()
 
   return result
 
 // ============================================================================
 // Does not destroy the selected LinkedList<> after enumerating
 public function LinkedList<TElem>.selectManyOwned<TElem, TRet>(Func1<TElem, LinkedList<TRet>> selector) returns LinkedList<TRet>
+  selector.acquire()
+  
   let result = new LinkedList<TRet>
   for elem in this
     let selectedElems = selector.call(elem)
     if (selectedElems != null)
       for selectedElem in selectedElems
         result.add(selectedElem)
-  
-  if (selector.getDestroyAfterUse())
-    destroy selector
+
+  selector.release()
 
   return result
 

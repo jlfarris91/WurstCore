@@ -431,8 +431,13 @@ public class PropertyInfo extends MemberInfo
   // --------------------------------------------------------------------------
   construct (Type owner, Func1<Object, Object> getter, Action2<Object, Object> setter)
     super(owner)
-    m_getter = getter
-    m_setter = setter
+    m_getter = getter.acquire()
+    m_setter = setter.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_getter.release()
+    m_setter.release()
 
   // --------------------------------------------------------------------------
   function getValue(Object context) returns Object
