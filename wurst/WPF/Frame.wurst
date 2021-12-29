@@ -211,6 +211,10 @@ public class Frame
     return m_frameHandle.getText()
 
   // --------------------------------------------------------------------------
+  function setTextAlignment(textaligntype vert, textaligntype horz)
+    m_frameHandle.setTextAlignment(vert, horz)
+
+  // --------------------------------------------------------------------------
   function getEnabled() returns bool
     return m_frameHandle.isEnabled()
 
