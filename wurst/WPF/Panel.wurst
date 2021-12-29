@@ -51,7 +51,9 @@ public class Panel extends Frame
   override function arrangeOverride(vec2 layoutSize) returns vec2
     vec2 result
     if (m_layout != null)
+      //log("arrangeOverride", "layoutSize: " + layoutSize.toString())
       result = m_layout.arrange(this, layoutSize)
+      //log("arrangeOverride", "result: " + layoutSize.toString())
     else
       super.arrangeOverride(layoutSize)
       result = layoutSize

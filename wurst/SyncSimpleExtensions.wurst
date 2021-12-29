@@ -5,7 +5,7 @@ import VectorExtensions
 
 // ============================================================================
 public function vec2.sync(player p, Vec2Action callback)
-  this.toString2().sync(p) dataStr ->
+  this.toString().sync(p) dataStr ->
     callback.call(dataStr.toVec2())
     if (callback.getDestroyAfterUse())
       destroy callback

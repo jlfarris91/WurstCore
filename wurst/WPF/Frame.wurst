@@ -11,6 +11,7 @@ import ErrorHandling
 import Execute
 
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
+@configurable public string FRAME_LOG_FILTER_STRING = null
 
 Action1<Frame> g_playerChanged = context -> context.onPlayerChanged()
 LinkedList<ILightweightProperty> g_allLightweightProperties
@@ -49,8 +50,13 @@ public class Frame
   protected LayoutRequest m_arrangeRequest = null
 
   // --------------------------------------------------------------------------
-  function log(string message)
-    Log.info("[{0}] {1}".format(getFullName(), message))
+  protected function log(string message)
+    if (FRAME_LOG_FILTER_STRING == null or getFullName().contains(FRAME_LOG_FILTER_STRING))
+      Log.info("[{0}] {1}".format(getFullName(), message))
+
+  // --------------------------------------------------------------------------
+  protected function log(string context, string message)
+    log("{0}: {1}".format(context, message))
 
   // --------------------------------------------------------------------------
   construct(framehandle frameHandle)
@@ -194,6 +200,7 @@ public class Frame
   // --------------------------------------------------------------------------
   function setAbsArea(framepointtype framepoint, vec2 pos, vec2 size)
     m_frameHandle.setAbsPoint(framepoint, pos)
+    m_desiredSize = size
     arrange(size)
 
   // --------------------------------------------------------------------------
@@ -494,11 +501,11 @@ public class Frame
   // --------------------------------------------------------------------------
   function arrange(vec2 availableSize)
 
-    if (availableSize.x == REAL_MAX)
-      Log.error("Arrange width cannot be REAL_MAX")
+    //if (availableSize.x == REAL_MAX)
+    //  Log.error("Arrange width cannot be REAL_MAX")
 
-    if (availableSize.y == REAL_MAX)
-      Log.error("Arrange width cannot be REAL_MAX")
+    //if (availableSize.y == REAL_MAX)
+    //  Log.error("Arrange height cannot be REAL_MAX")
 
     if (not isVisible())
       if (m_arrangeRequest != null)
@@ -538,6 +545,8 @@ public class Frame
   // --------------------------------------------------------------------------
   private function arrangeCore(vec2 availableSize)
 
+    //log("arrangeCore", "availableSize: " + availableSize.toString())
+
     let margin = getMargin()
     let marginWidth = margin.width()
     let marginHeight = margin.height()
@@ -546,15 +555,21 @@ public class Frame
       max(0, availableSize.x - marginWidth),
       max(0, availableSize.y - marginHeight))
 
+    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
+
     let desiredSizeMarginAdjusted = vec2(
       max(0, m_desiredSize.x - marginWidth),
       max(0, m_desiredSize.y - marginHeight))
+
+    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
 
     if (arrangeSize.x < desiredSizeMarginAdjusted.x)
       arrangeSize.x = desiredSizeMarginAdjusted.x
 
     if (arrangeSize.y < desiredSizeMarginAdjusted.y)
       arrangeSize.y = desiredSizeMarginAdjusted.y
+
+    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
     
     if (getHorizontalAlignment() != STRETCH)
       arrangeSize.x = desiredSizeMarginAdjusted.x
@@ -564,8 +579,19 @@ public class Frame
 
     // TODO: max size?
 
+    // Allow root frames to auto-size to fir their children
+    if (m_parent == null)
+      if (m_desiredSize.x == REAL_MAX)
+        arrangeSize.x = m_measuredSize.x
+      if (m_desiredSize.y == REAL_MAX)
+        arrangeSize.y = m_measuredSize.y
+
+    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
+
     let finalSize = arrangeOverride(arrangeSize)
     m_frameHandle.setSize(finalSize)
+
+    //log("arrangeCore", "finalSize: " + finalSize.toString())
 
   // --------------------------------------------------------------------------
   protected function arrangeOverride(vec2 availableSize) returns vec2

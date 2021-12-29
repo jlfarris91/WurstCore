@@ -1,9 +1,6 @@
 package VectorExtensions
 import StringUtils
 
-public function vec2.toString2() returns string
-  return "[" + this.x.toString() + ", " + this.y.toString() + "]"
-
 /** Expects a string format of "[X.X, X.X]" but the brackets are optional */
 public function string.toVec2() returns vec2
   var value = ZERO2

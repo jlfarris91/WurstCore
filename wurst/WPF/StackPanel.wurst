@@ -80,19 +80,22 @@ public class StackLayout implements IFrameLayout
 
     for child in children
     //{
-      let margin = child.getMargin()
-      let marginPadding = margin + padding
+      if (child.isVisible())
+      //{
+        let margin = child.getMargin()
+        let marginPadding = margin + padding
 
-      child.measure(childConstraint - marginPadding.size())
-      
-      let childMeasuredSize = child.getMeasuredSize()
+        child.measure(childConstraint - marginPadding.size())
+        
+        let childMeasuredSize = child.getMeasuredSize()
 
-      if (isHorizontal)
-        panelDesiredSize.x += childMeasuredSize.x
-        panelDesiredSize.y = max(panelDesiredSize.y, childMeasuredSize.y)
-      else
-        panelDesiredSize.x = max(panelDesiredSize.x, childMeasuredSize.x)
-        panelDesiredSize.y += childMeasuredSize.y
+        if (isHorizontal)
+          panelDesiredSize.x += childMeasuredSize.x
+          panelDesiredSize.y = max(panelDesiredSize.y, childMeasuredSize.y)
+        else
+          panelDesiredSize.x = max(panelDesiredSize.x, childMeasuredSize.x)
+          panelDesiredSize.y += childMeasuredSize.y
+      //}
     //}
 
     return panelDesiredSize
@@ -109,21 +112,24 @@ public class StackLayout implements IFrameLayout
 
     for child in children
     //{
-      let margin = child.getMargin()
-      let marginPadding = margin + padding
+      if (child.isVisible())
+      //{
+        let margin = child.getMargin()
+        let marginPadding = margin + padding
 
-      s_layoutCallbacks[m_orientation castTo int].call(processData(frame, child, finalSize, uv, marginPadding))
-      
-      let childMeasuredSize = child.getMeasuredSize()
+        s_layoutCallbacks[m_orientation castTo int].call(processData(frame, child, finalSize, uv, marginPadding))
+        
+        let childMeasuredSize = child.getMeasuredSize()
 
-      if (isHorizontal)
-        uv.x += childMeasuredSize.x
-        panelDesiredSize.x = uv.x
-        panelDesiredSize.y = max(panelDesiredSize.y, childMeasuredSize.y)
-      else
-        uv.y += childMeasuredSize.y
-        panelDesiredSize.x = max(panelDesiredSize.x, childMeasuredSize.x)
-        panelDesiredSize.y = uv.y
+        if (isHorizontal)
+          uv.x += childMeasuredSize.x
+          panelDesiredSize.x = uv.x
+          panelDesiredSize.y = max(panelDesiredSize.y, childMeasuredSize.y)
+        else
+          uv.y += childMeasuredSize.y
+          panelDesiredSize.x = max(panelDesiredSize.x, childMeasuredSize.x)
+          panelDesiredSize.y = uv.y
+      //}
     //}
 
     return finalSize   
