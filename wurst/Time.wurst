@@ -261,7 +261,6 @@ function onNewDay()
 // ============================================================================
 init
   registerTimeOfDayEvent(0.0, function onNewDay)
-  Log.info("night length: " + NIGHT_LENGTH.toString())
 
 // ============================================================================
 //
