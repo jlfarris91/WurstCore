@@ -1,0 +1,161 @@
+package Window
+import Panel
+import Layout
+import Frame
+import Math
+import ClosureFrames
+
+@configurable public constant int MAX_AREAS = 3
+constant real HEADER_HEIGHT = 0.025
+constant thickness HEADER_CONTAINER_PADDING = thickness(0.007, 0, 0.007, 0.0065)
+constant thickness CONTENT_CONTAINER_PADDING = thickness(0.007, 0.0065, 0.007, 0.0235)
+
+// ============================================================================
+public class Window extends Panel
+  private Frame m_headerContainer
+  private Frame m_contentContainer
+
+  private Frame m_headerContent
+  private framehandle m_iconFrame
+  private framehandle m_titleFrame
+  private framehandle m_closeButtonFrame
+  private framehandle m_maximizeButtonFrame
+
+  private string m_title
+  private string m_iconPath
+
+  private anchoredRectr array[MAX_AREAS] m_areas
+  private int m_areaIndex = 0
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(createFrame("WindowTemplate"))
+    _construct()
+
+  // --------------------------------------------------------------------------
+  private function _construct()
+    m_headerContainer = new Frame(getFrame("WindowHeaderContainer"))
+    m_contentContainer = new Frame(getFrame("WindowContentContainer"))
+    m_headerContent = new Frame(createFrame("DefaultWindowHeaderTemplate"))
+    onHeaderContentChanged()
+
+  // --------------------------------------------------------------------------
+  function setTitle(string title)
+    if (m_title != title)
+      m_title = title
+      if (m_titleFrame != null)
+        m_titleFrame.setText(title)
+
+  // --------------------------------------------------------------------------
+  function getTitle() returns string
+    return m_title
+
+  // --------------------------------------------------------------------------
+  function setIcon(string iconPath)
+    if (m_iconPath != iconPath)
+      m_iconPath = iconPath
+      if (m_iconFrame != null)
+        m_iconFrame.setTexture(m_iconPath, 0, true)
+
+  // --------------------------------------------------------------------------
+  function getIcon() returns string
+    return m_iconPath
+
+  // --------------------------------------------------------------------------
+  function setHeaderContent(Frame headerContent)
+    if (m_headerContent != headerContent)
+      if (m_headerContent != null)
+        destroy m_headerContent
+      m_headerContent = headerContent
+      onHeaderContentChanged()
+      invalidateMeasure()
+
+  // --------------------------------------------------------------------------
+  function getHeaderContent() returns Frame
+    return m_headerContent
+
+  // --------------------------------------------------------------------------
+  function setWindowArea(int index, anchoredRectr area)
+    let indexClamped = clamp(index, 0, MAX_AREAS-1)
+    m_areas[indexClamped] = area
+    if (m_areaIndex == indexClamped)
+      updateWindowArea()
+
+  // --------------------------------------------------------------------------
+  function getWindowArea(int index) returns anchoredRectr
+    let indexClamped = clamp(index, 0, MAX_AREAS-1)
+    return m_areas[indexClamped]
+
+  // --------------------------------------------------------------------------
+  function setWindowAreaIndex(int index)
+    if (m_areaIndex != index)
+      m_areaIndex = index
+      updateWindowArea()
+
+  // --------------------------------------------------------------------------
+  function getWindowAreaIndex() returns int
+    return m_areaIndex
+
+  // --------------------------------------------------------------------------
+  function advanceWindowAreaIndex()
+    setWindowAreaIndex(wrap(m_areaIndex + 1, 0, MAX_AREAS-1))
+
+  // --------------------------------------------------------------------------
+  override protected function measureOverride(vec2 availableSize) returns vec2
+
+    if (m_headerContent != null)
+      var headerConstraint = availableSize
+      headerConstraint.y = HEADER_HEIGHT
+      headerConstraint -= HEADER_CONTAINER_PADDING.size()
+      m_headerContent.measure(headerConstraint)
+
+    let contentConstraint = availableSize - CONTENT_CONTAINER_PADDING.size()
+
+    var result = super.measureOverride(contentConstraint)
+    result.y += HEADER_HEIGHT
+
+    return result
+
+  // --------------------------------------------------------------------------
+  override protected function arrangeOverride(vec2 availableSize) returns vec2
+
+    if (m_headerContent != null)
+      arrangeFrame(m_headerContainer, m_headerContent, ZEROTHICK)
+
+    let children = getChildren()
+    for child in children
+      if (child.isVisible())
+        arrangeFrame(m_contentContainer, child, ZEROTHICK)
+    
+    return availableSize
+
+  // --------------------------------------------------------------------------
+  private function updateWindowArea()
+    setAbsArea(m_areas[m_areaIndex].origin, m_areas[m_areaIndex].pos, m_areas[m_areaIndex].size)
+
+  // --------------------------------------------------------------------------
+  private function onCloseButtonPressed()
+    hide()
+
+  // --------------------------------------------------------------------------
+  private function onMaximizeButtonPressed()
+    advanceWindowAreaIndex()
+
+  // --------------------------------------------------------------------------
+  private function onHeaderContentChanged()
+    
+    m_iconFrame = getFrame("IconBackdrop")
+    if (m_iconFrame != null and m_iconPath != null)
+      m_iconFrame.setTexture(m_iconPath, 0, true)
+
+    m_titleFrame = getFrame("TitleText")
+    if (m_titleFrame != null and m_title != null)
+      m_titleFrame.setText(m_title)
+
+    m_closeButtonFrame = getFrame("CloseButton")
+    if (m_closeButtonFrame != null)
+      m_closeButtonFrame.onClick(() -> onCloseButtonPressed())
+
+    m_maximizeButtonFrame = getFrame("MaximizeButton")
+    if (m_maximizeButtonFrame != null)
+      m_maximizeButtonFrame.onClick(() -> onMaximizeButtonPressed())

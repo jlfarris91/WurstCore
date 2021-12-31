@@ -198,8 +198,9 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function setAbsArea(framepointtype framepoint, vec2 pos, vec2 size)
+    m_frameHandle.clearAllPoints()
     m_frameHandle.setAbsPoint(framepoint, pos)
-    m_desiredSize = size
+    setDesiredSize(size)
     arrange(size)
 
   // --------------------------------------------------------------------------
@@ -478,24 +479,37 @@ public class Frame
     m_measuredSize = measuredSize
     m_prevMeasureAvailableSize = availableSize
 
+    // log("ms: " + m_measuredSize.toString())
+
     if (m_parent != null and prevMeasuredSize != measuredSize
         and not m_parent.getMeasureInProgress() and not getMeasureDuringArrange())
       m_parent.onChildMeasuredSizeChanged(this)
 
   // --------------------------------------------------------------------------
   protected function measureOverride(vec2 availableSize) returns vec2
+    
+    var adjustedSize = m_desiredSize
+
+    if (adjustedSize.x == REAL_MAX)
+      adjustedSize.x = 0
+    if (adjustedSize.y == REAL_MAX)
+      adjustedSize.y = 0
+
     if (m_children.isEmpty())
-      return m_desiredSize
-    var desiredSize = m_desiredSize
+      return adjustedSize
+
+    var measuredSize = adjustedSize
+
     for child in m_children
     //{
       if (child.isVisible())
         child.measure(availableSize)
         let childMeasuredSize = child.getMeasuredSize()
-        desiredSize.x = max(desiredSize.x, childMeasuredSize.x)
-        desiredSize.y = max(desiredSize.y, childMeasuredSize.y)
+        measuredSize.x = max(measuredSize.x, childMeasuredSize.x)
+        measuredSize.y = max(measuredSize.y, childMeasuredSize.y)
     //}
-    return desiredSize
+
+    return measuredSize
 
   // --------------------------------------------------------------------------
   function arrange()

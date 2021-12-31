@@ -3,6 +3,7 @@ package Layout
 /** Represents a rectangle in screen-space where (x,y) is the bottom left corner of the rectangle. */
 public tuple rectr(real x, real y, real width, real height)
 public tuple thickness(real left, real bottom, real right, real top)
+public tuple anchoredRectr(framepointtype origin, vec2 pos, vec2 size)
 
 public constant rectr ZERORECTR = rectr(0,0,0,0)
 public constant thickness ZEROTHICK = thickness(0,0,0,0)
@@ -218,13 +219,13 @@ public function rectr.getFramePointOffset(framepointtype framepoint) returns vec
   if (framepoint == FRAMEPOINT_TOPRIGHT)
     return this.topRight()
   if (framepoint == FRAMEPOINT_LEFT)
-    return vec2(this.left(), 0)
+    return vec2(this.left(), this.center().y)
   if (framepoint == FRAMEPOINT_RIGHT)
-    return vec2(this.right(), 0)
+    return vec2(this.right(), this.center().y)
   if (framepoint == FRAMEPOINT_TOP)
-    return vec2(0, this.top())
+    return vec2(this.center().x, this.top())
   if (framepoint == FRAMEPOINT_BOTTOM)
-    return vec2(0, this.bottom())
+    return vec2(this.center().y, this.bottom())
   return this.center()
 
 // ============================================================================
