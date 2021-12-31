@@ -135,10 +135,12 @@ public class Window extends Panel
 
   // --------------------------------------------------------------------------
   private function onCloseButtonPressed()
+    m_closeButtonFrame.clearFocus()
     hide()
 
   // --------------------------------------------------------------------------
   private function onMaximizeButtonPressed()
+    m_maximizeButtonFrame.clearFocus()
     advanceWindowAreaIndex()
 
   // --------------------------------------------------------------------------
