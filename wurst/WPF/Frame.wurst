@@ -568,9 +568,11 @@ public class Frame
     let marginWidth = margin.width()
     let marginHeight = margin.height()
 
-    var arrangeSize = vec2(
+    let availableSizeMarginAdjusted = vec2(
       max(0, availableSize.x - marginWidth),
       max(0, availableSize.y - marginHeight))
+
+    var arrangeSize = availableSizeMarginAdjusted
 
     // log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
 
@@ -596,10 +598,17 @@ public class Frame
 
     // TODO: max size?
 
+    arrangeSize.x = min(arrangeSize.x, availableSizeMarginAdjusted.x)
+    arrangeSize.y = min(arrangeSize.y, availableSizeMarginAdjusted.y)
+
     //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
     // log("as: " + arrangeSize.toString())
 
-    let finalSize = arrangeOverride(arrangeSize)
+    var finalSize = arrangeOverride(arrangeSize)
+
+    finalSize.x = min(finalSize.x, availableSizeMarginAdjusted.x)
+    finalSize.y = min(finalSize.y, availableSizeMarginAdjusted.y)
+
     m_frameHandle.setSize(finalSize)
 
     // log("arrangeCore", "finalSize: " + finalSize.toString())

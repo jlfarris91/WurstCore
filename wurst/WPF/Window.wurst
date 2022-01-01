@@ -127,11 +127,13 @@ public class Window extends Panel
       arrangeFrame(m_headerContainer, m_headerContent, ZEROTHICK)
       m_headerContent.arrange(arrangeSize)
 
+    let contentConstraint = availableSize - CONTENT_CONTAINER_PADDING.size()
+
     let children = getChildren()
     for child in children
       if (child.isVisible())
         arrangeFrame(m_contentContainer, child, ZEROTHICK)
-        child.arrange(availableSize)
+        child.arrange(contentConstraint)
     
     return availableSize
 
