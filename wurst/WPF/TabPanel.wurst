@@ -88,7 +88,7 @@ public class TabPanel extends DockPanel
     let buttonFrame = new TabPanelButton()
     ..setText(buttonText)
     ..setWidth(0.05)
-    ..setHeight(0.025)
+    ..setHeight(0.02)
     ..setState(TabPanelButtonState.DOWN)
     addContent(id, buttonFrame, contentFrame)
 

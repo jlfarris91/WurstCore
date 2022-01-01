@@ -1,7 +1,23 @@
 // -- INCLUDE FILES ---------------------------------------------------------
 
+IncludeFile "UI\FrameDef\Glue\battlenettemplates.fdf",
+
 // -- TEMPLATES -------------------------------------------------------
 
+// ============================================================================
+Frame "BACKDROP" "TestBackdrop" {
+  SetAllPoints,
+  DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "ToolTipBackground", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.003, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "ToolTipBorder", //the border File
+  BackdropBlendAll,
+}
+
+// ============================================================================
 Frame "TEXT" "WindowTitleTextTemplate" {
   DecorateFileNames,
   FontFlags "FIXEDSIZE",
@@ -13,16 +29,18 @@ Frame "TEXT" "WindowTitleTextTemplate" {
   FontJustificationV JUSTIFYMIDDLE,
 }
 
+// ============================================================================
 Frame "BACKDROP" "WindowBackdropTemplate" {
   BackdropTileBackground, //Tile mode enabled
   BackdropBackground  "ui\widgets\battlenet\bnet-dialoguebox-background", //BackgroundFile
   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
   BackdropCornerSize  0.025, //higher numbers make the corners bigger.
   BackdropBackgroundInsets 0.004 0.004 0.004 0.004, //makes the background smaller, from the outside.
-  BackdropEdgeFile  "window-border", //the border File
+  BackdropEdgeFile  "ui\wpf\window-border", //the border File
   BackdropBlendAll,
 }
 
+// ============================================================================
 Frame "FRAME" "WindowTemplate" {
   UseActiveContext,
   Width 0.3,
@@ -45,6 +63,7 @@ Frame "FRAME" "WindowTemplate" {
   }
 }
 
+// ============================================================================
 Frame "GLUEBUTTON" "WindowHeaderCloseButtonTemplate" {
     Width 0.01,
     Height 0.01,
@@ -52,24 +71,25 @@ Frame "GLUEBUTTON" "WindowHeaderCloseButtonTemplate" {
 
     ControlBackdrop "ButtonIcon",
     Frame "BACKDROP" "ButtonIcon" {
-      BackdropBackground "close-button",
+      BackdropBackground "ui\wpf\close-button",
       BackdropBlendAll,
     }
 
     ControlDisabledBackdrop "ButtonIconDisabled",
     Frame "BACKDROP" "ButtonIconDisabled" {
-      BackdropBackground "close-button-pushed",
+      BackdropBackground "ui\wpf\close-button-pushed",
       BackdropBlendAll,
     }
 
     ControlMouseOverHighlight "ButtonHighlight",
     Frame "HIGHLIGHT" "ButtonHighlight" {
         HighlightType "FILETEXTURE",
-        HighlightAlphaFile "close-button-highlight",
+        HighlightAlphaFile "ui\wpf\close-button-highlight",
         HighlightAlphaMode "ADD",
     }
 }
 
+// ============================================================================
 Frame "GLUEBUTTON" "WindowHeaderMaximizeButtonTemplate" {
     Width 0.01,
     Height 0.01,
@@ -77,24 +97,25 @@ Frame "GLUEBUTTON" "WindowHeaderMaximizeButtonTemplate" {
 
     ControlBackdrop "ButtonIcon",
     Frame "BACKDROP" "ButtonIcon" {
-      BackdropBackground "maximize-button",
+      BackdropBackground "ui\wpf\maximize-button",
       BackdropBlendAll,
     }
 
     ControlDisabledBackdrop "ButtonIconDisabled",
     Frame "BACKDROP" "ButtonIconDisabled" {
-      BackdropBackground "maximize-button-pushed",
+      BackdropBackground "ui\wpf\maximize-button-pushed",
       BackdropBlendAll,
     }
 
     ControlMouseOverHighlight "ButtonHighlight",
     Frame "HIGHLIGHT" "ButtonHighlight" {
         HighlightType "FILETEXTURE",
-        HighlightAlphaFile "maximize-button-highlight",
+        HighlightAlphaFile "ui\wpf\maximize-button-highlight",
         HighlightAlphaMode "ADD",
     }
 }
 
+// ============================================================================
 Frame "FRAME" "DefaultWindowHeaderTemplate" {
 
   Frame "TEXT" "TitleText" INHERITS "WindowTitleTextTemplate" {
@@ -120,9 +141,11 @@ Frame "FRAME" "DefaultWindowHeaderTemplate" {
   }
 }
 
+// ============================================================================
 Frame "BACKDROP" "TabPanelBackdropTemplate" INHERITS "BattleNetControlBackdropTemplate" {
 }
 
+// ============================================================================
 Frame "TEXT" "TabPanelButtonTextTemplate" {
   DecorateFileNames,
   FontFlags "FIXEDSIZE",
@@ -134,6 +157,7 @@ Frame "TEXT" "TabPanelButtonTextTemplate" {
   FontJustificationV JUSTIFYMIDDLE,
 }
 
+// ============================================================================
 Frame "GLUETEXTBUTTON" "TabPanelButtonTemplate" {
     Height 0.06,
     ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
@@ -153,7 +177,7 @@ Frame "GLUETEXTBUTTON" "TabPanelButtonTemplate" {
     ControlMouseOverHighlight "TabPanelButtonMouseOverHighlight",
     Frame "HIGHLIGHT" "TabPanelButtonMouseOverHighlight" {
       HighlightType "FILETEXTURE",
-      HighlightAlphaFile "UI\Widgets\Glues\GlueScreen-CampaignButton-KeyboardHighlight", 
+      HighlightAlphaFile "UI\Widgets\BattleNet\bnet-button01-highlight-mouse.blp", 
       HighlightAlphaMode "ADD",
     }
 

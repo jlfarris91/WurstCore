@@ -23,6 +23,7 @@ Frame "FRAME" "InspectorTemplate" {
   }
 }
 
+// ============================================================================
 Frame "SLIDER" "VerticalSliderTest" {
     Width 0.012,
     SliderLayoutVertical,
@@ -52,50 +53,6 @@ Frame "SLIDER" "VerticalSliderTest" {
             BackdropBackground  "EscMenuSliderThumbButton",
         }
     }
-}
-
-Frame "SLIDER" "HorizontalSliderTest" {
-    Width 0.012,
-    SliderLayoutHorizontal,
-
-    ControlBackdrop "EscMenuScrollBarBackdrop",
-    Frame "BACKDROP" "EscMenuScrollBarBackdrop" {
-        DecorateFileNames,
-        BackdropTileBackground,
-        BackdropBackground  "EscMenuSliderBackground",
-        BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-        BackdropCornerSize  0.006,
-        BackdropBackgroundSize 0.006,
-        BackdropBackgroundInsets 0.0025 0.0025 0.0025 0.0025,
-        BackdropEdgeFile  "EscMenuSliderBorder",
-        BackdropBlendAll,
-    }
-
-    SliderThumbButtonFrame "EscMenuScrollThumbButton",
-    Frame "BUTTON" "EscMenuScrollThumbButton" {
-        Width 0.016,
-        Height 0.016,
-
-        ControlBackdrop "EscMenuScrollThumbButtonBackdrop",
-        Frame "BACKDROP" "EscMenuScrollThumbButtonBackdrop" {
-            DecorateFileNames,
-            BackdropBlendAll,
-            BackdropBackground  "EscMenuSliderThumbButton",
-        }
-    }
-}
-
-// ============================================================================
-Frame "BACKDROP" "TestBackdrop" {
-  SetAllPoints,
-  DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
-  BackdropTileBackground, //Tile mode enabled
-  BackdropBackground  "ToolTipBackground", //BackgroundFile
-  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  BackdropCornerSize  0.003, //higher numbers make the corners bigger.
-  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
-  BackdropEdgeFile  "ToolTipBorder", //the border File
-  BackdropBlendAll,
 }
 
 // ============================================================================
@@ -136,8 +93,7 @@ Frame "FRAME" "StringEditorTemplate" {
   Height 0.03,
 }
 
-// --- EDITBOX -----------------------------------------------------------------------
-
+// ============================================================================
 Frame "TEXT" "InspectorEditBoxTextTemplate" {
   DecorateFileNames,
   FrameFont "MasterFont", 0.01, "",
@@ -145,6 +101,7 @@ Frame "TEXT" "InspectorEditBoxTextTemplate" {
   FontFlags "FIXEDSIZE",
 }
 
+// ============================================================================
 Frame "BACKDROP" "InspectorEditBoxBackdropTemplate" {
   DecorateFileNames,
   BackdropTileBackground,
@@ -157,6 +114,7 @@ Frame "BACKDROP" "InspectorEditBoxBackdropTemplate" {
   BackdropBlendAll,
 }
 
+// ============================================================================
 Frame "EDITBOX" "InspectorEditBoxTemplate" {
   Height 0.04,
   EditBorderSize 0.005,

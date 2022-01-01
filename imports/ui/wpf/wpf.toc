@@ -1,0 +1,2 @@
+ui\framedef\glue\battlenettemplates.fdf
+ui\wpf\wpf.fdf
