@@ -562,7 +562,7 @@ public class Frame
   // --------------------------------------------------------------------------
   private function arrangeCore(vec2 availableSize)
 
-    //log("arrangeCore", "availableSize: " + availableSize.toString())
+    // log("arrangeCore", "availableSize: " + availableSize.toString())
 
     let margin = getMargin()
     let marginWidth = margin.width()
@@ -572,43 +572,37 @@ public class Frame
       max(0, availableSize.x - marginWidth),
       max(0, availableSize.y - marginHeight))
 
-    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
+    // log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
 
-    let desiredSizeMarginAdjusted = vec2(
-      max(0, m_desiredSize.x - marginWidth),
-      max(0, m_desiredSize.y - marginHeight))
+    let measuredSizeMarginAdjusted = vec2(
+      max(0, m_measuredSize.x - marginWidth),
+      max(0, m_measuredSize.y - marginHeight))
 
-    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
+    // log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
 
-    if (arrangeSize.x < desiredSizeMarginAdjusted.x)
-      arrangeSize.x = desiredSizeMarginAdjusted.x
+    if (arrangeSize.x < measuredSizeMarginAdjusted.x)
+      arrangeSize.x = measuredSizeMarginAdjusted.x
 
-    if (arrangeSize.y < desiredSizeMarginAdjusted.y)
-      arrangeSize.y = desiredSizeMarginAdjusted.y
+    if (arrangeSize.y < measuredSizeMarginAdjusted.y)
+      arrangeSize.y = measuredSizeMarginAdjusted.y
 
-    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
+    // log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
     
-    if (getHorizontalAlignment() != STRETCH)
-      arrangeSize.x = desiredSizeMarginAdjusted.x
+    if (getHorizontalAlignment() != STRETCH or (m_parent == null and m_desiredSize.x == REAL_MAX))
+      arrangeSize.x = measuredSizeMarginAdjusted.x
     
-    if (getVerticalAlignment() != STRETCH)
-      arrangeSize.y = desiredSizeMarginAdjusted.y
+    if (getVerticalAlignment() != STRETCH or (m_parent == null and m_desiredSize.y == REAL_MAX))
+      arrangeSize.y = measuredSizeMarginAdjusted.y
 
     // TODO: max size?
 
-    // Allow root frames to auto-size to fir their children
-    if (m_parent == null)
-      if (m_desiredSize.x == REAL_MAX)
-        arrangeSize.x = m_measuredSize.x
-      if (m_desiredSize.y == REAL_MAX)
-        arrangeSize.y = m_measuredSize.y
-
     //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
+    // log("as: " + arrangeSize.toString())
 
     let finalSize = arrangeOverride(arrangeSize)
     m_frameHandle.setSize(finalSize)
 
-    //log("arrangeCore", "finalSize: " + finalSize.toString())
+    // log("arrangeCore", "finalSize: " + finalSize.toString())
 
   // --------------------------------------------------------------------------
   protected function arrangeOverride(vec2 availableSize) returns vec2
@@ -618,7 +612,7 @@ public class Frame
       //{
         if (child.isVisible())
           Frame.arrangeFrame(this, child, padding)
-          child.arrange(availableSize - padding.size())          
+          child.arrange(availableSize - padding.size())
       //}
     return availableSize
 

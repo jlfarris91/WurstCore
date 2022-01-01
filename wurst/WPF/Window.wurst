@@ -36,7 +36,7 @@ public class Window extends Panel
   private function _construct()
     m_headerContainer = new Frame(getFrame("WindowHeaderContainer"))
     m_contentContainer = new Frame(getFrame("WindowContentContainer"))
-    m_headerContent = new Frame(createFrame("DefaultWindowHeaderTemplate"))
+    m_headerContent = new Frame(createFrame("DefaultWindowHeaderTemplate", m_headerContainer.getFrameHandle(), 0, 0))
     onHeaderContentChanged()
 
   // --------------------------------------------------------------------------
@@ -67,6 +67,7 @@ public class Window extends Panel
       if (m_headerContent != null)
         destroy m_headerContent
       m_headerContent = headerContent
+      m_headerContent.getFrameHandle().setParent(m_headerContainer.getFrameHandle())
       onHeaderContentChanged()
       invalidateMeasure()
 
@@ -120,12 +121,17 @@ public class Window extends Panel
   override protected function arrangeOverride(vec2 availableSize) returns vec2
 
     if (m_headerContent != null)
+      var arrangeSize = availableSize
+      arrangeSize.y = HEADER_HEIGHT
+      arrangeSize -= HEADER_CONTAINER_PADDING.size()
       arrangeFrame(m_headerContainer, m_headerContent, ZEROTHICK)
+      m_headerContent.arrange(arrangeSize)
 
     let children = getChildren()
     for child in children
       if (child.isVisible())
         arrangeFrame(m_contentContainer, child, ZEROTHICK)
+        child.arrange(availableSize)
     
     return availableSize
 
