@@ -425,11 +425,11 @@ public class MemberInfo
 
 // ============================================================================
 public class PropertyInfo extends MemberInfo
-  private Func1<Object, Object> m_getter
-  private Action2<Object, Object> m_setter
+  private Func1<object, object> m_getter
+  private Action2<object, object> m_setter
 
   // --------------------------------------------------------------------------
-  construct (Type owner, Func1<Object, Object> getter, Action2<Object, Object> setter)
+  construct (Type owner, Func1<object, object> getter, Action2<object, object> setter)
     super(owner)
     m_getter = getter.acquire()
     m_setter = setter.acquire()
@@ -440,11 +440,11 @@ public class PropertyInfo extends MemberInfo
     m_setter.release()
 
   // --------------------------------------------------------------------------
-  function getValue(Object context) returns Object
-    return m_getter != null ? m_getter.call(context) : null
+  function getValue(object context) returns object
+    return m_getter != null ? m_getter.call(context) : NULL
 
   // --------------------------------------------------------------------------
-  function setValue(Object context, Object value)
+  function setValue(object context, object value)
     if (m_setter != null)
       m_setter.call(context, value)
 

@@ -41,10 +41,12 @@ public class Vector<T>
     return m_count
 
   // --------------------------------------------------------------------------
-  function getItem(int i) returns T
+  function getItem(int index) returns T
     if (m_array == null)
       error("Array is null")
-    return m_array.getItem(i)
+    if (index < 0 or index >= getCount())
+      error("Index out of range: " + index.toString())
+    return m_array.getItem(index)
 
   // --------------------------------------------------------------------------
   function setItem(int i, T _item)

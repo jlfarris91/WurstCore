@@ -27,7 +27,7 @@ class FrameFlags
 
 // ============================================================================
 public class Frame
-  static constant LightweightProperty<Object>         dataContextProperty   = new LightweightProperty<Object>(null, null)
+  static constant LightweightProperty<object>         dataContextProperty   = new LightweightProperty<object>(NULL, (frame, args) -> frame.onDataContextChanged(args.oldValue, args.newValue))
   static constant LightweightProperty<Thickness>      marginProperty        = new LightweightProperty<Thickness>(null, null)..setAffectsMeasure(true)
   static constant LightweightProperty<Thickness>      paddingProperty       = new LightweightProperty<Thickness>(null, null)..setAffectsMeasure(true)
   static constant LightweightProperty<player>         playerProperty        = new LightweightProperty<player>(null, null)
@@ -39,7 +39,7 @@ public class Frame
   private VerticalLayoutMode m_verticalLayoutMode
   private vec2 m_desiredSize = ZERO2
   private vec2 m_measuredSize = ZERO2
-  private vec2 m_prevMeasureAvailableSize = ZERO2
+  protected vec2 m_prevConstraint = ZERO2
   private vec2 m_prevArrangeSize = ZERO2
   private int m_flags = 0x30 // neverMeasured | neverArranged
   private Frame m_rootFrame = null
@@ -47,6 +47,7 @@ public class Frame
 
   protected LayoutRequest m_measureRequest = null
   protected LayoutRequest m_arrangeRequest = null
+  protected SizeChangedInfo m_sizeChangedInfo = null
 
   // --------------------------------------------------------------------------
   protected function log(string message)
@@ -148,11 +149,13 @@ public class Frame
   function addChild(Frame childFrame)
     if (childFrame.m_parent != this)
       childFrame.setParent(this)
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function removeChild(Frame childFrame)
     if (childFrame.m_parent == this)
       childFrame.setParent(null)
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function isPanel() returns bool
@@ -201,7 +204,6 @@ public class Frame
     m_frameHandle.clearAllPoints()
     m_frameHandle.setAbsPoint(framepoint, pos)
     setDesiredSize(size)
-    arrange(size)
 
   // --------------------------------------------------------------------------
   function setText(string value)
@@ -227,9 +229,11 @@ public class Frame
   function setDesiredSize(vec2 value)
     if (m_desiredSize != value)
       m_desiredSize = value
-      invalidateMeasure()
       if (m_parent != null)
-        measure(value)
+        invalidateMeasure()
+        m_parent.invalidateMeasure()
+      else
+        doLayout(value)
 
   // --------------------------------------------------------------------------
   function resinsertIntoLayoutQueue()
@@ -271,19 +275,11 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getDataContext() returns object
-    let valueObject = dataContextProperty.getValue(this)
-    return valueObject != null ? valueObject.getObject() : NULL
+    return dataContextProperty.getValue(this)
 
   // --------------------------------------------------------------------------
   function setDataContext(object value)
-    var valueObject = dataContextProperty.getValue(this)
-    if (valueObject == null)
-      valueObject = new Object(value)
-      dataContextProperty.setValue(this, valueObject)
-    else if (valueObject.getObject() != value)
-      valueObject.setObject(value)
-      dataContextProperty.onPropertyChanged(this)
-    dataContextProperty.setValue(this, valueObject)
+    dataContextProperty.setValue(this, value)
 
   // --------------------------------------------------------------------------
   function getHorizontalAlignment() returns HorizontalLayoutMode
@@ -317,8 +313,10 @@ public class Frame
       valueObject = new Thickness(value)
       marginProperty.setValue(this, valueObject)
     else if (valueObject.value != value)
+      let oldValue = new Thickness(valueObject.value)
       valueObject.value = value
-      marginProperty.onPropertyChanged(this)
+      marginProperty.onPropertyChanged(this, oldValue, valueObject)
+      destroy oldValue
 
   // --------------------------------------------------------------------------
   function getPadding() returns thickness
@@ -332,8 +330,10 @@ public class Frame
       valueObject = new Thickness(value)
       paddingProperty.setValue(this, valueObject)
     else if (valueObject.value != value)
+      let oldValue = new Thickness(valueObject.value)
       valueObject.value = value
-      paddingProperty.onPropertyChanged(this)
+      paddingProperty.onPropertyChanged(this, oldValue, valueObject)
+      destroy oldValue
 
   // --------------------------------------------------------------------------
   function getPlayer() returns player
@@ -432,13 +432,18 @@ public class Frame
       invalidateMeasure()
 
   // --------------------------------------------------------------------------
-  function measure()
-    measure(m_prevMeasureAvailableSize)
+  private function doLayout(vec2 size)
+    measure(size)
+    arrange(size)
+
+  // --------------------------------------------------------------------------
+  function updateLayout()
+    LayoutManager.updateLayout()
 
   // --------------------------------------------------------------------------
   function measure(vec2 availableSize)
 
-    let isCloseToPrevMeasure = availableSize == m_prevMeasureAvailableSize
+    let isCloseToPrevMeasure = availableSize == m_prevConstraint
 
     if (not getMeasureDirty() and not getNeverMeasured() and isCloseToPrevMeasure)
       return
@@ -448,7 +453,7 @@ public class Frame
         LayoutManager.measureQueue.remove(this)
       if (not isCloseToPrevMeasure)
         invalidateMeasureInternal()
-        m_prevMeasureAvailableSize = availableSize
+        m_prevConstraint = availableSize
       return
 
     let prevMeasuredSize = m_measuredSize
@@ -470,16 +475,16 @@ public class Frame
     if (m_measureRequest != null)
       LayoutManager.measureQueue.remove(this)
 
+    // log("ms: " + measuredSize.toString())
+
     if (measuredSize.x == REAL_MAX)
-      Log.error("Measured width cannot be REAL_MAX")
+      error("Measured width cannot be REAL_MAX")
 
     if (measuredSize.y == REAL_MAX)
-      Log.error("Measured height cannot be REAL_MAX")
+      error("Measured height cannot be REAL_MAX")
 
     m_measuredSize = measuredSize
-    m_prevMeasureAvailableSize = availableSize
-
-    // log("ms: " + m_measuredSize.toString())
+    m_prevConstraint = availableSize
 
     if (m_parent != null and prevMeasuredSize != measuredSize
         and not m_parent.getMeasureInProgress() and not getMeasureDuringArrange())
@@ -537,16 +542,22 @@ public class Frame
       if (neverMeasured)
         measure(availableSize)
       else
-        measure()
+        measure(m_prevConstraint)
       setMeasureDuringArrange(false)
 
     if (not getArrangeDirty() and not getNeverArranged() and m_prevArrangeSize == availableSize)
       return
 
+    let oldSize = getSize()
+
     setArrangeInProgress(true)
       
     LayoutManager.enterArrange()
+    
     arrangeCore(availableSize)
+
+    markForSizeChangedIfNeeded(oldSize, getSize())
+
     LayoutManager.exitArrange()
 
     setArrangeInProgress(false)
@@ -626,8 +637,38 @@ public class Frame
     return availableSize
 
   // --------------------------------------------------------------------------
-  function updateLayout()
-    LayoutManager.updateLayout()
+  private function markForSizeChangedIfNeeded(vec2 oldSize, vec2 newSize) returns bool
+    let widthChanged = oldSize.x != newSize.x
+    let heightChanged = oldSize.y != newSize.y
+
+    // log("o: " +oldSize.toString() + "n: " + newSize.toString())
+
+    var info = m_sizeChangedInfo
+
+    if (info != null)
+      info.widthChanged = info.widthChanged or widthChanged
+      info.heightChanged = info.heightChanged or heightChanged
+      return true
+
+    if (widthChanged or heightChanged)
+      info = new SizeChangedInfo()
+      info.frame = this
+      info.oldSize = oldSize
+      info.widthChanged = widthChanged
+      info.heightChanged = heightChanged
+      m_sizeChangedInfo = info
+      LayoutManager.addToSizeChangedChain(info)
+      return true
+
+    return false
+
+  // --------------------------------------------------------------------------
+  protected function onRenderSizeChanged(SizeChangedInfo _info)
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function onDataContextChanged(object _oldValue, object _newValue)
+    skip
       
   // --------------------------------------------------------------------------
   static function arrangeFrame(Frame parentFrame, Frame childFrame, thickness padding)
@@ -914,12 +955,22 @@ public interface ILightweightProperty
   function clearValue(Frame context)
 
 // ============================================================================
+abstract class LightweightPropertyChangedCallback<T> extends Action2<Frame, LightweightPropertyChangedEventArgs<T>>
+
+// ============================================================================
+class LightweightPropertyChangedEventArgs<T>
+  LightweightProperty<T> property
+  T oldValue
+  T newValue
+
+// ============================================================================
 public class LightweightProperty<T> implements ILightweightProperty
   private HashMap<Frame, T> m_effectiveValues
-  private Action1<Frame> m_propertyChanged
+  private LightweightPropertyChangedCallback<T> m_propertyChanged
   private T m_defaultValue
   private int m_flags = 0
 
+  // --------------------------------------------------------------------------
   static class Flags
     static constant int affectsMeasure        = 0x01
     static constant int affectsArrange        = 0x02
@@ -927,7 +978,7 @@ public class LightweightProperty<T> implements ILightweightProperty
     static constant int affectsParentArrange  = 0x08
 
   // --------------------------------------------------------------------------
-  construct(T defaultValue, Action1<Frame> propertyChanged)
+  construct(T defaultValue, LightweightPropertyChangedCallback<T> propertyChanged)
     m_defaultValue = defaultValue
     m_propertyChanged = propertyChanged
 
@@ -981,10 +1032,11 @@ public class LightweightProperty<T> implements ILightweightProperty
   function setValue(Frame context, T value)
     if (m_effectiveValues == null)
       m_effectiveValues = new HashMap<Frame, T>()
-    if (m_effectiveValues.has(context) == false or
-        m_effectiveValues.get(context) != value)
+    let hasValue = m_effectiveValues.has(context)
+    let oldValue = m_effectiveValues.get(context)
+    if (not hasValue or oldValue != value)
       m_effectiveValues.put(context, value)
-      onPropertyChanged(context)
+      onPropertyChanged(context, oldValue, value)
   
   // --------------------------------------------------------------------------
   override function clearValue(Frame context)
@@ -995,10 +1047,9 @@ public class LightweightProperty<T> implements ILightweightProperty
         m_effectiveValues = null
 
   // --------------------------------------------------------------------------
-  protected function onPropertyChanged(Frame context)
+  protected function onPropertyChanged(Frame context, T oldValue, T newValue)
 
-    if (m_propertyChanged != null)
-      m_propertyChanged.call(context)
+    raisePropertyChanged(context, oldValue, newValue)
 
     let affectsMeasure = getAffectsMeasure()
     let affectsArrange = getAffectsArrange()
@@ -1018,6 +1069,16 @@ public class LightweightProperty<T> implements ILightweightProperty
 
     if (affectsArrange)
       context.invalidateArrange()
+
+  // --------------------------------------------------------------------------
+  private function raisePropertyChanged(Frame context, T oldValue, T newValue)
+    if (m_propertyChanged != null)
+      let args = new LightweightPropertyChangedEventArgs<T>()
+      args.property = this
+      args.oldValue = oldValue
+      args.newValue = newValue
+      m_propertyChanged.call(context, args)
+      destroy args
 
   // --------------------------------------------------------------------------
   @inline
@@ -1163,6 +1224,14 @@ class ArrangeQueue extends LayoutQueue
     frame.invalidateArrangeInternal()
 
 // ============================================================================
+public class SizeChangedInfo
+  Frame frame
+  vec2 oldSize
+  bool widthChanged
+  bool heightChanged
+  SizeChangedInfo next
+
+// ============================================================================
 public class LayoutManager
   static constant LayoutQueue measureQueue = new MeasureQueue()
   static constant LayoutQueue arrangeQueue = new ArrangeQueue()
@@ -1170,6 +1239,9 @@ public class LayoutManager
   private static int s_measureStack = 0
   private static int s_arrangeStack = 0
   private static bool s_isInUpdateLayout = false
+  private static bool s_dispatchInFlight = false
+  private static SizeChangedInfo s_sizeChangedChain
+  private static bool s_isInFireSizeChanged
 
   // --------------------------------------------------------------------------
   static function enterMeasure()
@@ -1188,43 +1260,91 @@ public class LayoutManager
     s_arrangeStack--
 
   // --------------------------------------------------------------------------
+  static function addToSizeChangedChain(SizeChangedInfo info)
+    info.next = s_sizeChangedChain
+    s_sizeChangedChain = info
+
+  // --------------------------------------------------------------------------
   protected static function dispatchUpdateLayout()
-    if (s_isInUpdateLayout or s_measureStack > 0 or s_arrangeStack > 0)
+    if (s_isInUpdateLayout or s_measureStack > 0 or s_arrangeStack > 0 or s_dispatchInFlight)
       return
-    nullTimer(() -> updateLayout())
+    s_dispatchInFlight = true
+    nullTimer() () ->
+      s_dispatchInFlight = false
+      updateLayout()
+
+  // --------------------------------------------------------------------------
+  private static function getHasDirtiness() returns bool
+    return measureQueue.isEmpty() == false or arrangeQueue.isEmpty() == false
 
   // --------------------------------------------------------------------------
   protected static function updateLayout()
-    if (s_isInUpdateLayout or s_measureStack > 0 or s_arrangeStack > 0)
+    if (s_isInUpdateLayout or s_measureStack > 0 or s_arrangeStack > 0 or s_dispatchInFlight)
       return
 
     let succeeded = try() -> 
+    //{
       Frame currentFrame
 
-      while (measureQueue.isEmpty() == false or arrangeQueue.isEmpty() == false)
-      //{
-        s_isInUpdateLayout = true
+      s_isInUpdateLayout = true
+      // Log.info("LayoutManager", "updateLayout", "", "s_isInUpdateLayout = true")
 
+      while (getHasDirtiness())
+      //{
+        var measured = 0
         while (true)
         //{
           currentFrame = measureQueue.getTopMost()
           if (currentFrame == null)
             break
-          currentFrame.measure()
+          currentFrame.measure(currentFrame.m_prevConstraint)
+          measured++
         //}
 
-        while (true)
+        var arranged = 0
+        while (measureQueue.isEmpty())
         //{
           currentFrame = arrangeQueue.getTopMost()
           if (currentFrame == null)
             break
           currentFrame.arrange()
+          arranged++
         //}
 
+        // Log.info("LayoutManager", "updateLayout", "", "m: " + measured.toString() + "a: " + arranged.toString())
+        
         if (measureQueue.isEmpty())
           s_isInUpdateLayout = false
+          // Log.info("LayoutManager", "updateLayout", "", "s_isInUpdateLayout = false")
+          fireSizeChangedEvents()
       //}
+      
+      fireSizeChangedEvents()
+    //}
+
+    s_isInUpdateLayout = false
+    // Log.info("LayoutManager", "updateLayout", "", "s_isInUpdateLayout = false")
   
     if (not succeeded)
       Log.error("LayerManager", "updateLayout", "", "failed to update layout")
       error(lastError)
+
+  // --------------------------------------------------------------------------
+  private static function fireSizeChangedEvents()
+    if (s_isInFireSizeChanged)
+      return
+
+    s_isInFireSizeChanged = true
+    // Log.info("LayoutManager", "fireSizeChangedEvents", "", "enter")
+
+    while (s_sizeChangedChain != null)
+      let info = s_sizeChangedChain
+      s_sizeChangedChain = info.next
+      info.frame.m_sizeChangedInfo = null
+      info.frame.onRenderSizeChanged(info)
+      destroy info
+      if (getHasDirtiness())
+        break
+
+    s_isInFireSizeChanged = false
+    // Log.info("LayoutManager", "fireSizeChangedEvents", "", "exit")

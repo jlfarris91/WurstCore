@@ -43,9 +43,9 @@ public class SerializationContext
   private HashMap<int, ObjectFactory1> m_objectTypeToFactoryMap
   private HashMap<int, ObjectDestructor> m_objectTypeToDestructorMap
   private player m_player
-  private LinkedList<Object> m_objectStack
+  private LinkedList<object> m_objectStack
   private LinkedList<int> m_objectVersionStack
-  private LinkedList<Object> m_creationContexts
+  private LinkedList<object> m_creationContexts
   private SerializableSerializer m_serializableSerializer
 
   // --------------------------------------------------------------------------
@@ -55,9 +55,9 @@ public class SerializationContext
     m_objectTypeToHeaderCodeMap = new HashMap<int, int>()
     m_objectTypeToFactoryMap = new HashMap<int, ObjectFactory1>()
     m_objectTypeToDestructorMap = new HashMap<int, ObjectDestructor>()
-    m_objectStack = new LinkedList<Object>()
+    m_objectStack = new LinkedList<object>()
     m_objectVersionStack = new LinkedList<int>()
-    m_creationContexts = new LinkedList<Object>()
+    m_creationContexts = new LinkedList<object>()
     
     m_serializableSerializer = new SerializableSerializer()
 
@@ -91,7 +91,7 @@ public class SerializationContext
 
   // --------------------------------------------------------------------------
   function getSerializingObject() returns object
-    return m_objectStack.peek().getObject()
+    return m_objectStack.peek()
 
   // --------------------------------------------------------------------------
   function getSerializingObjectVersion() returns int
@@ -99,12 +99,12 @@ public class SerializationContext
 
   // --------------------------------------------------------------------------
   function pushSerializingObject(object object, int objectVersion)
-    m_objectStack.push(object.ref())
+    m_objectStack.push(object)
     m_objectVersionStack.push(objectVersion)
 
   // --------------------------------------------------------------------------
   function popSerializingObject()
-    destroy m_objectStack.pop()
+    m_objectStack.pop().destr()
     m_objectVersionStack.pop()
 
   // --------------------------------------------------------------------------
@@ -478,16 +478,15 @@ public class SerializationContext
 
   // --------------------------------------------------------------------------
   function pushCreationContext(object object)
-    m_creationContexts.push(new Object(object))
+    m_creationContexts.push(object)
 
   // --------------------------------------------------------------------------
   function popCreationContext()
-    destroy m_creationContexts.pop()
+    m_creationContexts.pop().destr()
 
   // --------------------------------------------------------------------------
   function getCreationContext() returns object
-    let creationContext = m_creationContexts.size() > 0 ? m_creationContexts.peek() : null
-    return creationContext != null ? creationContext.getObject() : NULL
+    return m_creationContexts.size() > 0 ? m_creationContexts.peek() : NULL
 
   // --------------------------------------------------------------------------
   function error(string message)

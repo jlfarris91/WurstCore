@@ -2,10 +2,24 @@ package Object
 import Meta
 import ErrorHandling
 import public initlater HandleObjects
+import Bitwise
 
 public tuple object(int objectHandle, int objectTypeId)
 
 public constant object NULL = object(0, 0)
+
+constant int OBJECT_INDEX_HANDLE_MASK = 0xFFFFF   // Max number of handles supported is 1048575
+constant int OBJECT_INDEX_TYPEID_MASK = 0xFFF     // Max number of types supported is 4095
+
+// ============================================================================
+public function objectFromIndex(int index) returns object
+  return object(index.and32(OBJECT_INDEX_HANDLE_MASK), index.shiftr(20).and32(OBJECT_INDEX_TYPEID_MASK))
+
+// ============================================================================
+public function objectToIndex(object obj) returns int
+  // ((typeId & 0xFFF) << 20) | (handle & 0xFFFFF)
+  return obj.objectTypeId.and32(OBJECT_INDEX_TYPEID_MASK).shiftl(20)
+   .or32(obj.objectHandle.and32(OBJECT_INDEX_HANDLE_MASK))
 
 // ============================================================================
 public function object.is(int expectedTypeId) returns bool
@@ -138,3 +152,24 @@ public interface ObjectFactory1
 // ============================================================================
 public interface ObjectDestructor
   function call(object object)
+
+// ============================================================================
+@test function objectToIndex_NULL()
+  let h = 0
+  let t = 0
+  let i = objectToIndex(object(h, t))
+  i.assertEquals(0)
+
+// ============================================================================
+@test function objectToIndex1()
+  let h = 1234
+  let t = 1234
+  let i = objectToIndex(object(h, t))
+  i.assertEquals(0x4D2004D2)
+
+// ============================================================================
+@test function objectToIndex2()
+  let h = 0xFFFFF
+  let t = 0xFFF
+  let i = objectToIndex(object(h, t))
+  i.assertEquals(0xFFFFFFFF)

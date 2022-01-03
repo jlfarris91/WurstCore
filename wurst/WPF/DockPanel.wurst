@@ -12,7 +12,7 @@ public enum Dock
 
 // ============================================================================
 public class DockPanel extends Panel
-  static constant LightweightProperty<Dock> dockProperty = new LightweightProperty<Dock>(Dock.LEFT, frame -> onDockPropertyChanged(frame))
+  static constant LightweightProperty<Dock> dockProperty = new LightweightProperty<Dock>(Dock.LEFT, (frame, args) -> onDockPropertyChanged(frame))
   private DockLayout m_layout
 
   // --------------------------------------------------------------------------
