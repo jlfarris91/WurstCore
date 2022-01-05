@@ -1,6 +1,6 @@
 package Handle
 
-public constant _handle HANDLE_INVALID = _handle(0)
+public constant _handle INVALID_HANDLE = _handle(0)
 
 // ============================================================================
 public tuple _handle(int id)

@@ -329,7 +329,7 @@ Foo array g_foos
 // ============================================================================
 class Test
   int a = 0
-  _handle handleToUnregister = HANDLE_INVALID
+  _handle handleToUnregister = INVALID_HANDLE
 @test function unregister_unregisteringExecutingCallbackCallsRemainingCallbacks()
 
   let pool = new Vector<EventCallback>()

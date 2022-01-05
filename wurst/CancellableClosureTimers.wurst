@@ -3,66 +3,15 @@ import TimerUtils
 import CancellationToken
 import ErrorHandling
 import RefObject
+import Handle
+import Events
+import LinkedList
 
-// ============================================================================
-public abstract class CancellableCallbackSingle
-  protected CancellationToken m_cancellationToken = null
-  protected CancellableCallbackSingle m_prev = null
-  protected CancellableCallbackSingle m_next = null
-  protected CancellableCallbackSingle m_nextCallback = null
-  protected real m_nextDelay = 0.
-  private timer m_timer = null
-
-  use RefObject
-
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_prev != null)
-      m_prev.release()
-    m_next = null
-    if (m_timer != null)
-      m_timer.release()
-    if (m_cancellationToken != null)
-      m_cancellationToken.release()
-
-  // --------------------------------------------------------------------------
-  abstract function call()
-
-  // --------------------------------------------------------------------------
-  private function doCall()
-    if (m_cancellationToken.isCanceled() == false)
-      call()
-    
-    // If we should dispatch another action, do so now. The dispatched callback
-    // will be responsible for cleaning up this callback.
-    if (m_nextCallback != null)
-      if (m_cancellationToken.isCanceled() == false)
-        m_nextCallback.acquire()
-        m_next = doAfter(m_cancellationToken, m_nextDelay, m_nextCallback)
-        m_next.m_prev = this
-        m_nextCallback = null
-      else
-        m_nextCallback.release()
-
-    // If there is no follow up action then delete this callback now
-    if (m_next == null)
-      this.release()
-
-  // --------------------------------------------------------------------------
-  protected function start(timer whichTimer, CancellationToken ct, real time)
-    m_cancellationToken = ct.acquire()
-    m_timer = whichTimer
-    m_timer.setData(this castTo int)
-    m_timer.start(time, () -> staticCallback())
-
-  // --------------------------------------------------------------------------
-  private static function staticCallback()
-    let t = GetExpiredTimer()
-    let cb = t.getData() castTo thistype
-    cb.doCall()
+LinkedList<CancellableCallbackSingle> g_callbackStack = new LinkedList<CancellableCallbackSingle>()
 
 // ============================================================================
 public function timer.doAfter(CancellationToken ct, real timeToWait, CancellableCallbackSingle cb) returns CancellableCallbackSingle
+  cb.acquire()
   cb.start(this, ct, timeToWait)
   return cb
 
@@ -75,35 +24,139 @@ public function nullTimer(CancellationToken ct, CancellableCallbackSingle cb) re
   return doAfter(ct, 0, cb)
 
 // ============================================================================
-public function CancellableCallbackSingle.continueWith(CancellableCallbackSingle cb) returns CancellableCallbackSingle
-  return this.continueWith(0., cb)
+public function timer.doPeriodically(CancellationToken ct, real time, CancellableCallbackPeriodic cb) returns CancellableCallbackPeriodic
+  cb.acquire()
+  cb.start(this, ct, time)
+  return cb
 
 // ============================================================================
-public function CancellableCallbackSingle.continueWith(real timeToWait, CancellableCallbackSingle cb) returns CancellableCallbackSingle
-  this.m_nextCallback = cb
-  this.m_nextDelay = timeToWait
-  return cb
+public function doPeriodically(CancellationToken ct, real time, CancellableCallbackPeriodic cb) returns CancellableCallbackPeriodic
+  return getTimer().doPeriodically(ct, time, cb)
+
+// ============================================================================
+public abstract class CancellableCallbackSingle
+  use RefObject
+
+  private CancellationToken m_cancellationToken = null
+  private timer m_timer = null
+  private _handle m_onCanceledHandler = INVALID_HANDLE
+  private bool m_calling = false
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_timer != null)
+      m_timer.release()
+    if (m_cancellationToken != null)
+      if (m_onCanceledHandler != INVALID_HANDLE)
+        m_cancellationToken.unregisterCanceledCallback(m_onCanceledHandler)
+      m_cancellationToken.release()
+
+  // --------------------------------------------------------------------------
+  abstract function call()
+
+  // --------------------------------------------------------------------------
+  protected function start(timer whichTimer, CancellationToken ct, real time)
+
+    if (ct.isCanceled())
+      release()
+      return
+
+    m_cancellationToken = ct.acquire()
+    m_onCanceledHandler = m_cancellationToken.registerCanceledCallback() () ->
+      if (not m_calling)
+        release() 
+
+    m_timer = whichTimer
+    ..setData(this castTo int)
+    ..start(time, () -> staticCallback())
+
+  // --------------------------------------------------------------------------
+  private static function staticCallback()
+    let t = GetExpiredTimer()
+    let cb = t.getData() castTo thistype
+    if (not cb.m_cancellationToken.isCanceled())
+      cb.m_calling = true
+      cb.call()
+      cb.m_calling = false
+    cb.release()
+
+// ============================================================================
+public abstract class CancellableCallbackPeriodic
+  use RefObject
+
+  private CancellationToken m_cancellationToken = null
+  private timer m_timer = null
+  private _handle m_onCanceledHandler = INVALID_HANDLE
+  private bool m_calling = false
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_timer != null)
+      m_timer.release()
+    if (m_cancellationToken != null)
+      if (m_onCanceledHandler != INVALID_HANDLE)
+        m_cancellationToken.unregisterCanceledCallback(m_onCanceledHandler)
+      m_cancellationToken.release()
+
+  // --------------------------------------------------------------------------
+  protected abstract function call(thistype cb)
+
+  // --------------------------------------------------------------------------
+  protected function start(timer whichTimer, CancellationToken ct, real time)
+
+    if (ct.isCanceled())
+      release()
+      return
+
+    m_cancellationToken = ct.acquire()
+    m_onCanceledHandler = m_cancellationToken.registerCanceledCallback() () ->
+      if (not m_calling)
+        release()
+
+    m_timer = whichTimer
+      ..setData(this castTo int)
+      ..startPeriodic(time, function staticCallback)
+
+  // --------------------------------------------------------------------------
+  private static function staticCallback()
+    let cb = (GetExpiredTimer().getData() castTo thistype)
+    if (not cb.m_cancellationToken.isCanceled())
+      cb.m_calling = true
+      cb.call(cb)
+      cb.m_calling = false
+    else
+      cb.release()
 
 // ============================================================================
 @test function nullTimer_canceledImmediately()
   let ct = new CancellationToken()
+  ct.acquire()
   ct.cancel()
+
   nullTimer(ct, () -> error("This shouldn't be called"))
+
+  ct.release()
 
 // ============================================================================
 @test function nullTimer_canceledImmediately2()
   let ct = new CancellationToken()
+  ct.acquire()
+
   nullTimer(ct, () -> error("This shouldn't be called"))
-  ct.cancel()
+
+  ct.cancelAndRelease()
 
 // ============================================================================
 @test function doAfter_canceledImmediately()
   let ct = new CancellationToken()
+  ct.acquire()
   doAfter(ct, 1.0, () -> error("This shouldn't be called"))
-  ct.cancel()
+  ct.cancelAndRelease()
 
 // ============================================================================
 @test function doAfter_canceledBeforeCallback()
   let ct = new CancellationToken()
+  ct.acquire()
+
   doAfter(ct, 1.0, () -> error("This shouldn't be called"))
-  doAfter(ct, 0.1, () -> ct.cancel())
+  doAfter(ct, 0.1, () -> ct.cancelAndRelease())

@@ -1,0 +1,977 @@
+package Tasks
+import LinkedList
+import RefObject
+import CancellationToken
+import ErrorHandling
+import Func
+import Events
+import HashMap
+import Action
+import Execute
+import Object
+import ClosureTimers
+import CancellableClosureTimers
+import Observable
+
+TaskDefinitionBuilder g_taskDefinitionBuilder = new TaskDefinitionBuilder()
+
+// ============================================================================
+public class Task
+  use Observable
+
+  private TaskDefinition m_definition
+  private Task m_parent
+  private CancellationToken m_cancellationToken
+  private string m_errorMessage = null
+  private TaskState m_state = WAITING
+  private LinkedList<_handle> m_handles           // lazily constructed
+  private LinkedList<Action1<Task>> m_actions     // lazily constructed
+  private object m_userData = NULL
+  private _handle m_cancellationTokenCanceledHandler = INVALID_HANDLE
+  private Event1<Task> m_completed = null
+  private bool m_destroyOnCompletion = false
+  
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+    m_definition = definition
+    m_parent = parent
+    m_userData = userData
+    m_cancellationToken = (ct != null ? ct : new CancellationToken()).acquire()
+
+    m_cancellationTokenCanceledHandler = m_cancellationToken.registerCanceledCallback() -> 
+      cancel()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    m_cancellationToken.unregisterCanceledCallback(m_cancellationTokenCanceledHandler)
+    m_cancellationToken.release()
+    m_cancellationToken = null
+
+    if (m_completed != null)
+      for h in m_handles
+        m_completed.unregister(h)
+      destroy m_handles
+      destroy m_completed
+
+    for action in m_actions
+      action.release()
+    destroy m_actions
+
+  // --------------------------------------------------------------------------
+  function getDefinition() returns TaskDefinition
+    return m_definition
+
+  // --------------------------------------------------------------------------
+  function getUserData<T>() returns T
+    return m_userData.castUnsafe<T>()
+
+  // --------------------------------------------------------------------------
+  function getUserDataObject() returns object
+    return m_userData
+
+  // --------------------------------------------------------------------------
+  function getCancellationToken() returns CancellationToken
+    return m_cancellationToken
+
+  // --------------------------------------------------------------------------
+  function getErrorMessage() returns string
+    return m_errorMessage
+
+  // --------------------------------------------------------------------------
+  function getState() returns TaskState
+    return m_state
+
+  // --------------------------------------------------------------------------
+  function completed() returns bool
+    return succeeded() or failed() or canceled()
+
+  // --------------------------------------------------------------------------
+  function succeeded() returns bool
+    return m_state == SUCCEEDED
+
+  // --------------------------------------------------------------------------
+  function failed() returns bool
+    return m_state == FAILED
+
+  // --------------------------------------------------------------------------
+  function canceled() returns bool
+    return m_state == CANCELED
+
+  // --------------------------------------------------------------------------
+  function running() returns bool
+    return m_state == RUNNING
+
+  // --------------------------------------------------------------------------
+  function fail(string errorMessage)
+    m_state = FAILED
+    m_errorMessage = errorMessage
+    log("Failed! " + errorMessage)
+    complete()
+
+  // --------------------------------------------------------------------------
+  function cancel()
+    m_state = CANCELED
+    log("Canceled")
+    complete()
+
+  // --------------------------------------------------------------------------
+  function destr()
+    destroy this
+
+  // --------------------------------------------------------------------------
+  function destroyOnCompletion()
+    m_destroyOnCompletion = true
+
+  // --------------------------------------------------------------------------
+  function onCompleted(Event1Callback<Task> action) returns _handle
+
+    if (completed())
+      action..acquire()..call(this)..release()
+      return INVALID_HANDLE
+
+    return registerCompletedEventCallback(action.acquire())
+
+  // --------------------------------------------------------------------------
+  function onSucceeded(Action1<Task> action) returns _handle
+
+    if (succeeded())
+      action..acquire()..call(this)..release()
+      return INVALID_HANDLE
+
+    return registerCompletedCallbackAction(action) task ->
+      if (task.succeeded())
+        action.call(task)
+
+  // --------------------------------------------------------------------------
+  function onFailed(Action1<Task> action) returns _handle
+
+    if (failed())
+      action..acquire()..call(this)..release()
+      return INVALID_HANDLE
+
+    return registerCompletedCallbackAction(action) task ->
+      if (task.failed())
+        action.call(task)
+
+  // --------------------------------------------------------------------------
+  function unregisterOnCompletedEventHandler(_handle callbackHandle)
+    if (m_completed != null)
+      m_completed.unregister(callbackHandle)
+
+  // --------------------------------------------------------------------------
+  private function registerCompletedCallbackAction(Action1<Task> action, Event1Callback<Task> callback) returns _handle
+    if (m_actions == null)
+      m_actions = new LinkedList<Action1<Task>>()
+    m_actions.add(action.acquire())
+    return registerCompletedEventCallback(callback)    
+
+  // --------------------------------------------------------------------------
+  private function registerCompletedEventCallback(Event1Callback<Task> callback) returns _handle
+    if (m_handles == null)
+      m_handles = new LinkedList<_handle>()
+    if (m_completed == null)
+      m_completed = new Event1<Task>()
+    let h = m_completed.register(callback)
+    m_handles.add(h)
+    return h
+
+  // --------------------------------------------------------------------------
+  protected function log(string message)
+    Log.info(m_definition.getLabel() + ": " + message)
+
+  // --------------------------------------------------------------------------
+  protected function run()
+    m_state = RUNNING
+    log("Running")
+
+  // --------------------------------------------------------------------------
+  protected function succeed()
+    m_state = SUCCEEDED
+    log("Succeeded")
+    complete()
+
+  // --------------------------------------------------------------------------
+  protected function complete()
+    log("Completed")
+    if (m_completed != null)
+      m_completed.call(this)
+    if (m_destroyOnCompletion)
+      destroy this
+
+  // --------------------------------------------------------------------------
+  static function run(Action1<Task> action) returns Task
+    return run(new CancellationToken(), action)
+
+  // --------------------------------------------------------------------------
+  static function run(CancellationToken ct, Action1<Task> action) returns Task
+    return run(ct, NULL, action)
+
+  // --------------------------------------------------------------------------
+  static function run(CancellationToken ct, object userData, Action1<Task> action) returns Task
+    return run(ct, "", userData, action)
+
+  // --------------------------------------------------------------------------
+  static function run(CancellationToken ct, string label, object userData, Action1<Task> action) returns Task
+    let definition = new ActionTaskDefinition(null, label, action)
+    let task = definition.createTask(null, userData, ct)
+    ..onDestroy((task) -> destroy definition)
+    ..run()
+    return task
+
+  // --------------------------------------------------------------------------
+  static function run<TUserData>(Action2<Task, TUserData> action) returns Task
+    return run<TUserData>(new CancellationToken(), action)
+
+  // --------------------------------------------------------------------------
+  static function run<TUserData>(CancellationToken ct, Action2<Task, TUserData> action) returns Task
+    return run<TUserData>(ct, NULL, action)
+
+  // --------------------------------------------------------------------------
+  static function run<TUserData>(CancellationToken ct, object userData, Action2<Task, TUserData> action) returns Task
+    return run<TUserData>(ct, "", userData, action)
+
+  // --------------------------------------------------------------------------
+  static function run<TUserData>(CancellationToken ct, string label, object userData, Action2<Task, TUserData> action) returns Task
+    let definition = new ActionUserDataTaskDefinition(null, label, action)
+    let task = definition.createTask(null, userData, ct)
+    ..onDestroy((task) -> destroy definition)
+    ..run()
+    return task
+
+  // --------------------------------------------------------------------------
+  static function wait(CancellationToken ct, string label, real seconds) returns Task
+    let definition = new WaitTaskDefinition(null, label, seconds)
+    let task = definition.createTask(null, NULL, ct)
+    ..onDestroy((task) -> destroy definition)
+    ..run()
+    return task
+
+  // --------------------------------------------------------------------------
+  static function waitFor(real pollTime, Func1<Task, bool> predicate) returns Task
+    return waitFor("", pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor(string label, real pollTime, Func1<Task, bool> predicate) returns Task
+    return waitFor(null, label, pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor(CancellationToken ct, string label, real pollTime, Func1<Task, bool> predicate) returns Task
+    let definition = new WaitForTaskDefinition(null, label, pollTime, predicate)
+    let task = definition.createTask(null, NULL, ct)
+    ..onDestroy((task) -> destroy definition)
+    ..run()
+    return task
+
+  // --------------------------------------------------------------------------
+  static function waitFor<TUserData>(real pollTime, Func2<Task, TUserData, bool> predicate) returns Task
+    return waitFor<TUserData>("", pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor<TUserData>(string label, real pollTime, Func2<Task, TUserData, bool> predicate) returns Task
+    return waitFor<TUserData>(null, label, pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor<TUserData>(CancellationToken ct, string label, real pollTime, Func2<Task, TUserData, bool> predicate) returns Task
+    let definition = new WaitForUserDataTaskDefinition<TUserData>(null, label, pollTime, predicate)
+    let task = definition.createTask(null, NULL, ct)
+    ..onDestroy((task) -> destroy definition)
+    ..run()
+    return task
+
+// ============================================================================
+public enum TaskState
+  WAITING
+  RUNNING
+  CANCELED
+  FAILED
+  SUCCEEDED
+
+// ============================================================================
+public function TaskState.toString() returns string
+  switch this
+    case WAITING
+      return "Waiting"
+    case RUNNING
+      return "Running"
+    case CANCELED
+      return "Canceled"
+    case FAILED
+      return "Failed"
+    case SUCCEEDED
+      return "Succeeded"
+
+// ============================================================================
+public abstract class TaskFactory
+  use RefObject
+  abstract function createTask(TaskDefinition definition, Task parent, object userData, CancellationToken ct) returns Task
+
+// ============================================================================
+public abstract class TaskDefinition
+  protected TaskDefinition m_parent
+  protected string m_label
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label)
+    m_parent = parent
+    m_label = label
+
+  // --------------------------------------------------------------------------
+  function getLabel() returns string
+    return m_label
+
+  // --------------------------------------------------------------------------
+  function getOwner() returns TaskDefinition
+    return m_parent
+
+  // --------------------------------------------------------------------------
+  function run() returns Task
+    return run(null, NULL)
+
+  // --------------------------------------------------------------------------
+  function run(CancellationToken ct) returns Task
+    return run(ct, NULL)
+
+  // --------------------------------------------------------------------------
+  function run(object userData) returns Task
+    return run(null, userData)
+
+  // --------------------------------------------------------------------------
+  function run<TUserData>(TUserData userData) returns Task
+    return run(null, toObjectUnsafe<TUserData>(userData))
+
+  // --------------------------------------------------------------------------
+  function run(CancellationToken ct, object userData) returns Task
+    let task = createTask(null, userData, ct)
+    task.run()
+    return task
+
+  // --------------------------------------------------------------------------
+  static function wait(real seconds) returns TaskDefinition
+    return wait("", seconds)
+
+  // --------------------------------------------------------------------------
+  static function wait(string label, real seconds) returns TaskDefinition
+    return new WaitTaskDefinition(null, label, seconds)
+
+  // --------------------------------------------------------------------------
+  static function waitFor(real pollTime, Func1<Task, bool> predicate) returns TaskDefinition
+    return waitFor("", pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor(string label, real pollTime, Func1<Task, bool> predicate) returns TaskDefinition
+    return new WaitForTaskDefinition(null, label, pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor<TUserData>(real pollTime, Func2<Task, TUserData, bool> predicate) returns TaskDefinition
+    return waitFor<TUserData>("", pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function waitFor<TUserData>(string label, real pollTime, Func2<Task, TUserData, bool> predicate) returns TaskDefinition
+    return new WaitForUserDataTaskDefinition<TUserData>(null, label, pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  static function build(Action1<TaskDefinitionBuilder> taskBuilder) returns TaskDefinition
+    return build("", taskBuilder)
+
+  // --------------------------------------------------------------------------
+  static function build(string label, Action1<TaskDefinitionBuilder> taskBuilder) returns TaskDefinition
+    let definition = new SequenceTaskDefinition(null, label)
+    g_taskDefinitionBuilder.reset(definition)
+    taskBuilder.acquire()..call(g_taskDefinitionBuilder)..release()
+    return definition
+    
+  // --------------------------------------------------------------------------
+  abstract protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+
+// ============================================================================
+abstract class AggregateTaskDefinition extends TaskDefinition
+  protected LinkedList<TaskDefinition> m_childDefinitions = new LinkedList<TaskDefinition>()
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label)
+    super(parent, label)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    while m_childDefinitions.isEmpty() == false
+      destroy m_childDefinitions.pop()
+    destroy m_childDefinitions
+    m_childDefinitions = null
+  
+  // --------------------------------------------------------------------------
+  function getChildDefinitions() returns LinkedList<TaskDefinition>
+    return m_childDefinitions
+
+// ============================================================================
+class TaskFactoryDefinition extends TaskDefinition
+  protected TaskFactory m_factory
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition owner, string label, TaskFactory factory)
+    super(owner, label)
+    m_factory = factory.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_factory
+
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return m_factory.createTask(this, parent, userData, ct)
+
+// ============================================================================
+module AggregateTask
+  protected LinkedList<Task> m_tasks = new LinkedList<Task>()
+  protected HashMap<Task, _handle> m_taskHandles
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    unregisterCompletedCallbacks()
+    
+    if (m_taskHandles != null)
+      destroy m_taskHandles
+
+    while not m_tasks.isEmpty()
+      destroy m_tasks.pop()
+    destroy m_tasks
+
+  // --------------------------------------------------------------------------
+  protected function registerCompletedCallback(Task task, Event1Callback<Task> callback)
+    if (m_taskHandles == null)
+      m_taskHandles = new HashMap<Task, _handle>()
+    m_taskHandles.put(task, task.onCompleted(callback))
+
+  // --------------------------------------------------------------------------
+  protected function unregisterCompletedCallback(Task task)
+    if (m_taskHandles != null)
+      task.unregisterOnCompletedEventHandler(m_taskHandles.get(task))
+      m_taskHandles.remove(task)
+
+  // --------------------------------------------------------------------------
+  protected function unregisterCompletedCallbacks()
+    if (m_taskHandles != null and m_taskHandles.size() > 0)
+      for task in m_tasks
+        task.unregisterOnCompletedEventHandler(m_taskHandles.get(task))
+        m_taskHandles.remove(task)
+
+// ============================================================================
+class SequenceTaskDefinition extends AggregateTaskDefinition
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label)
+    super(parent, label)
+    
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return new SequenceTask(this, parent, userData, ct)
+
+// ============================================================================
+class SequenceTask extends Task
+  use AggregateTask
+
+  private LLIterator<TaskDefinition> m_taskIterator = null
+  private Task m_currentTask = null
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+    super(definition, parent, userData, ct)
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_taskIterator != null)
+      m_taskIterator.close()
+      m_taskIterator = null
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    super.run()
+
+    m_taskIterator = (getDefinition() castTo SequenceTaskDefinition).getChildDefinitions().iterator()
+    m_taskIterator.reset()
+
+    continue()
+
+  // --------------------------------------------------------------------------
+  private function continue()
+
+    if (m_currentTask != null)
+    //{
+      switch (m_currentTask.getState())
+        case SUCCEEDED
+          skip
+        case FAILED
+          fail(m_currentTask.getErrorMessage())
+          return
+        case CANCELED
+          cancel()
+          return
+        case WAITING | RUNNING
+          error("Child task " + m_currentTask.getDefinition().getLabel() + " completed with invalid state " + m_currentTask.getState().toString())
+    //}
+
+    let ct = getCancellationToken()
+
+    if (ct.isCanceled())
+      cancel()
+      return
+
+    if (m_taskIterator.hasNext() == false)
+      succeed()
+      return
+
+    m_currentTask = m_taskIterator.next().createTask(this, getUserDataObject(), ct)
+    
+    m_tasks.add(m_currentTask)
+    registerCompletedCallback(m_currentTask, (task) -> onTaskCompleted(task))
+
+    execute(() -> m_currentTask.run())
+
+  // --------------------------------------------------------------------------
+  private function onTaskCompleted(Task task)
+    if (task != m_currentTask)
+      error("Unexpected task completed")
+    unregisterCompletedCallback(task)
+    m_tasks.remove(task)
+    log("Child task completed " + task.getDefinition().getLabel())
+    continue()
+
+// ============================================================================
+public class ActionTaskDefinition extends TaskDefinition
+  protected Action1<Task> m_action
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label, Action1<Task> action)
+    super(parent, label)
+    m_action = action.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_action.release()
+    
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return new ActionTask(this, parent, userData, ct, m_action)
+
+// ============================================================================
+class ActionTask extends Task
+  protected Action1<Task> m_action
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, Action1<Task> action)
+    super(definition, parent, userData, ct)
+    m_action = action.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_action.release()
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    let ct = getCancellationToken().acquire()
+
+    try() () ->
+    //{
+      if (ct.isCanceled())
+        cancel()
+      else
+        m_action.call(this)
+        succeed()
+      ct.release()
+    //}
+
+    if (lastError != "")
+      fail(lastError)
+
+// ============================================================================
+class ActionUserDataTaskDefinition<TUserData> extends TaskDefinition
+  protected Action2<Task, TUserData> m_action
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label, Action2<Task, TUserData> action)
+    super(parent, label)
+    m_action = action.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_action.release()
+    
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return new ActionUserDataTask<TUserData>(this, parent, userData, ct, m_action)
+
+// ============================================================================
+class ActionUserDataTask<TUserData> extends Task
+  protected Action2<Task, TUserData> m_action
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, Action2<Task, TUserData> action)
+    super(definition, parent, userData, ct)
+    m_action = action.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_action.release()
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    let ct = getCancellationToken().acquire()
+
+    try() () ->
+    //{
+      if (ct.isCanceled())
+        cancel()
+      else
+        m_action.call(this, getUserData<TUserData>())
+        if (not completed())
+          succeed()
+      ct.release()
+    //}
+
+    if (lastError != "")
+      fail(lastError)
+
+// ============================================================================
+class WaitTaskDefinition extends TaskDefinition
+  private real m_seconds
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label, real seconds)
+    super(parent, (label != null ? label : "Wait({0}s)".format(seconds.toString())))
+    m_seconds = seconds
+    
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return new WaitTask(this, parent, userData, ct, m_seconds)
+
+// ============================================================================
+class WaitTask extends Task
+  private real m_seconds
+  private CancellableCallbackSingle m_callback
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real seconds)
+    super(definition, parent, userData, ct)
+    m_seconds = seconds
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroyCallback()
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    super.run()
+
+    m_callback = doAfter(getCancellationToken(), m_seconds) () ->
+      // doAfter handles destroying the callback
+      m_callback = null
+      succeed()
+
+  // --------------------------------------------------------------------------
+  override protected function complete()
+    destroyCallback()
+    super.complete()
+
+  // --------------------------------------------------------------------------
+  private function destroyCallback()
+    if (m_callback != null)
+      destroy m_callback
+      m_callback = null
+
+// ============================================================================
+class WaitForTaskDefinition extends TaskDefinition
+  private Func1<Task, bool> m_predicate
+  private real m_pollTime
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label, real pollTime, Func1<Task, bool> predicate)
+    super(parent, label)
+    m_pollTime = pollTime
+    m_predicate = predicate.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_predicate.release()
+
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return new WaitForTask(this, parent, userData, ct, m_pollTime, m_predicate)
+
+// ============================================================================
+class WaitForTask extends Task
+  private Func1<Task, bool> m_predicate
+  private real m_pollTime
+  private CancellableCallbackPeriodic m_callback
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real pollTime, Func1<Task, bool> predicate)
+    super(definition, parent, userData, ct)
+    m_predicate = predicate.acquire()
+    m_pollTime = pollTime
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroyCallback()
+    m_predicate.release()
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    super.run()
+
+    m_callback = doPeriodically(getCancellationToken(), m_pollTime) cb ->
+      if (m_predicate.call(this))
+        // doAfter handles destroying the callback
+        m_callback = null
+        succeed()
+
+  // --------------------------------------------------------------------------
+  override protected function complete()
+    destroyCallback()
+    super.complete()
+
+  // --------------------------------------------------------------------------
+  private function destroyCallback()
+    if (m_callback != null)
+      m_callback.release()
+
+// ============================================================================
+class WaitForUserDataTaskDefinition<TUserData> extends TaskDefinition
+  private Func2<Task, TUserData, bool> m_predicate
+  private real m_pollTime
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label, real pollTime, Func2<Task, TUserData, bool> predicate)
+    super(parent, "WaitFor({0} {1}s)".format(label, pollTime.toString()))
+    m_pollTime = pollTime
+    m_predicate = predicate.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_predicate.release()
+
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    return new WaitForUserDataTask(this, parent, userData, ct, m_pollTime, m_predicate)
+
+// ============================================================================
+class WaitForUserDataTask<TUserData> extends Task
+  private Func2<Task, TUserData, bool> m_predicate
+  private real m_pollTime
+  private CancellableCallbackPeriodic m_callback
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real pollTime, Func2<Task, TUserData, bool> predicate)
+    super(definition, parent, userData, ct)
+    m_predicate = predicate.acquire()
+    m_pollTime = pollTime
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroyCallback()
+    m_predicate.release()
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    super.run()
+
+    m_callback = doPeriodically(getCancellationToken(), m_pollTime) cb ->
+      if (m_predicate.call(this, getUserData<TUserData>()))
+        nullTimer(() -> succeed())
+
+  // --------------------------------------------------------------------------
+  override protected function complete()
+    destroyCallback()
+    super.complete()
+
+  // --------------------------------------------------------------------------
+  private function destroyCallback()
+    if (m_callback != null)
+      m_callback.release()
+
+// ============================================================================
+class WhenAllTaskDefinition extends AggregateTaskDefinition
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label)
+    super(parent, label)
+
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    let task = new WhenAllTask(this, parent, userData, ct)
+    for definition in m_childDefinitions
+      task.m_tasks.add(definition.createTask(task, userData, ct))
+    return task
+
+// ============================================================================
+class WhenAllTask extends Task
+  private int m_completed = 0
+
+  use AggregateTask
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+    super(definition, parent, userData, ct)
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    super.run()
+    m_completed = 0
+    for task in m_tasks
+      registerCompletedCallback(task, (task) -> onTaskCompleted(task))
+      execute(() -> task.run())
+
+  // --------------------------------------------------------------------------
+  override protected function complete()
+    unregisterCompletedCallbacks()
+    super.complete()
+
+  // --------------------------------------------------------------------------
+  private function onTaskCompleted(Task task)
+    unregisterCompletedCallback(task)
+    m_completed++
+    if (m_completed == m_tasks.size())
+      succeed()
+
+// ============================================================================
+class WhenAnyTaskDefinition extends AggregateTaskDefinition
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition parent, string label)
+    super(parent, label)
+
+  // --------------------------------------------------------------------------
+  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+    let task = new WhenAnyTask(this, parent, userData, ct)
+    for definition in m_childDefinitions
+      task.m_tasks.add(definition.createTask(task, userData, ct))
+    return task
+
+// ============================================================================
+class WhenAnyTask extends Task
+  private int m_completed = 0
+
+  use AggregateTask
+
+  // --------------------------------------------------------------------------
+  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+    super(definition, parent, userData, ct)
+
+  // --------------------------------------------------------------------------
+  override protected function run()
+    super.run()
+    m_completed = 0
+    for task in m_tasks
+      registerCompletedCallback(task, (task) -> onTaskCompleted(task))
+      execute(() -> task.run())
+
+  // --------------------------------------------------------------------------
+  override protected function complete()
+    unregisterCompletedCallbacks()
+    for task in m_tasks
+      if (not task.completed())
+        task.cancel()
+    super.complete()
+
+  // --------------------------------------------------------------------------
+  private function onTaskCompleted(Task task)
+    log("Child task completed: " + task.getDefinition().getLabel() + " " + task.getState().toString())
+    unregisterCompletedCallback(task)
+    m_completed++
+    if (task.succeeded())
+      succeed()
+    else if (m_completed == m_tasks.size())
+      fail("No tasks succeeded")
+
+// ============================================================================
+public class TaskDefinitionBuilder
+  private AggregateTaskDefinition m_definition
+
+  // --------------------------------------------------------------------------
+  construct ()
+    skip
+
+  // --------------------------------------------------------------------------
+  construct (AggregateTaskDefinition definition)
+    m_definition = definition
+
+  // --------------------------------------------------------------------------
+  function reset(AggregateTaskDefinition definition)
+    m_definition = definition
+
+  // --------------------------------------------------------------------------
+  function execute(Action1<Task> action)
+    execute("", action)
+
+  // --------------------------------------------------------------------------
+  function execute(string label, Action1<Task> action)
+    execute(new ActionTaskDefinition(m_definition, label, action))
+
+  // --------------------------------------------------------------------------
+  function execute<TUserData>(Action2<Task, TUserData> action)
+    execute("", action)
+
+  // --------------------------------------------------------------------------
+  function execute<TUserData>(string label, Action2<Task, TUserData> action)
+    execute(new ActionUserDataTaskDefinition(m_definition, label, action))
+
+  // --------------------------------------------------------------------------
+  function execute(TaskDefinition task)
+    if (m_definition.m_childDefinitions == null)
+      m_definition.m_childDefinitions = new LinkedList<TaskDefinition>()
+    m_definition.m_childDefinitions.add(task)
+
+  // --------------------------------------------------------------------------
+  function wait(real seconds)
+    wait("", seconds)
+
+  // --------------------------------------------------------------------------
+  function wait(string label, real seconds)
+    execute(new WaitTaskDefinition(null, label, seconds))
+  
+  // --------------------------------------------------------------------------
+  function waitFor(real pollTime, Func1<Task, bool> predicate)
+    waitFor("", pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  function waitFor(string label, real pollTime, Func1<Task, bool> predicate)
+    execute(new WaitForTaskDefinition(m_definition, label, pollTime, predicate))
+  
+  // --------------------------------------------------------------------------
+  function waitFor<TUserData>(real pollTime, Func2<Task, TUserData, bool> predicate)
+    waitFor("", pollTime, predicate)
+
+  // --------------------------------------------------------------------------
+  function waitFor<TUserData>(string label, real pollTime, Func2<Task, TUserData, bool> predicate)
+    execute(new WaitForUserDataTaskDefinition(m_definition, label, pollTime, predicate))
+
+  // --------------------------------------------------------------------------
+  function whenAll(vararg TaskDefinition taskDefinitions)
+    let task = new WhenAllTaskDefinition(m_definition, "")
+    for definition in taskDefinitions
+      task.m_childDefinitions.add(definition)
+    execute(task)
+
+  // --------------------------------------------------------------------------
+  function whenAll(string label, LinkedList<TaskDefinition> taskDefinitions, bool ownsTaskDefinitions)
+    let task = new WhenAllTaskDefinition(m_definition, label)
+    for definition in taskDefinitions
+      task.m_childDefinitions.add(definition)
+    execute(task)
+    if (ownsTaskDefinitions)
+      destroy taskDefinitions
+
+  // --------------------------------------------------------------------------
+  function whenAny(vararg TaskDefinition taskDefinitions)
+    let task = new WhenAnyTaskDefinition(m_definition, "")
+    for definition in taskDefinitions
+      task.m_childDefinitions.add(definition)
+    execute(task)
+
+  // --------------------------------------------------------------------------
+  function whenAny(string label, LinkedList<TaskDefinition> taskDefinitions, bool ownsTaskDefinitions)
+    let task = new WhenAnyTaskDefinition(m_definition, label)
+    for definition in taskDefinitions
+      task.m_childDefinitions.add(definition)
+    execute(task)
+    if (ownsTaskDefinitions)
+      destroy taskDefinitions

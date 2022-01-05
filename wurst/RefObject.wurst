@@ -18,6 +18,7 @@ import ErrorHandling
 */
 public module RefObject
   private int m_refs = 0
+  // string debugName = ""
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -29,11 +30,13 @@ public module RefObject
   // --------------------------------------------------------------------------
   function acquire() returns thistype
     m_refs++
+    // Log.info("[{0}] m_refs++: {1}".format(debugName, m_refs.toString()))
     return this
 
   // --------------------------------------------------------------------------
   function release()
     m_refs--
+    // Log.info("[{0}] m_refs--: {1}".format(debugName, m_refs.toString()))
     if (m_refs <= 0)
       destroy this
 

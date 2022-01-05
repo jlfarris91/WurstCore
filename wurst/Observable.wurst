@@ -1,0 +1,30 @@
+package Observable
+import Events
+
+// ============================================================================
+public module Observable
+  private Event1<thistype> m_destructing              // lazy constructed
+  private Event2<thistype, string> m_propertyChanged  // lazy constructed
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_destructing != null)
+      m_destructing.call(this)
+      destroy m_destructing
+
+  // --------------------------------------------------------------------------
+  function onDestroy(Event1Callback<thistype> callback) returns _handle
+    if (m_destructing == null)
+      m_destructing = new Event1<thistype>()
+    return m_destructing.register(callback)
+
+  // --------------------------------------------------------------------------
+  function onPropertyChanged(Event2Callback<thistype, string> callback) returns _handle
+    if (m_propertyChanged == null)
+      m_propertyChanged = new Event2<thistype, string>()
+    return m_propertyChanged.register(callback)
+
+  // --------------------------------------------------------------------------
+  protected function raisePropertyChangedEvent(string propertyName)
+    if (m_propertyChanged != null)
+      m_propertyChanged.call(this, propertyName)

@@ -1,11 +1,18 @@
 package CancellationToken
 import RefObject
+import Events
 
 // ============================================================================
 public class CancellationToken
   private bool m_canceled = false
+  private Event m_canceledEvent = null
 
   use RefObject
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_canceledEvent != null)
+      destroy m_canceledEvent
 
   // --------------------------------------------------------------------------
   function isCanceled() returns bool
@@ -13,9 +20,29 @@ public class CancellationToken
 
   // --------------------------------------------------------------------------
   function cancel()
-    m_canceled = true
+    if (not m_canceled)
+      m_canceled = true
+      if (m_canceledEvent != null)
+        m_canceledEvent.call()
 
   // --------------------------------------------------------------------------
   function cancelAndRelease()
     cancel()
     release()
+
+  // --------------------------------------------------------------------------
+  function registerCanceledCallback(EventCallback callback) returns _handle
+    
+    if (isCanceled())
+      callback.call()
+      callback.release()
+      return INVALID_HANDLE
+
+    if (m_canceledEvent == null)
+      m_canceledEvent = new Event()
+    return m_canceledEvent.register(callback)
+
+  // --------------------------------------------------------------------------
+  function unregisterCanceledCallback(_handle callbackHandle)
+    if (m_canceledEvent != null)
+      m_canceledEvent.unregister(callbackHandle)

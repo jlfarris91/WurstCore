@@ -12,6 +12,11 @@ constant int OBJECT_INDEX_HANDLE_MASK = 0xFFFFF   // Max number of handles suppo
 constant int OBJECT_INDEX_TYPEID_MASK = 0xFFF     // Max number of types supported is 4095
 
 // ============================================================================
+@compiletime function assertTypeCount()
+  if (maxTypeId() > OBJECT_INDEX_TYPEID_MASK)
+    compileError("Too many types defined to safely use the Object library. Total: {0} Max allowed: {1}".format(maxTypeId().toString(), OBJECT_INDEX_TYPEID_MASK.toString()))
+
+// ============================================================================
 public function objectFromIndex(int index) returns object
   return object(index.and32(OBJECT_INDEX_HANDLE_MASK), index.shiftr(20).and32(OBJECT_INDEX_TYPEID_MASK))
 
@@ -48,6 +53,10 @@ public function object.cast<T>(int expectedTypeId) returns T
     error("[object.cast] No meta type registered for object type {0}".format(this.getTypeName()))
   if (metaType.is(expectedTypeId) == false)
     error("[object.cast] Type cast failed. Object: {0} ({1}) Expected: {2} ({3})".format(this.getTypeName(), this.objectTypeId.toString(), Meta.getTypeName(expectedTypeId), expectedTypeId.toString()))
+  return this.objectHandle castTo T
+
+// ============================================================================
+public function object.castUnsafe<T>() returns T
   return this.objectHandle castTo T
 
 // ============================================================================
@@ -90,6 +99,10 @@ public function toObject<T>(T source, int objectTypeId) returns object
   return object(source castTo int, objectTypeId)
 
 // ============================================================================
+public function toObjectUnsafe<T>(T source) returns object
+  return object(source castTo int, OBJECT_INDEX_TYPEID_MASK)
+
+// ============================================================================
 public function toObjectRef<T>(T source, int objectTypeId) returns Object
   return toObject<T>(source, objectTypeId).ref()
 
@@ -120,6 +133,10 @@ public class Object
   // --------------------------------------------------------------------------
   function cast<T>(int expectedTypeId) returns T
     return m_object.cast<T>(expectedTypeId)
+
+  // --------------------------------------------------------------------------
+  function castUnsafe<T>() returns T
+    return m_object.castUnsafe<T>()
     
   // --------------------------------------------------------------------------
   function isNull() returns bool
