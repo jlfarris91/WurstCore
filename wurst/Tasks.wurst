@@ -24,11 +24,11 @@ public class Task
   private CancellationToken m_cancellationToken
   private string m_errorMessage = null
   private TaskState m_state = WAITING
-  private LinkedList<_handle> m_handles           // lazily constructed
   private LinkedList<Action1<Task>> m_actions     // lazily constructed
+  private LinkedList<_handle> m_handles           // lazily constructed
+  private Event1<Task> m_completed = null         // lazily constructed
   private object m_userData = NULL
   private _handle m_cancellationTokenCanceledHandler = INVALID_HANDLE
-  private Event1<Task> m_completed = null
   private bool m_destroyOnCompletion = false
   
   // --------------------------------------------------------------------------
@@ -44,19 +44,23 @@ public class Task
   // --------------------------------------------------------------------------
   ondestroy
 
-    m_cancellationToken.unregisterCanceledCallback(m_cancellationTokenCanceledHandler)
+    if (m_cancellationTokenCanceledHandler != INVALID_HANDLE)
+      m_cancellationToken.unregisterCanceledCallback(m_cancellationTokenCanceledHandler)
+
     m_cancellationToken.release()
     m_cancellationToken = null
 
     if (m_completed != null)
-      for h in m_handles
-        m_completed.unregister(h)
-      destroy m_handles
+      if (m_handles != null)
+        for h in m_handles
+          m_completed.unregister(h)
+        destroy m_handles
       destroy m_completed
 
-    for action in m_actions
-      action.release()
-    destroy m_actions
+    if (m_actions != null)
+      for action in m_actions
+        action.release()
+      destroy m_actions
 
   // --------------------------------------------------------------------------
   function getDefinition() returns TaskDefinition
@@ -194,8 +198,14 @@ public class Task
   // --------------------------------------------------------------------------
   protected function complete()
     log("Completed")
+
+    if (m_cancellationTokenCanceledHandler != INVALID_HANDLE)
+      m_cancellationToken.unregisterCanceledCallback(m_cancellationTokenCanceledHandler)
+      m_cancellationTokenCanceledHandler = INVALID_HANDLE
+
     if (m_completed != null)
       m_completed.call(this)
+
     if (m_destroyOnCompletion)
       destroy this
 
@@ -675,8 +685,7 @@ class WaitTask extends Task
   // --------------------------------------------------------------------------
   private function destroyCallback()
     if (m_callback != null)
-      destroy m_callback
-      m_callback = null
+      m_callback.release()
 
 // ============================================================================
 class WaitForTaskDefinition extends TaskDefinition
