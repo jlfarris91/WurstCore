@@ -7,6 +7,7 @@ import ClosureFrames
 import Range
 import Object
 import StackPanel
+import Execute
 
 tuple scrollbarState(int value, rangeInt range, bool show)
 
@@ -131,7 +132,7 @@ public class ListBox extends Panel
 
   // --------------------------------------------------------------------------
   private function getItemsSourceCount() returns int
-    return m_itemsSource != null ? m_itemsSource.getCount() : 0
+    return m_itemsSource != null ? m_itemsSource.size() : 0
 
   // --------------------------------------------------------------------------
   private function updateScrollBarFrame()
@@ -161,12 +162,16 @@ public class ListBox extends Panel
     let orientation = getOrientation()
     let isHorizontal = orientation == LayoutOrientation.LEFTTORIGHT or orientation == LayoutOrientation.RIGHTTOLEFT
     let newMaxNumberItems = getMaxNumberOfItems(m_itemSize, isHorizontal ? size.x : size.y)
-    if (getNeverMeasured() or m_needsRebuild or newMaxNumberItems != m_itemFrames.getCount())
-      rebuildItems(size)
+    if (getNeverMeasured() or m_needsRebuild or newMaxNumberItems != m_itemFrames.size())
+      executeRebuildItems(size)
 
   // --------------------------------------------------------------------------
   override protected function onRenderSizeChanged(SizeChangedInfo info)
     tryUpdateItems(getSize())
+
+  // --------------------------------------------------------------------------
+  private function executeRebuildItems(vec2 size)
+    execute(() -> rebuildItems(size))
   
   // --------------------------------------------------------------------------
   private function rebuildItems(vec2 size)
@@ -196,13 +201,13 @@ public class ListBox extends Panel
     var added = 0
     var removed = 0
 
-    while (m_itemFrames.getCount() < maxNumItems)
+    while (m_itemFrames.size() < maxNumItems)
       let frame = getNewItemFrame(itemFrameTemplate)
       m_itemFrames.add(frame)
       frame.show()
       added++
 
-    while (m_itemFrames.getCount() > maxNumItems)
+    while (m_itemFrames.size() > maxNumItems)
       let frame = m_itemFrames.pop()
       m_itemFramesPool.add(frame)
       frame.hide()
@@ -308,7 +313,7 @@ public class ListBox extends Panel
     next.value = m_scrollBar != null ? m_scrollBar.getValue().floor() : 0
 
     next = updateScrollbarState(
-      m_itemFrames.getCount(),
+      m_itemFrames.size(),
       getItemsSourceCount(),
       next)
 
@@ -348,7 +353,7 @@ public class ListBox extends Panel
   private function updateViewport()
     // let itemsSourceCount = getItemsSourceCount()
     let viewportStart = max((m_scrollbarState.range.max - m_scrollBar.getValue()).floor(), 0)
-    let viewportLength = m_itemFrames.getCount()
+    let viewportLength = m_itemFrames.size()
     let next = rangeInt(viewportStart, viewportStart + viewportLength)
     // log("updateViewport", "c: " + m_viewport.toString() + " next: " + next.toString())
     // if (next == m_viewport and m_lastItemsSourceCount == itemsSourceCount)
@@ -362,10 +367,10 @@ public class ListBox extends Panel
     let itemsSourceCount = getItemsSourceCount()
     for i = 0 to m_viewport.getLength() - 1
     //{
-      let childFrame = m_itemFrames.getItem(i)
+      let childFrame = m_itemFrames.get(i)
       let itemIndex = m_viewport.min + i
       if (itemIndex < itemsSourceCount)
-        childFrame.setDataContext(m_itemsSource.getItem(itemIndex))
+        childFrame.setDataContext(m_itemsSource.get(itemIndex))
         childFrame.show()
       else
         childFrame.setDataContext(NULL)

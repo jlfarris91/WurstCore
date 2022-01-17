@@ -11,6 +11,10 @@ public module Observable
     if (m_destructing != null)
       m_destructing.call(this)
       destroy m_destructing
+      m_destructing = null
+    if (m_propertyChanged != null)
+      destroy m_propertyChanged
+      m_propertyChanged = null
 
   // --------------------------------------------------------------------------
   function onDestroy(Event1Callback<thistype> callback) returns _handle

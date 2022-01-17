@@ -3,6 +3,36 @@ import ErrorHandling
 import Vector
 import public Handle
 import RefObject
+import LinkedList
+import HashList
+
+LinkedList<Event> g_eventStack = new LinkedList<Event>()
+
+// ============================================================================
+class EventTrace
+  static LinkedList<int> g_eventStack = new LinkedList<int>()
+  static HashList<int> g_events = new HashList<int>()
+
+  // --------------------------------------------------------------------------
+  static function push<T>(T e)
+    g_eventStack.push(e castTo int)
+    g_events.add(e castTo int)
+
+  // --------------------------------------------------------------------------
+  static function pop<T>(T expected)
+    let e = g_eventStack.pop()
+    if (e != expected castTo int)
+      error("Mismatch event trace!")
+    g_events.remove(e)
+
+  // --------------------------------------------------------------------------
+  static function has<T>(T e) returns bool
+    return g_events.has(e castTo int)
+
+  // --------------------------------------------------------------------------
+  static function remove<T>(T e)
+    g_eventStack.remove(e castTo int)
+    g_events.remove(e castTo int)
 
 // ============================================================================
 public class Event implements IHandleProvider
@@ -21,6 +51,7 @@ public class Event implements IHandleProvider
 
   // --------------------------------------------------------------------------
   ondestroy
+    EventTrace.remove(this)
     for callback in m_callbacks
       callback.release()
     destroy m_callbacks
@@ -47,12 +78,15 @@ public class Event implements IHandleProvider
     if (index == -1)
       // Log.info("Event", "unregister", "", "index == -1")
       return
-    let callback = m_callbacks.getItem(index)
+    let callback = m_callbacks.get(index)
     callback.markedForRemoval = true
     // Log.info("Event", "unregister", "", "Callback at index {0} marked for removal.".format(index.toString()))
 
   // --------------------------------------------------------------------------
   function call()
+
+    if (m_callStackDepth == 0)
+      EventTrace.push(this)
 
     m_callStackDepth++
     
@@ -63,14 +97,15 @@ public class Event implements IHandleProvider
       //  Log.info("Event", "call", "", "Callback marked for removal. Skipping.")
 
     m_callStackDepth--
-    if (m_callStackDepth == 0)
+    if (m_callStackDepth == 0 and EventTrace.has(this))
+      EventTrace.pop(this)
       cleanup()
 
   // --------------------------------------------------------------------------
   private function cleanup()
     var index = 0
-    while index < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(index)
+    while index < m_callbacks.size()
+      let callback = m_callbacks.get(index)
       if (callback.markedForRemoval)
         m_callbacks.removeAt(index).release()
         // Log.info("Event", "cleanup", "", "Callback at index {0} destroyed.".format(index.toString()))
@@ -99,6 +134,7 @@ public class Event1<TArg1> implements IHandleProvider
 
   // --------------------------------------------------------------------------
   ondestroy
+    EventTrace.remove(this)
     for callback in m_callbacks
       callback.release()
     destroy m_callbacks
@@ -123,11 +159,14 @@ public class Event1<TArg1> implements IHandleProvider
     let index = m_callbacks.indexOf(callbackHandle.id castTo Event1Callback<TArg1>)
     if (index == -1)
       return
-    let callback = m_callbacks.getItem(index)
+    let callback = m_callbacks.get(index)
     callback.markedForRemoval = true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1)
+
+    if (m_callStackDepth == 0)
+      EventTrace.push(this)
 
     m_callStackDepth++
     
@@ -136,14 +175,15 @@ public class Event1<TArg1> implements IHandleProvider
         callback.call(arg1)
 
     m_callStackDepth--
-    if (m_callStackDepth == 0)
+    if (m_callStackDepth == 0 and EventTrace.has(this))
+      EventTrace.pop(this)
       cleanup()
 
   // --------------------------------------------------------------------------
   private function cleanup()
     var index = 0
-    while index < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(index)
+    while index < m_callbacks.size()
+      let callback = m_callbacks.get(index)
       if (callback.markedForRemoval)
         m_callbacks.removeAt(index).release()
       else
@@ -171,6 +211,7 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
 
   // --------------------------------------------------------------------------
   ondestroy
+    EventTrace.remove(this)
     for callback in m_callbacks
       callback.release()
     destroy m_callbacks
@@ -195,11 +236,14 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
     let index = m_callbacks.indexOf(callbackHandle.id castTo Event2Callback<TArg1, TArg2>)
     if (index == -1)
       return
-    let callback = m_callbacks.getItem(index)
+    let callback = m_callbacks.get(index)
     callback.markedForRemoval = true
 
   // --------------------------------------------------------------------------
   function call(TArg1 arg1, TArg2 arg2)
+
+    if (m_callStackDepth == 0)
+      EventTrace.push(this)
 
     m_callStackDepth++
     
@@ -208,14 +252,15 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
         callback.call(arg1, arg2)
 
     m_callStackDepth--
-    if (m_callStackDepth == 0)
+    if (m_callStackDepth == 0 and EventTrace.has(this))
+      EventTrace.pop(this)
       cleanup()
 
   // --------------------------------------------------------------------------
   private function cleanup()
     var index = 0
-    while index < m_callbacks.getCount()
-      let callback = m_callbacks.getItem(index)
+    while index < m_callbacks.size()
+      let callback = m_callbacks.get(index)
       if (callback.markedForRemoval)
         m_callbacks.removeAt(index).release()
       else
@@ -254,11 +299,11 @@ public abstract class Event2Callback<TArg1, TArg2>
     let mah = ma.register(() -> skip)
     ma.unregister(mah)
 
-  pool.getCount().assertEquals(999)
+  pool.size().assertEquals(999)
 
   ma.call()
 
-  pool.getCount().assertEquals(0)
+  pool.size().assertEquals(0)
 
 // ============================================================================
 @test function stressTest_call()
@@ -350,4 +395,33 @@ class Test
 
   ma.call() 
 
-  test.a.assertEquals(pool.getCount())
+  test.a.assertEquals(pool.size())
+
+// ============================================================================
+@test function destroyEventDuringCall()
+
+  let e = new Event()
+  e..register(() -> destroy e)..call()
+
+  let e1 = new Event1<int>()
+  e1..register((i) -> destroy e1)..call(1)
+
+  let e2 = new Event2<int, int>()
+  e2..register((i, j) -> destroy e2)..call(1, 2)
+
+// ============================================================================
+@test function destroyEventDuringCall_Nested()
+
+  let a = new Event()
+  let b = new Event()
+  let c = new Event()
+
+  c..register(() -> begin
+      destroy a
+      destroy b
+      destroy c
+    end)
+  b..register(() -> c.call())
+  a..register(() -> b.call())
+
+  a.call()

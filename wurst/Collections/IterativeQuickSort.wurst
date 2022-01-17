@@ -1,0 +1,157 @@
+package IterativeQuickSort
+import LinkedList
+import ErrorHandling
+import Execute
+import ICollection
+import Vector
+
+// ============================================================================
+class QuickSortPartition<T>
+  int low
+  int high
+  T pivot
+  int i
+  int j
+  int nextPartition
+  bool execute
+
+// ============================================================================
+public class IterativeQuickSort<T>
+  private LinkedList<QuickSortPartition<T>> m_stack = new LinkedList<QuickSortPartition<T>>()
+  private int m_iterations
+  private int m_maxIterations
+  private int m_maxPartitionSize
+  private ICollection<T> m_collection
+  private Comparator<T> m_comparator
+  private int m_totalIterations
+  private int m_low
+  private int m_high
+
+  // --------------------------------------------------------------------------
+  construct(int iterations, int maxPartitionSize, ICollection<T> collection, Comparator<T> comparator)
+    __construct(iterations, maxPartitionSize, collection, comparator, 0, collection.size()-1)
+
+  // --------------------------------------------------------------------------
+  construct(int iterations, int maxPartitionSize, ICollection<T> collection, Comparator<T> comparator, int low, int high)
+    __construct(iterations, maxPartitionSize, collection, comparator, low, high)
+
+  // --------------------------------------------------------------------------
+  function __construct(int iterations, int maxPartitionSize, ICollection<T> collection, Comparator<T> comparator, int low, int high)
+    m_maxIterations = iterations
+    m_maxPartitionSize = maxPartitionSize
+    m_collection = collection
+    m_comparator = comparator
+    m_low = low
+    m_high = high
+    reset()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    clearStack()
+    destroy m_stack
+
+  // --------------------------------------------------------------------------
+  function reset()
+    m_iterations = 0
+    m_totalIterations = 0
+    clearStack()
+    enqueuePartition(m_low, m_high)
+
+  // --------------------------------------------------------------------------
+  function getTotalIterations() returns int
+    return m_totalIterations
+
+  // --------------------------------------------------------------------------
+  function next() returns bool
+
+    let succeeded = try() () ->
+      m_iterations = 0
+      while (m_iterations < m_maxIterations and m_stack.isEmpty() == false)
+        let partition = m_stack.getFirst()
+        if (processPartition(partition))
+          destroy m_stack.dequeue()
+
+    if (not succeeded)
+      error("May have ran out of ops - try decreasing max iterations")
+
+    return m_stack.isEmpty() == false
+
+  // --------------------------------------------------------------------------
+  function hasNext() returns bool
+    return m_stack.isEmpty() == false
+
+  // --------------------------------------------------------------------------
+  private function processPartition(QuickSortPartition<T> partition) returns bool
+    let done = updatePartition(partition)
+    if (done)
+      enqueuePartition(partition.low, partition.nextPartition-1)
+      enqueuePartition(partition.nextPartition+1, partition.high)
+    return done
+
+  // --------------------------------------------------------------------------
+  private function updatePartition(QuickSortPartition<T> partition) returns bool
+    var done = partition.j > partition.high - 1
+    
+    while (m_iterations < m_maxIterations and not done)
+      if (partition.j >= 0 and partition.j < m_high and m_comparator.compare(m_collection.get(partition.j), partition.pivot) < 0)
+        partition.i++
+        m_collection.swap(partition.i, partition.j)
+      partition.j++
+      done = partition.j > partition.high - 1
+      m_iterations++
+      m_totalIterations++
+
+    if (done)
+      m_collection.swap(partition.i + 1, partition.high)
+      partition.nextPartition = partition.i + 1
+
+    return done
+
+  // --------------------------------------------------------------------------
+  private function enqueuePartition(int low, int high)
+    if (low < high)
+      m_stack.push(createPartition(low, high))
+
+  // --------------------------------------------------------------------------
+  private function createPartition(int low, int high) returns QuickSortPartition<T>
+    let partition = new QuickSortPartition<T>()
+    partition.low = low
+    partition.high = high
+    partition.execute = (high - low).abs() > m_maxPartitionSize
+    partition.i = low-1
+    partition.j = low
+    partition.pivot = m_collection.get(high)
+    partition.nextPartition = -1
+    return partition
+
+  // --------------------------------------------------------------------------
+  private function clearStack()
+    while (m_stack.isEmpty() == false)
+      destroy m_stack.pop()
+
+// ============================================================================
+public function ICollection<T>.iterativeQuickSort<T>(int maxIterations, int maxPartitionSize, Comparator<T> comparator) returns IterativeQuickSort<T>
+  return new IterativeQuickSort<T>(maxIterations, maxPartitionSize, this, comparator)
+
+// ============================================================================
+public function ICollection<T>.iterativeQuickSort<T>(int maxIterations, int maxPartitionSize, int low, int high, Comparator<T> comparator) returns IterativeQuickSort<T>
+  return new IterativeQuickSort<T>(maxIterations, maxPartitionSize, this, comparator, low, high)
+
+// ============================================================================
+@test
+function testSort()
+  let vector = new Vector<int>(1024)
+  
+  for i = 0 to vector.capacity()-1
+    vector.add(GetRandomInt(0, 999))
+
+  let sorter = vector.iterativeQuickSort(1000, 1000, (a, b) -> b - a)
+
+  // act
+  while (sorter.hasNext())
+    sorter.next()
+  destroy sorter
+
+  // assert
+  for i = 0 to vector.size()-2
+    vector.get(i).assertGreaterThanOrEqual(vector.get(i+1))

@@ -1,7 +1,47 @@
 package ICollection
+import LinkedList
 
 // ============================================================================
-public interface ICollection<T>
-  function getCount() returns int
-  function get(int index) returns T
-  function set(int index, T elem)
+public abstract class ICollection<T>
+  abstract function get(int index) returns T
+  abstract function set(int index, T value)
+  abstract function size() returns int
+
+// ============================================================================
+public function ICollection<T>.swap<T>(int indexA, int indexB)
+  if (indexA >= 0 and indexA < this.size() and indexB >= 0 and indexB < this.size())
+    let temp = this.get(indexA)
+    this.set(indexA, this.get(indexB))
+    this.set(indexB, temp)
+
+// ============================================================================
+class LinkedListCollectionWrapper<T> extends ICollection<T>
+  private LinkedList<T> m_list
+  private bool m_ownsList
+
+  // --------------------------------------------------------------------------
+  construct(LinkedList<T> list, bool ownsList)
+    m_list = list
+    m_ownsList = ownsList
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_ownsList)
+      destroy m_list
+      m_list = null
+
+  // --------------------------------------------------------------------------
+  override function get(int index) returns T
+    return m_list.get(index)
+
+  // --------------------------------------------------------------------------
+  override function set(int index, T value)
+    m_list.set(index, value)
+
+  // --------------------------------------------------------------------------
+  override function size() returns int
+    return m_list.size()
+
+// ============================================================================
+public function LinkedList<T>.asCollection<T>(bool ownsList) returns ICollection<T>
+  return new LinkedListCollectionWrapper(this, ownsList)

@@ -3,11 +3,13 @@ import FixedArray
 import ErrorHandling
 import Action
 import Func
+import Execute
+import ICollection
 
 constant int DEFAULT_VECTOR_CAPACITY = 8
 
 // ============================================================================
-public class Vector<T>
+public class Vector<T> extends ICollection<T>
   private FixedArray<T> m_array
   private int m_count
   private VectorIterator<T> m_staticIterator
@@ -33,24 +35,37 @@ public class Vector<T>
       m_staticIterator = null
 
   // --------------------------------------------------------------------------
-  function getCapacity() returns int
-    return m_array.getCapacity()
+  function capacity() returns int
+    return m_array.size()
 
   // --------------------------------------------------------------------------
-  function getCount() returns int
+  override function size() returns int
     return m_count
 
   // --------------------------------------------------------------------------
-  function getItem(int index) returns T
-    if (m_array == null)
-      error("Array is null")
-    if (index < 0 or index >= getCount())
-      error("Index out of range: " + index.toString())
-    return m_array.getItem(index)
+  function setSize(int size)
+    if (size < 0)
+      error("Size argument cannot be less than zero.")
+    m_array = FixedArray.growArray(m_array, size)
+    m_count = size
 
   // --------------------------------------------------------------------------
-  function setItem(int i, T _item)
-    m_array.setItem(i, _item)
+  function fill(T object)
+    for i = 0 to capacity()-1
+      m_array.set(i, object)
+    m_count = capacity()
+
+  // --------------------------------------------------------------------------
+  override function get(int index) returns T
+    if (m_array == null)
+      error("Array is null")
+    if (index < 0 or index >= size())
+      error("Index out of range: " + index.toString())
+    return m_array.get(index)
+
+  // --------------------------------------------------------------------------
+  override function set(int i, T _item)
+    m_array.set(i, _item)
 
   // --------------------------------------------------------------------------
   function contains(T _item) returns bool
@@ -59,28 +74,28 @@ public class Vector<T>
   // --------------------------------------------------------------------------
   function add(T _item)
     m_array = FixedArray.growArray(m_array, m_count + 1)
-    m_array.setItem(m_count, _item)
+    m_array.set(m_count, _item)
     m_count++
 
   // --------------------------------------------------------------------------
   function insert(int index, T _item)
-    if (index < 0 or index > getCount())
+    if (index < 0 or index > size())
       error("Index out of range: " + index.toString())    
-    if (index == getCount())
+    if (index == size())
       add(_item)
       return
     m_array = FixedArray.growArray(m_array, m_count + 1)
     var mutableIndex = m_count - 1
     while (mutableIndex > index and mutableIndex > 0)
-      m_array.setItem(mutableIndex, getItem(mutableIndex - 1))
+      m_array.set(mutableIndex, get(mutableIndex - 1))
       mutableIndex--
     m_count++
-    setItem(index, _item)
+    set(index, _item)
 
   // --------------------------------------------------------------------------
   function indexOf(T _item) returns int
     for i = 0 to m_count - 1
-      if (getItem(i) == _item)
+      if (get(i) == _item)
         return i
     return -1
 
@@ -94,12 +109,12 @@ public class Vector<T>
 
   // --------------------------------------------------------------------------
   function removeAt(int index) returns T
-    if (index < 0 or index >= getCount())
+    if (index < 0 or index >= size())
       error("Index out of range: " + index.toString())
     var mutableIndex = index
-    let _item = getItem(index)
+    let _item = get(index)
     while (mutableIndex < m_count - 1)
-      m_array.setItem(mutableIndex, getItem(mutableIndex + 1))
+      m_array.set(mutableIndex, get(mutableIndex + 1))
       mutableIndex++
     m_count--
     return _item
@@ -115,16 +130,16 @@ public class Vector<T>
   // --------------------------------------------------------------------------
   function clearAndNull()
     for i = 0 to m_count - 1
-      m_array.setItem(i, null)
+      m_array.set(i, null)
     m_count = 0
 
   // --------------------------------------------------------------------------
   function getFirst() returns T
-    return m_count > 0 ? m_array.getItem(0) : null
+    return m_count > 0 ? m_array.get(0) : null
 
   // --------------------------------------------------------------------------
   function getLast() returns T
-    return m_count > 0 ? m_array.getItem(m_count - 1) : null
+    return m_count > 0 ? m_array.get(m_count - 1) : null
 
   // --------------------------------------------------------------------------
   function isEmpty() returns bool
@@ -132,9 +147,9 @@ public class Vector<T>
 
   // --------------------------------------------------------------------------
   function clone() returns Vector<T>
-    let clonedVector = new Vector<T>(getCapacity())
-    for i = 0 to getCount() - 1
-      clonedVector.add(getItem(i))
+    let clonedVector = new Vector<T>(capacity())
+    for i = 0 to size() - 1
+      clonedVector.add(get(i))
     return clonedVector
 
   // --------------------------------------------------------------------------
@@ -159,15 +174,15 @@ public function Vector<T>.forEach<T>(Action1<T> action)
 public function Vector<T>.getRandom<T>() returns T
   if (this.isEmpty())
     return null
-  return this.getItem(GetRandomInt(0, this.getCount() - 1))
+  return this.get(GetRandomInt(0, this.size() - 1))
 
 // ============================================================================
 public function Vector<T>.getRandomUnique<T>(int count) returns Vector<T>
   let clone = this.clone()
   let output = new Vector<T>()
   for i = 0 to count - 1
-    let randomIndex = GetRandomInt(0, clone.getCount() - 1)
-    output.add(clone.getItem(randomIndex))
+    let randomIndex = GetRandomInt(0, clone.size() - 1)
+    output.add(clone.get(randomIndex))
     clone.removeAt(randomIndex)
     if (clone.isEmpty())
       break
@@ -176,7 +191,7 @@ public function Vector<T>.getRandomUnique<T>(int count) returns Vector<T>
 
 // ============================================================================
 public function Vector<T>.pop<T>() returns T
-  let count = this.getCount()
+  let count = this.size()
   if (count == 0)
     error("Cannot pop from an empty Vector")
   return this.removeAt(count - 1)
@@ -192,12 +207,12 @@ public function Vector<T>.peek<T>() returns T
 // ============================================================================
 // Tries to fill a null slot in the vector or adds to the end otherwise.
 public function Vector<T>.emplaceAdd<T>(T _item) returns int
-  for i = 0 to this.getCount() - 1
-    if (this.getItem(i) == null)
-      this.setItem(i, _item)
+  for i = 0 to this.size() - 1
+    if (this.get(i) == null)
+      this.set(i, _item)
       return i
   this.add(_item)
-  return this.getCount() - 1
+  return this.size() - 1
 
 // ============================================================================
 // Removes an item from the vector by nulling it out. Does not affect the count.
@@ -205,21 +220,21 @@ public function Vector<T>.emplaceRemove<T>(T _item) returns bool
   let index = this.indexOf(_item)
   if (index == -1)
     return false
-  this.setItem(index, null)
+  this.set(index, null)
   return true
 
 // ============================================================================
 public function Vector<T>.copyTo<T>(Vector<T> other)
-  other.resize(this.getCapacity())
-  let thisCount = this.getCount()
-  let otherCount = other.getCount()
+  other.resize(this.capacity())
+  let thisCount = this.size()
+  let otherCount = other.size()
   for i = 0 to max(thisCount - 1, otherCount - 1)
     if (i >= thisCount)
       break
     if (i < otherCount)
-      other.setItem(i, this.getItem(i))
+      other.set(i, this.get(i))
     else
-      other.add(this.getItem(i))
+      other.add(this.get(i))
 
 // ============================================================================
 public function Vector<T>.take<T>(int count) returns Vector<T>
@@ -251,20 +266,20 @@ public function Vector<string>.joinBy(string separator) returns string
 
 // ============================================================================
 public function Vector<T>.swap<T>(int indexA, int indexB)
-  if (indexA >= 0 and indexA < this.getCount() and indexB >= 0 and indexB < this.getCount())
-    let temp = this.getItem(indexA)
-    this.setItem(indexA, this.getItem(indexB))
-    this.setItem(indexB, temp)
+  if (indexA >= 0 and indexA < this.size() and indexB >= 0 and indexB < this.size())
+    let temp = this.get(indexA)
+    this.set(indexA, this.get(indexB))
+    this.set(indexB, temp)
 
 // ============================================================================
 function Vector<T>.quickSortPartition<T>(int low, int high, Func2<T, T, bool> comparator) returns int
   comparator.acquire()
-  let pivot = this.getItem(high)
-  let count = this.getCount()
+  let pivot = this.get(high)
+  let count = this.size()
   var i = low - 1
   var j = low
   while (j <= high - 1)
-    if (j >= 0 and j < count and comparator.call(this.getItem(j), pivot))
+    if (j >= 0 and j < count and comparator.call(this.get(j), pivot))
       i++
       this.swap(i, j)
     j++
@@ -272,18 +287,36 @@ function Vector<T>.quickSortPartition<T>(int low, int high, Func2<T, T, bool> co
   comparator.release()
   return i + 1
 
+int g_partition
+
 // ============================================================================
-function Vector<T>.quickSort<T>(int left, int right, Func2<T, T, bool> comparator)
+function Vector<T>.quickSort<T>(int left, int right, Func2<T, T, bool> comparator, int maxPartitionSize)
   if (left < right)
     comparator.acquire()
-    let partition = this.quickSortPartition(left, right, comparator)
-    this.quickSort(left, partition-1, comparator)
-    this.quickSort(partition+1, right, comparator)
+
+    int partition
+
+    if ((left - right).abs() > maxPartitionSize)
+      g_partition = INT_MIN
+      execute() () ->
+        g_partition = this.quickSortPartition(left, right, comparator)
+      if (g_partition == INT_MIN)
+        error("Ran out of ops must increase max partition size")
+      partition = g_partition
+    else
+      partition = this.quickSortPartition(left, right, comparator)
+
+    this.quickSort(left, partition-1, comparator, maxPartitionSize)
+    this.quickSort(partition+1, right, comparator, maxPartitionSize)
     comparator.release()
 
 // ============================================================================
 public function Vector<T>.sort<T>(Func2<T, T, bool> comparator)
-  this.quickSort(0, this.getCount() - 1, comparator)
+  this.quickSort(0, this.size() - 1, comparator, INT_MAX)
+
+// ============================================================================
+public function Vector<T>.sort<T>(Func2<T, T, bool> comparator, int maxPartitionSize)
+  this.quickSort(0, this.size() - 1, comparator, maxPartitionSize)
 
 // ============================================================================
 public class VectorIterator<T>
@@ -295,18 +328,18 @@ public class VectorIterator<T>
   // --------------------------------------------------------------------------
   construct(Vector<T> vector, bool destroyOnClose)
     m_vector = vector
-    m_count = m_vector.getCount()
+    m_count = m_vector.size()
     m_destroyOnClose = destroyOnClose
 
   // --------------------------------------------------------------------------
   function reset()
-    m_count = m_vector.getCount()
+    m_count = m_vector.size()
     m_index = -1
 
   // --------------------------------------------------------------------------
   function modify(T value)
     if (m_index != -1)
-      m_vector.setItem(m_index, value)
+      m_vector.set(m_index, value)
 
   // --------------------------------------------------------------------------
   function hasNext() returns bool
@@ -315,13 +348,13 @@ public class VectorIterator<T>
   // --------------------------------------------------------------------------
   function next() returns T
     m_index++
-    return m_vector.getItem(m_index)
+    return m_vector.get(m_index)
 
   // --------------------------------------------------------------------------
   function lookahead() returns T
     T nextItem = null
     if (hasNext())
-      nextItem = m_vector.getItem(m_index + 1)
+      nextItem = m_vector.get(m_index + 1)
     return nextItem
 
   // --------------------------------------------------------------------------
@@ -332,35 +365,35 @@ public class VectorIterator<T>
 // ============================================================================
 @test
 function testCreate()
-  new Vector<int>(8).getCapacity().assertEquals(8)
-  new Vector<int>(9).getCapacity().assertEquals(16)
-  new Vector<int>(16).getCapacity().assertEquals(16)
-  new Vector<int>(17).getCapacity().assertEquals(32)
-  new Vector<int>(32).getCapacity().assertEquals(32)
-  new Vector<int>(33).getCapacity().assertEquals(64)
-  new Vector<int>(64).getCapacity().assertEquals(64)
-  new Vector<int>(65).getCapacity().assertEquals(128)
-  new Vector<int>(128).getCapacity().assertEquals(128)
-  new Vector<int>(129).getCapacity().assertEquals(256)
-  new Vector<int>(256).getCapacity().assertEquals(256)
-  new Vector<int>(257).getCapacity().assertEquals(512)
-  new Vector<int>(512).getCapacity().assertEquals(512)
-  new Vector<int>(513).getCapacity().assertEquals(1024)
-  new Vector<int>(1024).getCapacity().assertEquals(1024)
-  new Vector<int>(1025).getCapacity().assertEquals(2048)
-  new Vector<int>(2048).getCapacity().assertEquals(2048)
-  new Vector<int>(2049).getCapacity().assertEquals(4096)
-  new Vector<int>(4096).getCapacity().assertEquals(4096)
-  new Vector<int>(4097).getCapacity().assertEquals(8192)
-  new Vector<int>(8192).getCapacity().assertEquals(8192)
+  new Vector<int>(8).capacity().assertEquals(8)
+  new Vector<int>(9).capacity().assertEquals(16)
+  new Vector<int>(16).capacity().assertEquals(16)
+  new Vector<int>(17).capacity().assertEquals(32)
+  new Vector<int>(32).capacity().assertEquals(32)
+  new Vector<int>(33).capacity().assertEquals(64)
+  new Vector<int>(64).capacity().assertEquals(64)
+  new Vector<int>(65).capacity().assertEquals(128)
+  new Vector<int>(128).capacity().assertEquals(128)
+  new Vector<int>(129).capacity().assertEquals(256)
+  new Vector<int>(256).capacity().assertEquals(256)
+  new Vector<int>(257).capacity().assertEquals(512)
+  new Vector<int>(512).capacity().assertEquals(512)
+  new Vector<int>(513).capacity().assertEquals(1024)
+  new Vector<int>(1024).capacity().assertEquals(1024)
+  new Vector<int>(1025).capacity().assertEquals(2048)
+  new Vector<int>(2048).capacity().assertEquals(2048)
+  new Vector<int>(2049).capacity().assertEquals(4096)
+  new Vector<int>(4096).capacity().assertEquals(4096)
+  new Vector<int>(4097).capacity().assertEquals(8192)
+  new Vector<int>(8192).capacity().assertEquals(8192)
 
 // ============================================================================
 @test
 function testAdd()
   let vector = new Vector<int>(8)
   vector.add(1)
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(1)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(1)
 
 // ============================================================================
 @test
@@ -368,21 +401,21 @@ function testAdd_Grows()
   let vector = new Vector<int>(8)
   
   // fill to capacity
-  for i = 0 to vector.getCapacity() - 1
+  for i = 0 to vector.capacity() - 1
     vector.add(i)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(8)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(8)
 
   // add one more to make it grow
   vector.add(8)
 
-  vector.getCapacity().assertEquals(16)
-  vector.getCount().assertEquals(9)
+  vector.capacity().assertEquals(16)
+  vector.size().assertEquals(9)
 
-  let count = vector.getCount()
+  let count = vector.size()
   for i = 0 to count - 1
-    vector.getItem(i).assertEquals(i)
+    vector.get(i).assertEquals(i)
 
 // ============================================================================
 @test
@@ -390,21 +423,21 @@ function testRemoveFirst()
   let vector = new Vector<int>(8)
   
   // fill to capacity
-  for i = 0 to vector.getCapacity() - 1
+  for i = 0 to vector.capacity() - 1
     vector.add(i)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(8)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(8)
 
   // remove a single entry
   vector.remove(0)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(7)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(7)
 
-  let count = vector.getCount()
+  let count = vector.size()
   for i = 0 to count - 1
-    vector.getItem(i).assertEquals(i + 1)
+    vector.get(i).assertEquals(i + 1)
 
 // ============================================================================
 @test
@@ -412,21 +445,21 @@ function testRemoveLast()
   let vector = new Vector<int>(8)
   
   // fill to capacity
-  for i = 0 to vector.getCapacity() - 1
+  for i = 0 to vector.capacity() - 1
     vector.add(i)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(8)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(8)
 
   // remove a single entry
   vector.remove(7)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(7)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(7)
 
-  let count = vector.getCount()
+  let count = vector.size()
   for i = 0 to count - 1
-    vector.getItem(i).assertEquals(i)
+    vector.get(i).assertEquals(i)
 
 // ============================================================================
 @test
@@ -442,22 +475,22 @@ function testRemoveAt_First()
   vector.add(7)
   vector.add(8)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(8)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(8)
 
   // act
   let _item = vector.removeAt(0)
 
   _item.assertEquals(1)
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(7)
-  vector.getItem(0).assertEquals(2)
-  vector.getItem(1).assertEquals(3)
-  vector.getItem(2).assertEquals(4)
-  vector.getItem(3).assertEquals(5)
-  vector.getItem(4).assertEquals(6)
-  vector.getItem(5).assertEquals(7)
-  vector.getItem(6).assertEquals(8)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(7)
+  vector.get(0).assertEquals(2)
+  vector.get(1).assertEquals(3)
+  vector.get(2).assertEquals(4)
+  vector.get(3).assertEquals(5)
+  vector.get(4).assertEquals(6)
+  vector.get(5).assertEquals(7)
+  vector.get(6).assertEquals(8)
 
 // ============================================================================
 @test
@@ -479,15 +512,15 @@ function testRemoveAt_Middle()
 
   // assert
   _item.assertEquals(4)
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(7)
-  vector.getItem(0).assertEquals(1)
-  vector.getItem(1).assertEquals(2)
-  vector.getItem(2).assertEquals(3)
-  vector.getItem(3).assertEquals(5)
-  vector.getItem(4).assertEquals(6)
-  vector.getItem(5).assertEquals(7)
-  vector.getItem(6).assertEquals(8)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(7)
+  vector.get(0).assertEquals(1)
+  vector.get(1).assertEquals(2)
+  vector.get(2).assertEquals(3)
+  vector.get(3).assertEquals(5)
+  vector.get(4).assertEquals(6)
+  vector.get(5).assertEquals(7)
+  vector.get(6).assertEquals(8)
 
 // ============================================================================
 @test
@@ -509,15 +542,15 @@ function testRemoveAt_Last()
 
   // assert
   _item.assertEquals(8)
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(7)
-  vector.getItem(0).assertEquals(1)
-  vector.getItem(1).assertEquals(2)
-  vector.getItem(2).assertEquals(3)
-  vector.getItem(3).assertEquals(4)
-  vector.getItem(4).assertEquals(5)
-  vector.getItem(5).assertEquals(6)
-  vector.getItem(6).assertEquals(7)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(7)
+  vector.get(0).assertEquals(1)
+  vector.get(1).assertEquals(2)
+  vector.get(2).assertEquals(3)
+  vector.get(3).assertEquals(4)
+  vector.get(4).assertEquals(5)
+  vector.get(5).assertEquals(6)
+  vector.get(6).assertEquals(7)
 
 // ============================================================================
 @test
@@ -528,8 +561,8 @@ function testRemoveAt_Last_Empty()
   // remove a single entry
   vector.removeAt(0)
 
-  vector.getCapacity().assertEquals(8)
-  vector.getCount().assertEquals(0)
+  vector.capacity().assertEquals(8)
+  vector.size().assertEquals(0)
 
 // ============================================================================
 @test
@@ -540,12 +573,12 @@ function testGrow_Strings()
   for i = 0 to 31
     vector.add(i.toString())
 
-  vector.getCapacity().assertEquals(32)
-  vector.getCount().assertEquals(32)
+  vector.capacity().assertEquals(32)
+  vector.size().assertEquals(32)
 
-  let count = vector.getCount()
+  let count = vector.size()
   for i = 0 to count - 1
-    vector.getItem(i).assertEquals(i.toString())
+    vector.get(i).assertEquals(i.toString())
 
 class PlayerVector extends Vector<player>
 
@@ -586,7 +619,7 @@ function testPop()
 
   // assert
   _item.assertEquals(123)
-  vector.getCount().assertEquals(0)
+  vector.size().assertEquals(0)
 
 // ============================================================================
 @test
@@ -600,9 +633,9 @@ function testClone()
   let clone = vector.clone()
 
   // assert
-  clone.getCount().assertEquals(8)
+  clone.size().assertEquals(8)
   for i = 0 to 7
-    clone.getItem(i).assertEquals(i + 1)
+    clone.get(i).assertEquals(i + 1)
 
 // ============================================================================
 @test
@@ -623,11 +656,11 @@ function testSort()
     return a < b
 
   // assert
-  vector.getItem(0).assertEquals(1)
-  vector.getItem(1).assertEquals(2)
-  vector.getItem(2).assertEquals(3)
-  vector.getItem(3).assertEquals(4)
-  vector.getItem(4).assertEquals(5)
-  vector.getItem(5).assertEquals(6)
-  vector.getItem(6).assertEquals(7)
-  vector.getItem(7).assertEquals(8)
+  vector.get(0).assertEquals(1)
+  vector.get(1).assertEquals(2)
+  vector.get(2).assertEquals(3)
+  vector.get(3).assertEquals(4)
+  vector.get(4).assertEquals(5)
+  vector.get(5).assertEquals(6)
+  vector.get(6).assertEquals(7)
+  vector.get(7).assertEquals(8)

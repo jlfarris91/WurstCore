@@ -1,21 +1,19 @@
 package FixedArray
 import ErrorHandling
+import ICollection
 
 // ============================================================================
-public abstract class FixedArray<T>
-  abstract function getCapacity() returns int
-  abstract function getItem(int i) returns T
-  abstract function setItem(int i, T _item)
+public abstract class FixedArray<T> extends ICollection<T>
 
   // --------------------------------------------------------------------------
   static function growArray<T>(FixedArray<T> fixedArray, int newSize) returns FixedArray<T>
-    let currentCapacity = fixedArray.getCapacity()
+    let currentCapacity = fixedArray.size()
     let newCapacity = growCapacityToFit(newSize)
     if (currentCapacity >= newCapacity)
       return fixedArray
     let newArray = createArray<T>(newCapacity)
     for i = 0 to currentCapacity - 1
-      newArray.setItem(i, fixedArray.getItem(i))
+      newArray.set(i, fixedArray.get(i))
     destroy fixedArray
     return newArray
 
@@ -77,19 +75,19 @@ class FixedArray8<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 8
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -98,19 +96,19 @@ class FixedArray16<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 16
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -119,19 +117,19 @@ class FixedArray32<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 32
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -140,19 +138,19 @@ class FixedArray64<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 64
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -161,19 +159,19 @@ class FixedArray128<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 128
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -182,19 +180,19 @@ class FixedArray256<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 256
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -203,19 +201,19 @@ class FixedArray512<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 512
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -224,19 +222,19 @@ class FixedArray1024<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 1024
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -245,19 +243,19 @@ class FixedArray2048<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 2048
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -266,19 +264,19 @@ class FixedArray4096<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 4096
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item
 
 // ============================================================================
@@ -287,17 +285,17 @@ class FixedArray8192<T> extends FixedArray<T>
 
   // --------------------------------------------------------------------------
   ondestroy
-    for i = 0 to getCapacity() - 1
+    for i = 0 to size() - 1
       m_items[i] = null
 
   // --------------------------------------------------------------------------
-  override function getCapacity() returns int
+  override function size() returns int
     return 8192
 
   // --------------------------------------------------------------------------
-  override function getItem(int i) returns T
+  override function get(int i) returns T
     return m_items[i]
 
   // --------------------------------------------------------------------------
-  override function setItem(int i, T _item)
+  override function set(int i, T _item)
     m_items[i] = _item

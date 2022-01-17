@@ -214,7 +214,7 @@ public class WrapLayout implements IFrameLayout
   // --------------------------------------------------------------------------
   private function layoutLine(Frame parent, uvsize uvLine, uvsize total, bool useItemU, real itemU)
     let isHorizontal = m_orientation == HORIZONTAL
-    let remainingU = m_stretchItems ? (total.u - uvLine.u) / max(m_lineScratchpad.getCount(), 1) : 0
+    let remainingU = m_stretchItems ? (total.u - uvLine.u) / max(m_lineScratchpad.size(), 1) : 0
     real u = 0
 
     let parentHandle = parent.getFrameHandle()
