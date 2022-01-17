@@ -55,6 +55,7 @@ public class ListBox extends Panel
     let frameHandle = getFrameHandle()
 
     m_stackPanel = new StackPanel()
+    m_stackPanel.getFrameHandle().setParent(getFrameHandle())
 
     // Just exists to capture the mouse wheel scroll event
     m_scrollingBackdrop = createFrame("SLIDER", "BackdropScrollCapture", GAME_UI, "", 0)

@@ -12,7 +12,7 @@ public class CircularBuffer<T>
 
   // --------------------------------------------------------------------------
   construct(int capacity)
-    m_items = new Vector<T>(capacity)
+    m_items = new Vector<T>(capacity)..setSize(capacity)
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -22,7 +22,7 @@ public class CircularBuffer<T>
 
   // --------------------------------------------------------------------------
   function getCapacity() returns int
-    return m_items.getCapacity()
+    return m_items.capacity()
 
   // --------------------------------------------------------------------------
   function getCount() returns int
@@ -40,7 +40,7 @@ public class CircularBuffer<T>
   function enqueue(T _item)
     if (isFull())
       error("Cannot enqueue to a full CircularBuffer")
-    m_items.setItem(m_writeIndex, _item)
+    m_items.set(m_writeIndex, _item)
     incrementWriteIndex()
     m_count++
 
@@ -48,7 +48,7 @@ public class CircularBuffer<T>
   function dequeue() returns T
     if (isEmpty())
       error("Cannot dequeue from empty CircularBuffer")
-    let _item = m_items.getItem(m_readIndex)
+    let _item = m_items.get(m_readIndex)
     incrementReadIndex()
     m_count--
     return _item
@@ -56,7 +56,7 @@ public class CircularBuffer<T>
   // --------------------------------------------------------------------------
   function clear()
     for i = 0 to getCapacity() - 1
-      m_items.setItem(i, null)
+      m_items.set(i, null)
     m_readIndex = 0
     m_writeIndex = 0
     m_count = 0
@@ -100,13 +100,13 @@ public class CBIterator<T>
   // --------------------------------------------------------------------------
   function next() returns T
     m_index = incrementIndex(m_index)
-    return m_vector.getItem(m_index)
+    return m_vector.get(m_index)
 
   // --------------------------------------------------------------------------
   function lookahead() returns T
     T nextItem = null
     if (hasNext())
-      nextItem = m_vector.getItem(incrementIndex(m_index))
+      nextItem = m_vector.get(incrementIndex(m_index))
     return nextItem
 
   // --------------------------------------------------------------------------
@@ -116,7 +116,7 @@ public class CBIterator<T>
   
   // --------------------------------------------------------------------------
   private function incrementIndex(int index) returns int
-    return wrap(index + 1, 0, m_vector.getCapacity() - 1)
+    return wrap(index + 1, 0, m_vector.capacity() - 1)
 
 // ============================================================================
 @test function test_enqueueOne_countIncreasesByOne()

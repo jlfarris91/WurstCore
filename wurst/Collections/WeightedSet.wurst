@@ -438,7 +438,7 @@ public class WeightedSetIterator<T>
   let elems = weightedSet.getRandom(3)
   
   // assert
-  elems.getCount().assertEquals(3)
+  elems.size().assertEquals(3)
 
   for elem in elems
     elem.assertGreaterThanOrEqual(1)
@@ -455,7 +455,7 @@ public class WeightedSetIterator<T>
   let elems = weightedSet.getRandom(3)
   
   // assert
-  elems.getCount().assertEquals(3)
+  elems.size().assertEquals(3)
 
   for elem in elems
     elem.assertGreaterThanOrEqual(1)
@@ -472,7 +472,7 @@ public class WeightedSetIterator<T>
   let elems = weightedSet.getRandom(100)
   
   // assert
-  elems.getCount().assertEquals(3)
+  elems.size().assertEquals(3)
 
   for elem in elems
     elem.assertGreaterThanOrEqual(1)
@@ -523,7 +523,7 @@ public class WeightedSetIterator<T>
   
   // assert
   weightedSet.size().assertEquals(3)
-  elems.getCount().assertEquals(3)
+  elems.size().assertEquals(3)
 
   for elem in elems
     elem.assertGreaterThanOrEqual(1)
@@ -541,7 +541,7 @@ public class WeightedSetIterator<T>
   
   // assert
   weightedSet.size().assertEquals(0)
-  elems.getCount().assertEquals(3)
+  elems.size().assertEquals(3)
 
   for elem in elems
     elem.assertGreaterThanOrEqual(1)
@@ -559,7 +559,7 @@ public class WeightedSetIterator<T>
   
   // assert
   weightedSet.size().assertEquals(0)
-  elems.getCount().assertEquals(3)
+  elems.size().assertEquals(3)
 
   for elem in elems
     elem.assertGreaterThanOrEqual(1)

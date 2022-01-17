@@ -4,7 +4,6 @@ import CancellationToken
 import ErrorHandling
 import RefObject
 import Handle
-import Events
 import LinkedList
 
 LinkedList<CancellableCallbackSingle> g_callbackStack = new LinkedList<CancellableCallbackSingle>()

@@ -64,8 +64,12 @@ public class Vector<T> extends ICollection<T>
     return m_array.get(index)
 
   // --------------------------------------------------------------------------
-  override function set(int i, T _item)
-    m_array.set(i, _item)
+  override function set(int index, T _item)
+    if (m_array == null)
+      error("Array is null")
+    if (index < 0 or index >= size())
+      error("Index out of range: " + index.toString())
+    m_array.set(index, _item)
 
   // --------------------------------------------------------------------------
   function contains(T _item) returns bool
