@@ -1,0 +1,222 @@
+package SubgroupSelection
+import FramehandleExtensions
+import ErrorHandling
+import ClosureTimers
+import RegisterEvents
+import Vector
+import Func
+import UnitExtensions
+import LinkedList
+import GroupExtensions
+
+PlayerSelection array g_playerSelection
+LinkedList<PlayerSelection> g_playerSelections
+Func2<unit, unit, bool> g_prioritySorter
+trigger g_playerSubgroupUnitTypeIdChangedTrigger
+LinkedList<player> g_triggeringPlayerStack
+group g_temp
+bool g_initialized
+
+// ============================================================================
+@configurable public function trackSubgroupSelectionChanges(player _player) returns bool
+  return GetPlayerController(_player) == MAP_CONTROL_USER
+
+// ============================================================================
+public function registerPlayerSubgroupUnitChanged(code callback)
+  lazyInitPackage()
+  g_playerSubgroupUnitTypeIdChangedTrigger.addCondition(Condition(callback))
+
+// ============================================================================
+public function getPlayerSubgroupUnitChangingPlayer() returns player
+  return g_triggeringPlayerStack != null ? g_triggeringPlayerStack.peek() : null
+
+// ============================================================================
+public function player.getSelectedSubgroupUnit() returns unit
+  lazyInitPackage()
+  let selection = g_playerSelection[this.getId()]
+  return selection != null ? selection.getSelectedSubgroupUnit() : null
+
+// ============================================================================
+public function player.getSelectedSubgroupUnitTypeId() returns int
+  lazyInitPackage()
+  let selection = g_playerSelection[this.getId()]
+  return selection != null ? selection.getSelectedSubgroupUnitTypeId() : 0
+
+// ============================================================================
+function raisePlayerSelectedSubgroupUnitChangedEvent(player p)
+  g_triggeringPlayerStack.push(p)
+  g_playerSubgroupUnitTypeIdChangedTrigger.evaluate()
+  g_triggeringPlayerStack.pop()
+
+// ============================================================================
+function raiseInvalidUILayoutError()
+  error("Invalid UI layout! Blizzard must have changed something.")
+
+// ============================================================================
+function assertNotNullWithChildren(framehandle frame, int childrenCount)
+  if (frame == null or frame.getChildrenCount() < childrenCount)
+    raiseInvalidUILayoutError()
+
+// ============================================================================
+enum FrameState
+  UNKNOWN
+  HIDDEN
+  VISIBLE
+
+// ============================================================================
+class PlayerSelection
+  private player m_player
+  private framehandle m_groupPanel
+  private FrameState m_groupPanelWasVisible
+  private framehandle array[12] m_unitFramesToWatch
+  private FrameState array[12] m_unitFrameWasVisible
+  private Vector<unit> m_sortedSelection = new Vector<unit>(12)
+  private unit m_selectedSubgroupUnit = null
+
+  // --------------------------------------------------------------------------
+  construct (player p)
+    m_player = p
+    m_groupPanel = null
+    g_playerSelections.add(this)
+    m_groupPanelWasVisible = FrameState.UNKNOWN
+    for i = 0 to 11
+      m_unitFramesToWatch[i] = null
+      m_unitFrameWasVisible[i] = FrameState.UNKNOWN
+    checkForVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_sortedSelection
+
+  // --------------------------------------------------------------------------
+  protected function getSelectedSubgroupUnit() returns unit
+    return m_selectedSubgroupUnit
+
+  // --------------------------------------------------------------------------
+  protected function getSelectedSubgroupUnitTypeId() returns int
+    return m_selectedSubgroupUnit != null ? m_selectedSubgroupUnit.getTypeId() : 0
+
+  // --------------------------------------------------------------------------
+  protected function getInfoPanelUnitFrames()
+    let simpleUIParent = getOriginFrame(ORIGIN_FRAME_SIMPLE_UI_PARENT)
+    assertNotNullWithChildren(simpleUIParent, 2)
+    
+    let infoPanel = simpleUIParent.getChild(1)
+    assertNotNullWithChildren(infoPanel, 5)
+    
+    m_groupPanel = infoPanel.getChild(5)
+    assertNotNullWithChildren(m_groupPanel, 1)
+
+    let gridLayout = m_groupPanel.getChild(0)
+    assertNotNullWithChildren(gridLayout, 12)
+
+    for i = 0 to gridLayout.getChildrenCount()-1
+    //{
+      let groupUnitFrame = gridLayout.getChild(i)
+      assertNotNullWithChildren(groupUnitFrame, 1)
+      
+      let highlightFrame = groupUnitFrame.getChild(0)
+      if (highlightFrame == null)
+        raiseInvalidUILayoutError()
+
+      m_unitFramesToWatch[i] = highlightFrame
+    //}
+
+  // --------------------------------------------------------------------------
+  protected function checkForVisibilityChanged()
+
+    if (m_groupPanel == null)
+      getInfoPanelUnitFrames()
+      if (m_groupPanel == null)
+        setSelectedSubgroupUnit(null)
+        return
+
+    let groupPanelIsVisible = m_groupPanel.isVisible() ? FrameState.VISIBLE : FrameState.HIDDEN
+    if (m_groupPanelWasVisible != groupPanelIsVisible)
+    //{
+      m_groupPanelWasVisible = groupPanelIsVisible
+      if (groupPanelIsVisible == FrameState.VISIBLE)
+        for i = 0 to 11
+          m_unitFrameWasVisible[i] = FrameState.UNKNOWN
+    //}
+
+    if (groupPanelIsVisible == FrameState.HIDDEN)
+      g_temp.enumUnitsSelected(m_player, null)
+      setSelectedSubgroupUnit(g_temp.getFirst())
+      return
+
+    var firstSelectedUnitSlot = -1
+
+    for i = 0 to 11
+    //{
+      let isVisible = m_unitFramesToWatch[i].isVisible() ? FrameState.VISIBLE : FrameState.HIDDEN
+      if (m_unitFrameWasVisible[i] != isVisible)
+        m_unitFrameWasVisible[i] = isVisible
+        if (isVisible == FrameState.VISIBLE and firstSelectedUnitSlot == -1)
+          firstSelectedUnitSlot = i
+    //}
+
+    if (firstSelectedUnitSlot != -1)
+    //{
+      g_temp.enumUnitsSelected(m_player, null)
+      let selectedCount = g_temp.size()
+      // Log.info("firstSelectedUnitSlot = " + firstSelectedUnitSlot.toString() + " size: " + selectedCount.toString())
+      if (selectedCount > 0 and firstSelectedUnitSlot < selectedCount)
+      //{
+        // Sort according to actual priority as to match what's shown in the ui
+        m_sortedSelection.setSize(selectedCount)
+        var i = 0
+        for u from g_temp
+          m_sortedSelection.set(i, u)
+          i++
+        m_sortedSelection.sort(g_prioritySorter)
+        let selectedSubgroupUnit = m_sortedSelection.get(firstSelectedUnitSlot)
+        setSelectedSubgroupUnit(selectedSubgroupUnit)
+      //}
+    //}
+
+  // --------------------------------------------------------------------------
+  private function setSelectedSubgroupUnit(unit u)
+    if (m_selectedSubgroupUnit != u)
+      m_selectedSubgroupUnit = u
+      // Log.info(m_selectedSubgroupUnit.getName() + " : " + m_selectedSubgroupUnit.getPriority().toString())
+      raisePlayerSelectedSubgroupUnitChangedEvent(m_player)
+
+  // --------------------------------------------------------------------------
+  protected function onSelectionChanged()
+    for i = 0 to 11
+      m_unitFrameWasVisible[i] = FrameState.UNKNOWN
+
+// ============================================================================
+function onSelectionChanged()
+  let selectedUnit = GetTriggerUnit()
+  let owningPlayer = selectedUnit.getOwner()
+  let selection = g_playerSelection[owningPlayer.getId()]
+  if (selection != null)
+    selection.onSelectionChanged()
+
+// ============================================================================
+function lazyInitPackage()
+  if (g_initialized)
+    return
+
+  g_playerSubgroupUnitTypeIdChangedTrigger = CreateTrigger()
+  g_triggeringPlayerStack = new LinkedList<player>()
+  g_playerSelections = new LinkedList<PlayerSelection>()
+  g_temp = CreateGroup()
+  g_prioritySorter = (unit o1, unit o2) -> o2.getPriority() <= o1.getPriority()
+  g_prioritySorter.acquire()
+
+  for p in GetPlayersAll()
+    if (trackSubgroupSelectionChanges(p))
+      g_playerSelection[p.getId()] = new PlayerSelection(p)
+  
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SELECTED, () -> onSelectionChanged())
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DESELECTED, () -> onSelectionChanged())
+  
+  doPeriodically(ANIMATION_PERIOD) (cb) ->
+    let iter = g_playerSelections.staticItr()
+    while (iter.hasNext())
+      iter.next().checkForVisibilityChanged()
+
+  g_initialized = true

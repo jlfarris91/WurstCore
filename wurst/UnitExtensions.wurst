@@ -3,6 +3,7 @@ import GroupUtils
 import Range
 import Dice
 import ClosureTimers
+import HeroAge
 
 @configurable public constant real UNIT_FADE_INTERVAL = 0.1
 @configurable public constant real UNIT_FADE_DURATION = 3.0
@@ -182,3 +183,11 @@ public function unit.fade(real interval, real duration, colorA startColor, color
   this.setVertexColor(startColor)
   return doPeriodicallyTimed(interval, duration) (CallbackCounted cb) ->
     this.setVertexColor(startColor.mix(endColor, cb.getPercentage()))
+
+// ============================================================================
+public function unit.getPriority() returns real
+  let illusionPri = this.isIllusion() ? 100000.0 : 0.0
+  var unitPri = this.itemCount()
+  if (IsHeroUnitId(this.getTypeId()))
+    unitPri = this.getHeroAge() + this.inventorySize()
+  return this.getField(UNIT_RF_PRIORITY) * 40000.0 + unitPri + illusionPri

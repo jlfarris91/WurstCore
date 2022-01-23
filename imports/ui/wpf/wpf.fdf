@@ -18,6 +18,138 @@ Frame "BACKDROP" "TestBackdrop" {
 }
 
 // ============================================================================
+Frame "BACKDROP" "DebugOutlineWhite" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.01, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_white",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineWhite_Thick" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_white",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineBlack" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.01, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_black",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineBlack_Thick" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_black",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineRed" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.01, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_red",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineRed_Thick" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_red",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineGreen" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.01, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_green",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineGreen_Thick" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_green",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineBlue" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.01, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_blue",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "BACKDROP" "DebugOutlineBlue_Thick" {
+  SetAllPoints,
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "textures\transparent", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "textures\debug_backdrop_edge_blue",
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "TEXT" "DebugText" {
+  DecorateFileNames,
+  FontFlags "FIXEDSIZE",
+  FrameFont "MasterFont", 0.012, "",
+  FontColor 1.0 1.0 1.0 1.0, //Red Green Blue Alpha 0.0 to 1.0
+  FontShadowColor 0.0 0.0 0.0 0.9,
+  FontShadowOffset 0.001 -0.001,
+  FontJustificationH JUSTIFYCENTER,
+  FontJustificationV JUSTIFYMIDDLE,
+}
+
+// ============================================================================
 Frame "TEXT" "WindowTitleTextTemplate" {
   DecorateFileNames,
   FontFlags "FIXEDSIZE",

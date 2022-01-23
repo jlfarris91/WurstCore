@@ -1,0 +1,35 @@
+package HeroAge
+import HashMap
+import UnitIndexer
+import GroupUtils
+
+HashMap<unit, int> g_heroCountAtIndex = new HashMap<unit, int>()
+conditionfunc g_enumUnitIsHero = Condition(function enumUnitIsHero)
+
+// ============================================================================
+public function unit.getHeroAge() returns int
+  return IsHeroUnitId(this.getTypeId()) ? g_heroCountAtIndex.get(this) : 0
+
+// ============================================================================
+function player.countNumberOfHeroes() returns int
+  let temp = getGroup()
+  temp.enumUnitsOfPlayer(this, g_enumUnitIsHero)
+  let result = temp.size()
+  temp.release()
+  return result
+
+// ============================================================================
+function enumUnitIsHero() returns bool
+  return IsHeroUnitId(GetEnumUnit().getTypeId())
+
+// ============================================================================
+init
+  onUnitIndex() () ->
+    let indexingUnit = getIndexingUnit()
+    if (IsHeroUnitId(indexingUnit.getTypeId()))
+      g_heroCountAtIndex.put(indexingUnit, indexingUnit.getOwner().countNumberOfHeroes())
+
+  onUnitDeindex() () ->
+    let indexingUnit = getIndexingUnit()
+    if (IsHeroUnitId(indexingUnit.getTypeId()))
+      g_heroCountAtIndex.remove(indexingUnit)
