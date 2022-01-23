@@ -311,7 +311,7 @@ public class UnitRecycler
 
     // Do a shitty O-N search for the first inactive unit
     let numberOfUnits = m_units.size()
-    for i = 0 to numberOfUnits
+    for i = 0 to numberOfUnits-1
       let _unit = m_units.get(i)
       if (isUnitInactive(_unit))
         return _unit
