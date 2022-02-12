@@ -14,11 +14,6 @@ public class Composable implements IComposite
       destroy m_compositionManager
       m_compositionManager = null
 
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(Composable.typeId)..registerInterface(typeId_IComposite)
-  /////////////////////////////////////////////////////////////////////////////
-
   // --------------------------------------------------------------------------
   function getCompositionManager() returns CompositionManager
     return m_compositionManager
@@ -45,9 +40,5 @@ public class Composable implements IComposite
 
 // ============================================================================
 init
-  registerPackageMetadata()
-
-///////////////////////////////////////////////////////////////////////////////
-function registerPackageMetadata()
-  Composable.registerMetadata()
-///////////////////////////////////////////////////////////////////////////////
+  Meta.register("Composable") registrar ->
+    registrar.registerClass(Composable.typeId)..registerInterface(typeId_IComposite)

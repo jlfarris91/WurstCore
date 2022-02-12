@@ -5,26 +5,21 @@ import Func
 import Action
 import LinkedList
 import HashList
-import Bitwise
 import StringUtils
 import ErrorHandling
 import HashMap
+import Math
+import initlater BoxedValueObjects
+import Execute
+import ClosureTimers
 
-import public initlater MetaHandles
+// Concrete class types use X.typeId while other types need to have type ids generated for them
+MetaIDGen g_typeIDGen = new MetaIDGen(maxTypeId() + 1)
 
-constant int TYPE_ID_CLASS_MASK = 0xF0000000 // max 15 possible classifications
-constant int TYPE_ID_INDEX_MASK = 0x0FFFFFFF // max 268,435,455 possible types
-
-MetaIDGen g_interfaceIDGen = new MetaIDGen(TypeClassification.Interface, 1)
-MetaIDGen g_abstractClassIDGen = new MetaIDGen(TypeClassification.Class, maxTypeId()+1)
-MetaIDGen g_handleIDGen = new MetaIDGen(TypeClassification.Handle, 1)
-
-Type array g_classes
-Type array g_interfaces
-Type array g_enumerations
-Type array g_handles
-
+Type array g_types
+HashMap<int, TypeClassification> g_typeIdToClassificationMap = new HashMap<int, TypeClassification>()
 HashMap<string, int> g_fullyQualifiedTypeNameToTypeIdMap = new HashMap<string, int>()
+HashMap<int, string> g_reservedTypeIds = new HashMap<int, string>()
 HashList<int> g_emptyInts = new HashList<int>()
 HashList<MethodInfo> g_emptyMethods = new HashList<MethodInfo>()
 HashList<PropertyInfo> g_emptyProperties = new HashList<PropertyInfo>()
@@ -32,16 +27,14 @@ HashList<PropertyInfo> g_emptyProperties = new HashList<PropertyInfo>()
 // ============================================================================
 class MetaIDGen
   private int m_index = 1
-  private TypeClassification m_classification
 
   // --------------------------------------------------------------------------
-  construct(TypeClassification classification, int start)
+  construct(int start)
     m_index = start
-    m_classification = classification
 
   // --------------------------------------------------------------------------
   function next() returns int
-    let id = Meta.createTypeId(m_index, m_classification)
+    let id = m_index
     m_index++
     return id
 
@@ -49,8 +42,9 @@ class MetaIDGen
 enum TypeClassification
   Class
   Interface
+  Abstract
+  Primitive
   Enum
-  Handle
 
 // ============================================================================
 public function TypeClassification.toString() returns string
@@ -59,133 +53,241 @@ public function TypeClassification.toString() returns string
       return "Class"
     case Interface
       return "Interface"
+    case Abstract
+      return "Abstract"
+    case Primitive
+      return "Primitive"
     case Enum
       return "Enum"
-    case Handle
-      return "Handle"
+
+// ============================================================================
+public abstract class IMetaRegistrar
+  protected string context
+  abstract function register(MetaRegistrar registrar)
 
 // ============================================================================
 public class Meta
 
   @configurable static bool DEBUGGING_ENABLED = false
+  @configurable static Loglevel LOG_LEVEL = Loglevel.INFO
+
+  private static LinkedList<IMetaRegistrar> m_registrars = new LinkedList<IMetaRegistrar>()
+  private static LinkedList<Action> m_onInitializedCallbacks = new LinkedList<Action>()
+  protected static bool m_initializing = false
+  protected static bool m_initialized = false
+
+  // --------------------------------------------------------------------------
+  static function log(string msg)
+    log(Loglevel.DEBUG, msg)
+
+  // --------------------------------------------------------------------------
+  static function log(Loglevel loglvl, string msg)
+    if (LOG_LEVEL castTo int) <= (loglvl castTo int)
+      printLog(localPlayer, loglvl, "[Meta] " + msg)
 
   // --------------------------------------------------------------------------
   static function getType(int _typeId) returns Type
+    errorIfNotInitialized()
     if (_typeId == 0)
+      // argumentNullError("_typeId")
       return null
-    let typeClassification = getTypeClassification(_typeId)
-    let typeIdx = getTypeIndex(_typeId)
-    //Log.debug("getType({0}) -> class: {1} idx: {2}".format(_typeId.toString(), (typeClassification castTo int).toString(), typeIdx.toString()))
-    switch (typeClassification)
-      case Class
-        return g_classes[typeIdx]
-      case Interface
-        return g_interfaces[typeIdx]
-      case Enum
-        return g_enumerations[typeIdx]
-      case Handle
-        return g_handles[typeIdx]
+    let t = g_types[_typeId]
+    log("getType({0}) -> name: {1}".format(_typeId.toString(), (t == null ? "null" : t.getFullyQualifiedName())))
+    return t
 
   // --------------------------------------------------------------------------
   static function getType(string fullyQualifiedTypeName) returns Type
+    errorIfNotInitialized()
     if (g_fullyQualifiedTypeNameToTypeIdMap.has(fullyQualifiedTypeName))
       return getType(g_fullyQualifiedTypeNameToTypeIdMap.get(fullyQualifiedTypeName))
     return null
 
   // --------------------------------------------------------------------------
   static function is(int derivedTypeId, int baseTypeId) returns bool
+    errorIfNotInitialized()
     if (derivedTypeId == 0 or baseTypeId == 0)
       return false
     let childObjectType = getType(derivedTypeId)
     if (Meta.DEBUGGING_ENABLED)
     //{
       if (childObjectType == null)
-        Log.debug("Meta", "is", "", "No meta type registered for derived type {0}".format(Meta.getTypeName(derivedTypeId)))
+        log("No meta type registered for derived type {0}".format(Meta.getTypeName(derivedTypeId)))
       if (getType(baseTypeId) == null)
-        Log.debug("Meta", "is", "", "No meta type registered for base type {0}".format(Meta.getTypeName(baseTypeId)))
+        log("No meta type registered for base type {0}".format(Meta.getTypeName(baseTypeId)))
     //}
     return childObjectType != null and childObjectType.is(baseTypeId)
 
   // --------------------------------------------------------------------------
-  private static function registerType(Type _type)
+  static function is(int _typeId, TypeClassification classification) returns bool
+    return getTypeClassification(_typeId) == classification
+
+  // --------------------------------------------------------------------------
+  static function as<TSource, TDestination>(TSource source, int sourceTypeId, int destinationTypeId) returns TDestination
+    errorIfNotInitialized()
+    if (is(sourceTypeId, destinationTypeId))
+      return (source castTo int) castTo TDestination
+    return null
+
+  // --------------------------------------------------------------------------
+  static function getTypeClassification(int _typeId) returns TypeClassification
+    if (_typeId <= maxTypeId())
+      return TypeClassification.Class
+    return g_typeIdToClassificationMap.get(_typeId)
+
+  // --------------------------------------------------------------------------
+  static function getTypeName(int typeid) returns string
+    string typename = null
+    if (m_initialized)
+      let _type = getType(typeid)
+      if (_type != null)
+        typename = _type.getFullyQualifiedName()
+    else
+      typename = g_reservedTypeIds.get(typeid)
+    return typename != null ? typename : "Unknown({0} {1})".format(typeIdToTypeName(typeid), typeid.toString())
+
+  // --------------------------------------------------------------------------
+  static function initialize()
+
+    if (m_initialized or m_initializing)
+      error("Called Meta.initialize() twice")
+    
+    m_initializing = true
+
+    log("Initializing...")
+
+    let registrar = new MetaRegistrar()
+
+    let succeeded = try() () ->
+      for callback in m_registrars
+        execute() () ->
+          log("Registration context: " + callback.context)
+          callback.register(registrar)
+
+    m_initializing = false
+    m_initialized = succeeded
+
+    destroy registrar
+
+    if (not succeeded)
+      error("Failed to initialize Meta: " + lastError)
+
+    log("Done initializing")
+
+    for callback in m_onInitializedCallbacks
+      callback.call()
+
+  // --------------------------------------------------------------------------
+  static function onInitialized(Action callback)
+    m_onInitializedCallbacks.add(callback.acquire())
+
+  // --------------------------------------------------------------------------
+  private static function errorIfNotInitialized()
+    if (m_initialized == false)
+      error("Meta is not initialized")
+
+  // --------------------------------------------------------------------------
+  static function register(string context, IMetaRegistrar registrar)
+    registrar.context = context
+    m_registrars.add(registrar)
+
+  // --------------------------------------------------------------------------
+  static function reserveAbstractClass(string fullyQualifiedName) returns int
+    let typeid = reserveTypeId()
+    log("reserve abstract ({0}): {1} ".format(fullyQualifiedName, typeid.toString()))
+    g_reservedTypeIds.put(typeid, fullyQualifiedName)
+    g_typeIdToClassificationMap.put(typeid, TypeClassification.Abstract)
+    return typeid
+
+  // --------------------------------------------------------------------------
+  static function reserveInterface(string fullyQualifiedName) returns int
+    let typeid = reserveTypeId()
+    log("reserve interface ({0}): {1} ".format(fullyQualifiedName, typeid.toString()))
+    g_reservedTypeIds.put(typeid, fullyQualifiedName)
+    g_typeIdToClassificationMap.put(typeid, TypeClassification.Interface)
+    return typeid
+
+  // --------------------------------------------------------------------------
+  static function reservePrimitive(string fullyQualifiedName) returns int
+    let typeid = reserveTypeId()
+    log("reserve primitive ({0}): {1} ".format(fullyQualifiedName, typeid.toString()))
+    g_reservedTypeIds.put(typeid, fullyQualifiedName)
+    g_typeIdToClassificationMap.put(typeid, TypeClassification.Primitive)
+    return typeid
+
+  // --------------------------------------------------------------------------
+  static function reserveHandle(string fullyQualifiedName) returns int
+    let typeid = reserveTypeId()
+    log("reserve handle ({0}): {1} ".format(fullyQualifiedName, typeid.toString()))
+    g_reservedTypeIds.put(typeid, fullyQualifiedName)
+    g_typeIdToClassificationMap.put(typeid, TypeClassification.Primitive)
+    return typeid
+
+  // --------------------------------------------------------------------------
+  private static function reserveTypeId() returns int
+    return g_typeIDGen.next()
+
+  // --------------------------------------------------------------------------
+  protected static function registerType(Type _type)
+
     if (_type == null)
       argumentNullError("_type")
 
     let _typeId = _type.getTypeId()
 
-    if (g_fullyQualifiedTypeNameToTypeIdMap.has(_type.getFullyQualifiedName()))
-      error("[Meta.registerType] A type has already been registered with the fully qualified type name {0}".format(_type.getFullyQualifiedName()))
-    g_fullyQualifiedTypeNameToTypeIdMap.put(_type.getFullyQualifiedName(), _typeId)
+    if (g_types[_typeId] != null)
+      error("A type has already been registered with the id {0} : {1}".format(_typeId.toString(), g_types[_typeId].getFullyQualifiedName()))
 
-    let typeClassification = _type.getClassification()
-    let typeIdx = getTypeIndex(_typeId)
-    // Log.debug("registerType({0}) -> class: {1} idx: {2}".format(_typeId.toString(), (typeClassification castTo int).toString(), typeIdx.toString()))
-    switch (typeClassification)
-      case Class
-        if (g_classes[typeIdx] != null)
-          error("[Meta.registerType] A class type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_classes[typeIdx].getFullyQualifiedName()))
-        g_classes[typeIdx] = _type
-      case Interface
-        if (g_interfaces[typeIdx] != null)
-          error("[Meta.registerType] An interface type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_interfaces[typeIdx].getFullyQualifiedName()))
-        g_interfaces[typeIdx] = _type
-      case Enum
-        if (g_enumerations[typeIdx] != null)
-          error("[Meta.registerType] An enum type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_enumerations[typeIdx].getFullyQualifiedName()))
-        g_enumerations[typeIdx] = _type
-      case Handle
-        if (g_handles[typeIdx] != null)
-          error("[Meta.registerType] A handle type has already been registered with the type id {0} : {1}".format(_typeId.toString(), g_handles[typeIdx].getFullyQualifiedName()))
-        g_handles[typeIdx] = _type
+    let typeFullyQualifiedName = _type.getFullyQualifiedName()
+    if (g_fullyQualifiedTypeNameToTypeIdMap.has(typeFullyQualifiedName))
+      error("A type has already been registered with the fully qualified type name {0}".format(typeFullyQualifiedName))
+    g_fullyQualifiedTypeNameToTypeIdMap.put(typeFullyQualifiedName, _typeId)
+
+    g_types[_typeId] = _type
+
+    log("Registered {0} type {1} ({2})".format(getTypeClassification(_typeId).toString(), _type.getFullyQualifiedName(), _typeId.toString()))
+
+// ============================================================================
+public class MetaRegistrar
 
   // --------------------------------------------------------------------------
-  static function getTypeClassification(int _typeId) returns TypeClassification
-    return _typeId.and32(TYPE_ID_CLASS_MASK).shiftr(28) castTo TypeClassification
-
-  // --------------------------------------------------------------------------
-  static function getTypeIndex(int _typeId) returns int
-    return _typeId.and32(TYPE_ID_INDEX_MASK)
-
-  // --------------------------------------------------------------------------
-  static function createTypeId(int _typeId, TypeClassification classification) returns int
-    return getTypeIndex(_typeId).or32((classification castTo int).shiftl(28))
-
-  // --------------------------------------------------------------------------
-  static function registerClass(int id) returns Class
-    let newClass = new Class(id)
+  function registerClass(int typeid) returns Class
+    errorIfNotInitializing()
+    let newClass = new Class(typeid)
     Meta.registerType(newClass)
     return newClass
 
   // --------------------------------------------------------------------------
-  static function registerAbstractClass(string fullyQualifiedName) returns Class
-    let newClass = new Class(g_abstractClassIDGen.next(), fullyQualifiedName)
+  function registerAbstractClass(int typeid, string fullyQualifiedName) returns Class
+    errorIfNotInitializing()
+    let newClass = new Class(typeid, fullyQualifiedName)
     Meta.registerType(newClass)
     return newClass
 
   // --------------------------------------------------------------------------
-  static function registerInterface(string fullyQualifiedName) returns Interface
-    let newType = new Interface(g_interfaceIDGen.next(), fullyQualifiedName)
+  function registerInterface(int typeid, string fullyQualifiedName) returns Interface
+    errorIfNotInitializing()
+    let newType = new Interface(typeid, fullyQualifiedName)
     Meta.registerType(newType)
     return newType
 
   // --------------------------------------------------------------------------
-  static function registerHandle(string fullyQualifiedName, int baseId) returns Handle
-    let newType = new Handle(g_handleIDGen.next(), fullyQualifiedName)..setBase(baseId)
+  function registerPrimitive(int typeid, string fullyQualifiedName) returns Primitive
+    errorIfNotInitializing()
+    let newType = new Primitive(typeid, fullyQualifiedName)
     Meta.registerType(newType)
     return newType
 
   // --------------------------------------------------------------------------
-  static function getTypeName(int _typeId) returns string
-    let _type = getType(_typeId)
-    return _type != null ? _type.getFullyQualifiedName() : "UnknownType({0}-{1})".format(typeIdToTypeName(_typeId), _typeId.toString())
+  function registerHandle(int typeid, string fullyQualifiedName, int baseId) returns Primitive
+    errorIfNotInitializing()
+    let newType = new Primitive(typeid, fullyQualifiedName)..setBase(baseId)
+    Meta.registerType(newType)
+    return newType
 
-// ============================================================================
-public interface ObjectToIndex
-  function call(object object) returns int
-
-// ============================================================================
-public interface ObjectFromIndex
-  function call(int index) returns object
+  // --------------------------------------------------------------------------
+  private static function errorIfNotInitializing()
+    if (not Meta.m_initializing or Meta.m_initialized)
+      error("Called outside of Meta.initialize()")
 
 // ============================================================================
 public abstract class Type
@@ -194,15 +296,15 @@ public abstract class Type
   protected string m_name
   protected string m_fullyQualifiedName
   protected ObjectDestructor m_destructor
-
-  ObjectToIndex objectToIndex
-  ObjectFromIndex objectFromIndex
+  protected ObjectStringifier m_stringifier
+  private HashList<MethodInfo> m_methods
+  private HashList<PropertyInfo> m_properties
 
   // --------------------------------------------------------------------------
   construct (int _typeId, string fullyQualifiedName)
 
     if (_typeId <= 0)
-      error("[Type.construct] Argument invalid: _typeId must be greater than 0")
+      error("Argument invalid: _typeId must be greater than 0")
 
     m_id = _typeId
     m_fullyQualifiedName = fullyQualifiedName
@@ -210,6 +312,24 @@ public abstract class Type
     let parts = fullyQualifiedName.split(".")
     m_name = parts.size() >= 1 ? parts.get(parts.size() - 1) : fullyQualifiedName
     destroy parts
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_destructor != null)
+      destroy m_destructor
+      m_destructor = null
+
+    if (m_stringifier != null)
+      destroy m_stringifier
+      m_stringifier = null
+
+    if (m_methods != null)
+      destroy m_methods
+      m_methods = null
+
+    if (m_properties != null)
+      destroy m_properties
+      m_properties = null
 
   // --------------------------------------------------------------------------
   function getTypeId() returns int
@@ -261,6 +381,48 @@ public abstract class Type
         return baseType.destroyObject(object)
     return false
 
+  // --------------------------------------------------------------------------
+  function registerStringifier(ObjectStringifier toString)
+    m_stringifier = toString
+
+  // --------------------------------------------------------------------------
+  function getStringifier() returns ObjectStringifier
+    return m_stringifier
+
+  // --------------------------------------------------------------------------
+  function registerMethod(MethodInfo methodInfo)
+    if (m_methods == null)
+      m_methods = new HashList<MethodInfo>()
+    m_methods.add(methodInfo)
+
+  // --------------------------------------------------------------------------
+  function getMethods() returns HashList<MethodInfo>
+    return m_methods != null ? m_methods : g_emptyMethods
+
+  // --------------------------------------------------------------------------
+  function registerProperty(string name, int propertyTypeId, Func1<object, object> getter, Action2<object, object> setter) returns PropertyInfo
+    let propInfo = new PropertyInfo(this, name, propertyTypeId, getter, setter)
+    registerProperty(propInfo)
+    return propInfo
+
+  // --------------------------------------------------------------------------
+  function registerProperty(PropertyInfo property)
+    if (m_properties == null)
+      m_properties = new HashList<PropertyInfo>()
+    m_properties.add(property)
+
+  // --------------------------------------------------------------------------
+  function getProperties() returns HashList<PropertyInfo>
+    return m_properties != null ? m_properties : g_emptyProperties
+
+  // --------------------------------------------------------------------------
+  function toString(object object) returns string
+    if (object == NULL)
+      return "NULL"
+    if (m_stringifier != null)
+      return m_stringifier.call(object)
+    return "[{0} {1}]".format(getFullyQualifiedName(), object.objectHandle.toString())
+
 // ============================================================================
 public abstract class ConcreteType extends Type
   private ObjectFactory m_factory
@@ -296,19 +458,17 @@ public abstract class ConcreteType extends Type
 
 // ============================================================================
 public class Class extends ConcreteType
-  private HashList<MethodInfo> m_methods
-  private HashList<PropertyInfo> m_properties
   private HashList<int> m_interfaces
   private bool m_isAbstract
 
   // --------------------------------------------------------------------------
   construct (int id)
-    super (Meta.createTypeId(id, TypeClassification.Class), typeIdToTypeName(id))
+    super (id, typeIdToTypeName(id))
     m_isAbstract = false
 
   // --------------------------------------------------------------------------
   construct (int id, string fullyQualifiedName)
-    super (Meta.createTypeId(id, TypeClassification.Class), fullyQualifiedName)
+    super (id, fullyQualifiedName)
     m_isAbstract = true
 
   // --------------------------------------------------------------------------
@@ -317,14 +477,6 @@ public class Class extends ConcreteType
     if (m_interfaces != null)
       destroy m_interfaces
       m_interfaces = null
-
-    if (m_methods != null)
-      destroy m_methods
-      m_methods = null
-
-    if (m_properties != null)
-      destroy m_properties
-      m_properties = null
 
   // --------------------------------------------------------------------------
   function getIsAbstract() returns bool
@@ -337,32 +489,12 @@ public class Class extends ConcreteType
     for id in typeIds
       if (Meta.getTypeClassification(id) != TypeClassification.Interface)
         error("type({0}) : Type is not an interface: {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
-      // Log.debug("type({0}) : Registered interface {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
+      Meta.log("type({0}) : Registered interface {1}".format(getFullyQualifiedName(), Meta.getTypeName(id)))
       m_interfaces.add(id)
 
   // --------------------------------------------------------------------------
   function getInterfaces() returns HashList<int>
     return m_interfaces != null ? m_interfaces : g_emptyInts
-
-  // --------------------------------------------------------------------------
-  function registerMethod(MethodInfo methodInfo)
-    if (m_methods == null)
-      m_methods = new HashList<MethodInfo>()
-    m_methods.add(methodInfo)
-
-  // --------------------------------------------------------------------------
-  function getMethods() returns HashList<MethodInfo>
-    return m_methods != null ? m_methods : g_emptyMethods
-
-  // --------------------------------------------------------------------------
-  function registerProperty(PropertyInfo property)
-    if (m_properties == null)
-      m_properties = new HashList<PropertyInfo>()
-    m_properties.add(property)
-
-  // --------------------------------------------------------------------------
-  function getProperties() returns HashList<PropertyInfo>
-    return m_properties != null ? m_properties : g_emptyProperties
 
   // --------------------------------------------------------------------------
   override function is(int otherType) returns bool
@@ -377,7 +509,8 @@ public class Interface extends Type
 
   // --------------------------------------------------------------------------
   construct (int id, string fullyQualifiedName)
-    super (Meta.createTypeId(id, TypeClassification.Interface), fullyQualifiedName)
+    super (id, fullyQualifiedName)
+    g_typeIdToClassificationMap.put(id, TypeClassification.Interface)
 
   // --------------------------------------------------------------------------
   function registerInterface(vararg int typeIds)
@@ -400,11 +533,16 @@ public class Interface extends Type
     return baseType != null ? baseType.is(otherType) : false
 
 // ============================================================================
-public class Handle extends ConcreteType
+public class Primitive extends ConcreteType
 
   // --------------------------------------------------------------------------
   construct (int id, string fullyQualifiedName)
-    super (Meta.createTypeId(id, TypeClassification.Handle), fullyQualifiedName)
+    super (id, fullyQualifiedName)
+    g_typeIdToClassificationMap.put(id, TypeClassification.Primitive)
+
+// ============================================================================
+public function Type.isPrimitive() returns bool
+  return this.typeId == Primitive.typeId
 
 // ============================================================================
 public class MemberInfo
@@ -412,8 +550,9 @@ public class MemberInfo
   private string m_name
 
   // --------------------------------------------------------------------------
-  construct (Type owner)
+  construct (Type owner, string name)
     m_owner = owner
+    m_name = name
 
   // --------------------------------------------------------------------------
   function getOwningType() returns Type
@@ -425,28 +564,1104 @@ public class MemberInfo
 
 // ============================================================================
 public class PropertyInfo extends MemberInfo
+  private int m_propertyTypeId
+  private Type m_propertyType
   private Func1<object, object> m_getter
   private Action2<object, object> m_setter
 
   // --------------------------------------------------------------------------
-  construct (Type owner, Func1<object, object> getter, Action2<object, object> setter)
-    super(owner)
-    m_getter = getter.acquire()
-    m_setter = setter.acquire()
+  construct (Type owner, string name, int propertyTypeId, Func1<object, object> getter, Action2<object, object> setter)
+    super(owner, name)
+    m_propertyTypeId = propertyTypeId
+    m_propertyType = null
+    m_getter = getter != null ? getter.acquire() : null
+    m_setter = setter != null ? setter.acquire() : null
 
   // --------------------------------------------------------------------------
   ondestroy
-    m_getter.release()
-    m_setter.release()
+    if (m_getter != null)
+      m_getter.release()
+    
+    if (m_setter != null)
+      m_setter.release()
+
+  // --------------------------------------------------------------------------
+  function getPropertyType() returns Type
+    if (m_propertyType == null)
+      m_propertyType = Meta.getType(m_propertyTypeId)
+    return m_propertyType
+
+  // --------------------------------------------------------------------------
+  function canGetValue(object context) returns bool
+    return m_getter != null and context.is(getOwningType().getTypeId())
 
   // --------------------------------------------------------------------------
   function getValue(object context) returns object
     return m_getter != null ? m_getter.call(context) : NULL
 
   // --------------------------------------------------------------------------
+  function canSetValue(object context, object value) returns bool
+    return m_setter != null and context.is(getOwningType().getTypeId()) and value.is(m_propertyTypeId)
+
+  // --------------------------------------------------------------------------
   function setValue(object context, object value)
+    value.castAssert(m_propertyTypeId)
     if (m_setter != null)
       m_setter.call(context, value)
 
 // ============================================================================
 public class MethodInfo
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//  Native Handle Types
+//
+///////////////////////////////////////////////////////////////////////////////
+public constant int typeId_bool = Meta.reservePrimitive("bool")
+public constant int typeId_int = Meta.reservePrimitive("int")
+public constant int typeId_real = Meta.reservePrimitive("real")
+public constant int typeId_string = Meta.reservePrimitive("string")
+public constant int typeId_handle = Meta.reserveHandle("handle")
+public constant int typeId_agent = Meta.reserveHandle("agent")
+public constant int typeId_event = Meta.reserveHandle("event")
+public constant int typeId_player = Meta.reserveHandle("player")
+public constant int typeId_widget = Meta.reserveHandle("widget")
+public constant int typeId_unit = Meta.reserveHandle("unit")
+public constant int typeId_destructable = Meta.reserveHandle("destructable")
+public constant int typeId_item = Meta.reserveHandle("item")
+public constant int typeId_ability = Meta.reserveHandle("ability")
+public constant int typeId_buff = Meta.reserveHandle("buff")
+public constant int typeId_force = Meta.reserveHandle("force")
+public constant int typeId_group = Meta.reserveHandle("group")
+public constant int typeId_trigger = Meta.reserveHandle("trigger")
+public constant int typeId_triggercondition = Meta.reserveHandle("triggercondition")
+public constant int typeId_triggeraction = Meta.reserveHandle("triggeraction")
+public constant int typeId_timer = Meta.reserveHandle("timer")
+public constant int typeId_location = Meta.reserveHandle("location")
+public constant int typeId_region = Meta.reserveHandle("region")
+public constant int typeId_rect = Meta.reserveHandle("rect")
+public constant int typeId_boolexpr = Meta.reserveHandle("boolexpr")
+public constant int typeId_sound = Meta.reserveHandle("sound")
+public constant int typeId_conditionfunc = Meta.reserveHandle("conditionfunc")
+public constant int typeId_filterfunc = Meta.reserveHandle("filterfunc")
+public constant int typeId_unitpool = Meta.reserveHandle("unitpool")
+public constant int typeId_itempool = Meta.reserveHandle("itempool")
+public constant int typeId_race = Meta.reserveHandle("race")
+public constant int typeId_alliancetype = Meta.reserveHandle("alliancetype")
+public constant int typeId_racepreference = Meta.reserveHandle("racepreference")
+public constant int typeId_gamestate = Meta.reserveHandle("gamestate")
+public constant int typeId_igamestate = Meta.reserveHandle("igamestate")
+public constant int typeId_fgamestate = Meta.reserveHandle("fgamestate")
+public constant int typeId_playerstate = Meta.reserveHandle("playerstate")
+public constant int typeId_playerscore = Meta.reserveHandle("playerscore")
+public constant int typeId_playergameresult = Meta.reserveHandle("playergameresult")
+public constant int typeId_unitstate = Meta.reserveHandle("unitstate")
+public constant int typeId_aidifficulty = Meta.reserveHandle("aidifficulty")
+public constant int typeId_eventid = Meta.reserveHandle("eventid")
+public constant int typeId_gameevent = Meta.reserveHandle("gameevent")
+public constant int typeId_playerevent = Meta.reserveHandle("playerevent")
+public constant int typeId_playerunitevent = Meta.reserveHandle("playerunitevent")
+public constant int typeId_unitevent = Meta.reserveHandle("unitevent")
+public constant int typeId_limitop = Meta.reserveHandle("limitop")
+public constant int typeId_widgetevent = Meta.reserveHandle("widgetevent")
+public constant int typeId_dialogevent = Meta.reserveHandle("dialogevent")
+public constant int typeId_unittype = Meta.reserveHandle("unittype")
+public constant int typeId_gamespeed = Meta.reserveHandle("gamespeed")
+public constant int typeId_gamedifficulty = Meta.reserveHandle("gamedifficulty")
+public constant int typeId_gametype = Meta.reserveHandle("gametype")
+public constant int typeId_mapflag = Meta.reserveHandle("mapflag")
+public constant int typeId_mapvisibility = Meta.reserveHandle("mapvisibility")
+public constant int typeId_mapsetting = Meta.reserveHandle("mapsetting")
+public constant int typeId_mapdensity = Meta.reserveHandle("mapdensity")
+public constant int typeId_mapcontrol = Meta.reserveHandle("mapcontrol")
+public constant int typeId_minimapicon = Meta.reserveHandle("minimapicon")
+public constant int typeId_playerslotstate = Meta.reserveHandle("playerslotstate")
+public constant int typeId_volumegroup = Meta.reserveHandle("volumegroup")
+public constant int typeId_camerafield = Meta.reserveHandle("camerafield")
+public constant int typeId_camerasetup = Meta.reserveHandle("camerasetup")
+public constant int typeId_playercolor = Meta.reserveHandle("playercolor")
+public constant int typeId_placement = Meta.reserveHandle("placement")
+public constant int typeId_startlocprio = Meta.reserveHandle("startlocprio")
+public constant int typeId_raritycontrol = Meta.reserveHandle("raritycontrol")
+public constant int typeId_blendmode = Meta.reserveHandle("blendmode")
+public constant int typeId_texmapflags = Meta.reserveHandle("texmapflags")
+public constant int typeId_effect = Meta.reserveHandle("effect")
+public constant int typeId_effecttype = Meta.reserveHandle("effecttype")
+public constant int typeId_weathereffect = Meta.reserveHandle("weathereffect")
+public constant int typeId_terraindeformation = Meta.reserveHandle("terraindeformation")
+public constant int typeId_fogstate = Meta.reserveHandle("fogstate")
+public constant int typeId_fogmodifier = Meta.reserveHandle("fogmodifier")
+public constant int typeId_dialog = Meta.reserveHandle("dialog")
+public constant int typeId_button = Meta.reserveHandle("button")
+public constant int typeId_quest = Meta.reserveHandle("quest")
+public constant int typeId_questitem = Meta.reserveHandle("questitem")
+public constant int typeId_defeatcondition = Meta.reserveHandle("defeatcondition")
+public constant int typeId_timerdialog = Meta.reserveHandle("timerdialog")
+public constant int typeId_leaderboard = Meta.reserveHandle("leaderboard")
+public constant int typeId_multiboard = Meta.reserveHandle("multiboard")
+public constant int typeId_multiboarditem = Meta.reserveHandle("multiboarditem")
+public constant int typeId_trackable = Meta.reserveHandle("trackable")
+public constant int typeId_gamecache = Meta.reserveHandle("gamecache")
+public constant int typeId_version = Meta.reserveHandle("version")
+public constant int typeId_itemtype = Meta.reserveHandle("itemtype")
+public constant int typeId_texttag = Meta.reserveHandle("texttag")
+public constant int typeId_attacktype = Meta.reserveHandle("attacktype")
+public constant int typeId_damagetype = Meta.reserveHandle("damagetype")
+public constant int typeId_weapontype = Meta.reserveHandle("weapontype")
+public constant int typeId_soundtype = Meta.reserveHandle("soundtype")
+public constant int typeId_lightning = Meta.reserveHandle("lightning")
+public constant int typeId_pathingtype = Meta.reserveHandle("pathingtype")
+public constant int typeId_mousebuttontype = Meta.reserveHandle("mousebuttontype")
+public constant int typeId_animtype = Meta.reserveHandle("animtype")
+public constant int typeId_subanimtype = Meta.reserveHandle("subanimtype")
+public constant int typeId_image = Meta.reserveHandle("image")
+public constant int typeId_ubersplat = Meta.reserveHandle("ubersplat")
+public constant int typeId_hashtable = Meta.reserveHandle("hashtable")
+public constant int typeId_framehandle = Meta.reserveHandle("framehandle")
+public constant int typeId_originframetype = Meta.reserveHandle("originframetype")
+public constant int typeId_framepointtype = Meta.reserveHandle("framepointtype")
+public constant int typeId_textaligntype = Meta.reserveHandle("textaligntype")
+public constant int typeId_frameeventtype = Meta.reserveHandle("frameeventtype")
+public constant int typeId_oskeytype = Meta.reserveHandle("oskeytype")
+public constant int typeId_abilityintegerfield = Meta.reserveHandle("abilityintegerfield")
+public constant int typeId_abilityrealfield = Meta.reserveHandle("abilityrealfield")
+public constant int typeId_abilitybooleanfield = Meta.reserveHandle("abilitybooleanfield")
+public constant int typeId_abilitystringfield = Meta.reserveHandle("abilitystringfield")
+public constant int typeId_abilityintegerlevelfield = Meta.reserveHandle("abilityintegerlevelfield")
+public constant int typeId_abilityreallevelfield = Meta.reserveHandle("abilityreallevelfield")
+public constant int typeId_abilitybooleanlevelfield = Meta.reserveHandle("abilitybooleanlevelfield")
+public constant int typeId_abilitystringlevelfield = Meta.reserveHandle("abilitystringlevelfield")
+public constant int typeId_abilityintegerlevelarrayfield = Meta.reserveHandle("abilityintegerlevelarrayfield")
+public constant int typeId_abilityreallevelarrayfield = Meta.reserveHandle("abilityreallevelarrayfield")
+public constant int typeId_abilitybooleanlevelarrayfield = Meta.reserveHandle("abilitybooleanlevelarrayfield")
+public constant int typeId_abilitystringlevelarrayfield = Meta.reserveHandle("abilitystringlevelarrayfield")
+public constant int typeId_unitintegerfield = Meta.reserveHandle("unitintegerfield")
+public constant int typeId_unitrealfield = Meta.reserveHandle("unitrealfield")
+public constant int typeId_unitbooleanfield = Meta.reserveHandle("unitbooleanfield")
+public constant int typeId_unitstringfield = Meta.reserveHandle("unitstringfield")
+public constant int typeId_unitweaponintegerfield = Meta.reserveHandle("unitweaponintegerfield")
+public constant int typeId_unitweaponrealfield = Meta.reserveHandle("unitweaponrealfield")
+public constant int typeId_unitweaponbooleanfield = Meta.reserveHandle("unitweaponbooleanfield")
+public constant int typeId_unitweaponstringfield = Meta.reserveHandle("unitweaponstringfield")
+public constant int typeId_itemintegerfield = Meta.reserveHandle("itemintegerfield")
+public constant int typeId_itemrealfield = Meta.reserveHandle("itemrealfield")
+public constant int typeId_itembooleanfield = Meta.reserveHandle("itembooleanfield")
+public constant int typeId_itemstringfield = Meta.reserveHandle("itemstringfield")
+public constant int typeId_movetype = Meta.reserveHandle("movetype")
+public constant int typeId_targetflag = Meta.reserveHandle("targetflag")
+public constant int typeId_armortype = Meta.reserveHandle("armortype")
+public constant int typeId_heroattribute = Meta.reserveHandle("heroattribute")
+public constant int typeId_defensetype = Meta.reserveHandle("defensetype")
+public constant int typeId_regentype = Meta.reserveHandle("regentype")
+public constant int typeId_unitcategory = Meta.reserveHandle("unitcategory")
+public constant int typeId_pathingflag = Meta.reserveHandle("pathingflag")
+public constant int typeId_commandbuttoneffect = Meta.reserveHandle("commandbuttoneffect")
+
+// ============================================================================
+function registerNativeTypes(MetaRegistrar registrar)
+  registrar.registerPrimitive(typeId_bool, "bool")..registerStringifier(o -> o.castToBool().toString())
+  registrar.registerPrimitive(typeId_int, "int")..registerStringifier(o -> o.castToInt().toString())
+  registrar.registerPrimitive(typeId_real, "real")..registerStringifier(o -> o.castToReal().toString())
+  registrar.registerPrimitive(typeId_string, "string")..registerStringifier(o -> o.castToString())
+  registrar.registerHandle(typeId_handle, "handle", 0)
+  registrar.registerHandle(typeId_agent, "agent", typeId_handle)
+  registrar.registerHandle(typeId_event, "event", typeId_agent)
+  registrar.registerHandle(typeId_player, "player", typeId_agent)..registerStringifier(o -> o.castToPlayer().getName())
+  registrar.registerHandle(typeId_widget, "widget", typeId_agent)
+  registerHandle_unit(registrar)
+  registrar.registerHandle(typeId_destructable, "destructable", typeId_widget)
+  registerHandle_item(registrar)
+  registrar.registerHandle(typeId_ability, "ability", typeId_agent)
+  registrar.registerHandle(typeId_buff, "buff", typeId_ability)
+  registrar.registerHandle(typeId_force, "force", typeId_agent)
+  registerHandle_group(registrar)
+  registrar.registerHandle(typeId_trigger, "trigger", typeId_agent)
+  registrar.registerHandle(typeId_triggercondition, "triggercondition", typeId_agent)
+  registrar.registerHandle(typeId_triggeraction, "triggeraction", typeId_handle)
+  registrar.registerHandle(typeId_timer, "timer", typeId_agent)
+  registrar.registerHandle(typeId_location, "location", typeId_agent)
+  registrar.registerHandle(typeId_region, "region", typeId_agent)
+  registrar.registerHandle(typeId_rect, "rect", typeId_agent)
+  registrar.registerHandle(typeId_boolexpr, "boolexpr", typeId_agent)
+  registrar.registerHandle(typeId_sound, "sound", typeId_agent)
+  registrar.registerHandle(typeId_conditionfunc, "conditionfunc", typeId_boolexpr)
+  registrar.registerHandle(typeId_filterfunc, "filterfunc", typeId_boolexpr)
+  registrar.registerHandle(typeId_unitpool, "unitpool", typeId_handle)
+  registrar.registerHandle(typeId_itempool, "itempool", typeId_handle)
+  registrar.registerHandle(typeId_race, "race", typeId_handle)
+  registrar.registerHandle(typeId_alliancetype, "alliancetype", typeId_handle)
+  registrar.registerHandle(typeId_racepreference, "racepreference", typeId_handle)
+  registrar.registerHandle(typeId_gamestate, "gamestate", typeId_handle)
+  registrar.registerHandle(typeId_igamestate, "igamestate", typeId_gamestate)
+  registrar.registerHandle(typeId_fgamestate, "fgamestate", typeId_gamestate)
+  registrar.registerHandle(typeId_playerstate, "playerstate", typeId_handle)
+  registrar.registerHandle(typeId_playerscore, "playerscore", typeId_handle)
+  registrar.registerHandle(typeId_playergameresult, "playergameresult", typeId_handle)
+  registrar.registerHandle(typeId_unitstate, "unitstate", typeId_handle)
+  registrar.registerHandle(typeId_aidifficulty, "aidifficulty", typeId_handle)
+  registrar.registerHandle(typeId_eventid, "eventid", typeId_handle)
+  registrar.registerHandle(typeId_gameevent, "gameevent", typeId_eventid)
+  registrar.registerHandle(typeId_playerevent, "playerevent", typeId_eventid)
+  registrar.registerHandle(typeId_playerunitevent, "playerunitevent", typeId_eventid)
+  registrar.registerHandle(typeId_unitevent, "unitevent", typeId_eventid)
+  registrar.registerHandle(typeId_limitop, "limitop", typeId_eventid)
+  registrar.registerHandle(typeId_widgetevent, "widgetevent", typeId_eventid)
+  registrar.registerHandle(typeId_dialogevent, "dialogevent", typeId_eventid)
+  registrar.registerHandle(typeId_unittype, "unittype", typeId_handle)
+  registrar.registerHandle(typeId_gamespeed, "gamespeed", typeId_handle)
+  registrar.registerHandle(typeId_gamedifficulty, "gamedifficulty", typeId_handle)
+  registrar.registerHandle(typeId_gametype, "gametype", typeId_handle)
+  registrar.registerHandle(typeId_mapflag, "mapflag", typeId_handle)
+  registrar.registerHandle(typeId_mapvisibility, "mapvisibility", typeId_handle)
+  registrar.registerHandle(typeId_mapsetting, "mapsetting", typeId_handle)
+  registrar.registerHandle(typeId_mapdensity, "mapdensity", typeId_handle)
+  registrar.registerHandle(typeId_mapcontrol, "mapcontrol", typeId_handle)
+  registrar.registerHandle(typeId_minimapicon, "minimapicon", typeId_handle)
+  registrar.registerHandle(typeId_playerslotstate, "playerslotstate", typeId_handle)
+  registrar.registerHandle(typeId_volumegroup, "volumegroup", typeId_handle)
+  registrar.registerHandle(typeId_camerafield, "camerafield", typeId_handle)
+  registrar.registerHandle(typeId_camerasetup, "camerasetup", typeId_handle)
+  registrar.registerHandle(typeId_playercolor, "playercolor", typeId_handle)
+  registrar.registerHandle(typeId_placement, "placement", typeId_handle)
+  registrar.registerHandle(typeId_startlocprio, "startlocprio", typeId_handle)
+  registrar.registerHandle(typeId_raritycontrol, "raritycontrol", typeId_handle)
+  registrar.registerHandle(typeId_blendmode, "blendmode", typeId_handle)
+  registrar.registerHandle(typeId_texmapflags, "texmapflags", typeId_handle)
+  registrar.registerHandle(typeId_effect, "effect", typeId_agent)
+  registrar.registerHandle(typeId_effecttype, "effecttype", typeId_handle)
+  registrar.registerHandle(typeId_weathereffect, "weathereffect", typeId_handle)
+  registrar.registerHandle(typeId_terraindeformation, "terraindeformation", typeId_handle)
+  registrar.registerHandle(typeId_fogstate, "fogstate", typeId_handle)
+  registrar.registerHandle(typeId_fogmodifier, "fogmodifier", typeId_agent)
+  registrar.registerHandle(typeId_dialog, "dialog", typeId_agent)
+  registrar.registerHandle(typeId_button, "button", typeId_agent)
+  registrar.registerHandle(typeId_quest, "quest", typeId_agent)
+  registrar.registerHandle(typeId_questitem, "questitem", typeId_agent)
+  registrar.registerHandle(typeId_defeatcondition, "defeatcondition", typeId_agent)
+  registrar.registerHandle(typeId_timerdialog, "timerdialog", typeId_agent)
+  registrar.registerHandle(typeId_leaderboard, "leaderboard", typeId_agent)
+  registrar.registerHandle(typeId_multiboard, "multiboard", typeId_agent)
+  registrar.registerHandle(typeId_multiboarditem, "multiboarditem", typeId_agent)
+  registrar.registerHandle(typeId_trackable, "trackable", typeId_agent)
+  registrar.registerHandle(typeId_gamecache, "gamecache", typeId_agent)
+  registrar.registerHandle(typeId_version, "version", typeId_handle)
+  registrar.registerHandle(typeId_itemtype, "itemtype", typeId_handle)
+  registrar.registerHandle(typeId_texttag, "texttag", typeId_handle)
+  registrar.registerHandle(typeId_attacktype, "attacktype", typeId_handle)
+  registrar.registerHandle(typeId_damagetype, "damagetype", typeId_handle)
+  registrar.registerHandle(typeId_weapontype, "weapontype", typeId_handle)
+  registrar.registerHandle(typeId_soundtype, "soundtype", typeId_handle)
+  registrar.registerHandle(typeId_lightning, "lightning", typeId_handle)
+  registrar.registerHandle(typeId_pathingtype, "pathingtype", typeId_handle)
+  registrar.registerHandle(typeId_mousebuttontype, "mousebuttontype", typeId_handle)
+  registrar.registerHandle(typeId_animtype, "animtype", typeId_handle)
+  registrar.registerHandle(typeId_subanimtype, "subanimtype", typeId_handle)
+  registrar.registerHandle(typeId_image, "image", typeId_handle)
+  registrar.registerHandle(typeId_ubersplat, "ubersplat", typeId_handle)
+  registrar.registerHandle(typeId_hashtable, "hashtable", typeId_agent)
+  registerHandle_framehandle(registrar)
+  registrar.registerHandle(typeId_originframetype, "originframetype", typeId_handle)
+  registrar.registerHandle(typeId_framepointtype, "framepointtype", typeId_handle)
+  registrar.registerHandle(typeId_textaligntype, "textaligntype", typeId_handle)
+  registrar.registerHandle(typeId_frameeventtype, "frameeventtype", typeId_handle)
+  registrar.registerHandle(typeId_oskeytype, "oskeytype", typeId_handle)
+  registrar.registerHandle(typeId_abilityintegerfield, "abilityintegerfield", typeId_handle)
+  registrar.registerHandle(typeId_abilityrealfield, "abilityrealfield", typeId_handle)
+  registrar.registerHandle(typeId_abilitybooleanfield, "abilitybooleanfield", typeId_handle)
+  registrar.registerHandle(typeId_abilitystringfield, "abilitystringfield", typeId_handle)
+  registrar.registerHandle(typeId_abilityintegerlevelfield, "abilityintegerlevelfield", typeId_handle)
+  registrar.registerHandle(typeId_abilityreallevelfield, "abilityreallevelfield", typeId_handle)
+  registrar.registerHandle(typeId_abilitybooleanlevelfield, "abilitybooleanlevelfield", typeId_handle)
+  registrar.registerHandle(typeId_abilitystringlevelfield, "abilitystringlevelfield", typeId_handle)
+  registrar.registerHandle(typeId_abilityintegerlevelarrayfield, "abilityintegerlevelarrayfield", typeId_handle)
+  registrar.registerHandle(typeId_abilityreallevelarrayfield, "abilityreallevelarrayfield", typeId_handle)
+  registrar.registerHandle(typeId_abilitybooleanlevelarrayfield, "abilitybooleanlevelarrayfield", typeId_handle)
+  registrar.registerHandle(typeId_abilitystringlevelarrayfield, "abilitystringlevelarrayfield", typeId_handle)
+  registrar.registerHandle(typeId_unitintegerfield, "unitintegerfield", typeId_handle)
+  registrar.registerHandle(typeId_unitrealfield, "unitrealfield", typeId_handle)
+  registrar.registerHandle(typeId_unitbooleanfield, "unitbooleanfield", typeId_handle)
+  registrar.registerHandle(typeId_unitstringfield, "unitstringfield", typeId_handle)
+  registrar.registerHandle(typeId_unitweaponintegerfield, "unitweaponintegerfield", typeId_handle)
+  registrar.registerHandle(typeId_unitweaponrealfield, "unitweaponrealfield", typeId_handle)
+  registrar.registerHandle(typeId_unitweaponbooleanfield, "unitweaponbooleanfield", typeId_handle)
+  registrar.registerHandle(typeId_unitweaponstringfield, "unitweaponstringfield", typeId_handle)
+  registrar.registerHandle(typeId_itemintegerfield, "itemintegerfield", typeId_handle)
+  registrar.registerHandle(typeId_itemrealfield, "itemrealfield", typeId_handle)
+  registrar.registerHandle(typeId_itembooleanfield, "itembooleanfield", typeId_handle)
+  registrar.registerHandle(typeId_itemstringfield, "itemstringfield", typeId_handle)
+  registrar.registerHandle(typeId_movetype, "movetype", typeId_handle)
+  registrar.registerHandle(typeId_targetflag, "targetflag", typeId_handle)
+  registrar.registerHandle(typeId_armortype, "armortype", typeId_handle)
+  registrar.registerHandle(typeId_heroattribute, "heroattribute", typeId_handle)
+  registrar.registerHandle(typeId_defensetype, "defensetype", typeId_handle)
+  registrar.registerHandle(typeId_regentype, "regentype", typeId_handle)
+  registrar.registerHandle(typeId_unitcategory, "unitcategory", typeId_handle)
+  registrar.registerHandle(typeId_pathingflag, "pathingflag", typeId_handle)
+  registrar.registerHandle(typeId_commandbuttoneffect, "commandbuttoneffect", typeId_handle)
+
+// ============================================================================
+public class UnitCreationContext
+  player owningPlayer
+  int unitTypeId
+  vec2 pos
+  angle facing
+
+// ============================================================================
+function registerHandle_unit(MetaRegistrar registrar)
+  registrar.registerHandle(typeId_unit, "unit", typeId_widget)
+  ..registerFactory1((object context) -> begin
+  //{
+    var unitObject = NULL
+    let creationContext = context.as<UnitCreationContext>(UnitCreationContext.typeId)
+    if (creationContext != null)
+      let createdUnit = createUnit(creationContext.owningPlayer, creationContext.unitTypeId, creationContext.pos, creationContext.facing)
+      unitObject = toObject(unitToIndex(createdUnit), typeId_unit)
+    return unitObject
+  //}
+  end)
+  ..registerDestructor((object) -> unitFromIndex(object.objectHandle).remove())
+  ..registerStringifier((object) -> object.castToUnit().getName())
+  ..registerProperty("Name",         typeId_string, o -> o.castToUnit().getName().toObject(),        (o, v) -> o.castToUnit().setName(v.castToString()))
+  ..registerProperty("Proper Name",  typeId_string, o -> o.castToUnit().getProperName().toObject(),  (o, v) -> o.castToUnit().setProperName(v.castToString()))
+  ..registerProperty("HP",           typeId_real,   o -> o.castToUnit().getHP().toObject(),          (o, v) -> o.castToUnit().setHP(v.castToReal()))
+  ..registerProperty("Max HP",       typeId_int,    o -> o.castToUnit().getMaxHP().toObject(),       (o, v) -> o.castToUnit().setMaxHP(v.castToInt()))
+  ..registerProperty("Mana",         typeId_real,   o -> o.castToUnit().getMana().toObject(),        (o, v) -> o.castToUnit().setMana(v.castToReal()))
+  ..registerProperty("Max Mana",     typeId_int,    o -> o.castToUnit().getMaxMana().toObject(),     (o, v) -> o.castToUnit().setMaxMana(v.castToInt()))
+  ..registerProperty("XP",           typeId_int,    o -> o.castToUnit().getXp().toObject(),          (o, v) -> o.castToUnit().setXp(v.castToInt(), false))
+  ..registerProperty("Level",        typeId_int,    o -> o.castToUnit().getLevel().toObject(),       (o, v) -> o.castToUnit().setLevel(v.castToInt(), false))
+
+// ============================================================================
+public class ItemCreationContext
+  int itemTypeId
+  vec2 pos
+
+// ============================================================================
+function registerHandle_item(MetaRegistrar registrar)
+  registrar.registerHandle(typeId_item, "item", typeId_widget)
+  ..registerFactory1((context) -> begin
+    var itemObject = NULL
+    let creationContext = context.as<ItemCreationContext>(ItemCreationContext.typeId)
+    if (creationContext != null)
+      itemObject = toObject(itemToIndex(createItem(creationContext.itemTypeId, creationContext.pos)), typeId_unit)
+    return itemObject
+  end)
+  ..registerDestructor((object) -> groupFromIndex(object.objectHandle).destr())
+  ..registerStringifier((object) -> object.castToItem().getName())
+
+// ============================================================================
+function registerHandle_group(MetaRegistrar registrar)
+  registrar.registerHandle(typeId_group, "group", typeId_agent)
+  ..registerFactory(() -> toObject(groupToIndex(CreateGroup()), typeId_group))
+  ..registerDestructor((object) -> groupFromIndex(object.objectHandle).destr())
+
+// ============================================================================
+function registerHandle_framehandle(MetaRegistrar registrar)
+  registrar.registerHandle(typeId_framehandle, "framehandle", typeId_handle)
+  ..registerDestructor((object) -> object.castToFramehandle().remove())
+  ..registerProperty("Name",            typeId_string,      o -> o.castToFramehandle().getName().toObject(),           null)
+  ..registerProperty("HandleId",        typeId_int,         o -> o.castToFramehandle().getHandleId().toObject(),       null)
+  ..registerProperty("Parent",          typeId_framehandle, o -> o.castToFramehandle().getParent().toObject(),         (o, v) -> o.castToFramehandle().setParent(v.castToFramehandle()))
+  ..registerProperty("Width",           typeId_real,        o -> o.castToFramehandle().getWidth().toObject(),          (o, v) -> o.castToFramehandle().setWidth(v.castToReal()))
+  ..registerProperty("Height",          typeId_real,        o -> o.castToFramehandle().getHeight().toObject(),         (o, v) -> o.castToFramehandle().setHeight(v.castToReal()))
+  ..registerProperty("Enabled",         typeId_bool,        o -> o.castToFramehandle().isEnabled().toObject(),         (o, v) -> o.castToFramehandle().setEnabled(v.castToBool()))
+  ..registerProperty("Visible",         typeId_bool,        o -> o.castToFramehandle().isVisible().toObject(),         (o, v) -> o.castToFramehandle().setVisible(v.castToBool()))
+  ..registerProperty("Alpha",           typeId_int,         o -> o.castToFramehandle().getAlpha().toObject(),          (o, v) -> o.castToFramehandle().setAlpha(v.castToInt()))
+  ..registerProperty("Text",            typeId_string,      o -> o.castToFramehandle().getText().toObject(),           (o, v) -> o.castToFramehandle().setText(v.castToString()))
+  ..registerProperty("Text Size Limit", typeId_int,         o -> o.castToFramehandle().getTextSizeLimit().toObject(),  (o, v) -> o.castToFramehandle().setTextSizeLimit(v.castToInt()))
+  ..registerProperty("Value",           typeId_real,        o -> o.castToFramehandle().getValue().toObject(),          (o, v) -> o.castToFramehandle().setValue(v.castToReal()))
+  ..registerProperty("Level",           typeId_int,         null,                                                      (o, v) -> o.castToFramehandle().setLevel(v.castToInt()))
+  ..registerProperty("Texture",         typeId_string,      null,                                                      (o, v) -> o.castToFramehandle().setTexture(v.castToString(), 0, true))
+  ..registerProperty("Vert Color",      typeId_int,         null,                                                      (o, v) -> o.castToFramehandle().setVertexColor(v.castToInt()))
+  ..registerProperty("Text Color",      typeId_int,         null,                                                      (o, v) -> o.castToFramehandle().setTextColor(v.castToInt()))
+  ..registerProperty("Step",            typeId_real,        null,                                                      (o, v) -> o.castToFramehandle().setStepSize(v.castToReal()))
+  ..registerProperty("Model",           typeId_string,      null,                                                      (o, v) -> o.castToFramehandle().setModel(v.castToString(), 0))
+  ..registerProperty("Animate",         typeId_int,         null,                                                      (o, v) -> o.castToFramehandle().setSpriteAnimate(v.castToInt(), 0))
+  ..registerProperty("Tooltip",         typeId_framehandle, null,                                                      (o, v) -> o.castToFramehandle().setTooltip(v.castToFramehandle()))
+  ..registerProperty("Focus",           typeId_bool,        null,                                                      (o, v) -> o.castToFramehandle().setFocus(v.castToBool()))
+  ..registerProperty("MinMax",          Vec2.typeId,        null,                                                      (o, v) -> o.castToFramehandle().setMinMax(v.cast<Vec2>(Vec2.typeId).getValue().x, v.cast<Vec2>(Vec2.typeId).getValue().y))
+
+// ============================================================================
+public class BoolObjectResolver implements IObjectResolver<bool>
+  static constant IObjectResolver<bool> instance = new BoolObjectResolver()
+  override function toObject(bool object) returns object
+    return object.toObject()
+  override function fromObject(object object) returns bool
+    return object.castToBool()
+
+// ============================================================================
+public function bool.toObject() returns object
+  return object(booleanToIndex(this), typeId_bool)
+
+// ============================================================================
+public function object.castToBool() returns bool
+  this.castAssert(typeId_bool)
+  return booleanFromIndex(this.objectHandle)
+
+// ============================================================================
+public class IntObjectResolver implements IObjectResolver<int>
+  static constant IObjectResolver<int> instance = new IntObjectResolver()
+  override function toObject(int object) returns object
+    return object.toObject()
+  override function fromObject(object object) returns int
+    return object.castToInt()
+
+// ============================================================================
+public function int.toObject() returns object
+  return object(this, typeId_int)
+
+// ============================================================================
+public function object.castToInt() returns int
+  this.castAssert(typeId_int)
+  return this.objectHandle
+
+// ============================================================================
+public class RealObjectResolver implements IObjectResolver<real>
+  static constant IObjectResolver<real> instance = new RealObjectResolver()
+  override function toObject(real object) returns object
+    return object.toObject()
+  override function fromObject(object object) returns real
+    return object.castToReal()
+
+// ============================================================================
+/** Can only store values between R2I_MIN and R2I_MAX */
+public function real.toObject() returns object
+  return object(realToIndex(clamp(this, R2I_MIN, R2I_MAX)), typeId_real)
+
+// ============================================================================
+public function object.castToReal() returns real
+  this.castAssert(typeId_real)
+  return realFromIndex(this.objectHandle)
+
+// ============================================================================
+public class StringObjectResolver implements IObjectResolver<string>
+  static constant IObjectResolver<string> instance = new StringObjectResolver()
+  override function toObject(string object) returns object
+    return object.toObject()
+  override function fromObject(object object) returns string
+    return object.castToString()
+
+// ============================================================================
+public function string.toObject() returns object
+  return object(stringToIndex(this), typeId_string)
+
+// ============================================================================
+public function object.castToString() returns string
+  this.castAssert(typeId_string)
+  return stringFromIndex(this.objectHandle)
+
+// ============================================================================
+// public function handle.toObject() returns object
+//   return object(handleToIndex(this), typeId_handle)
+
+// ============================================================================
+// public function agent.toObject() returns object
+//   return object(agentToIndex(this), typeId_agent)
+
+// ============================================================================
+// public function event.toObject() returns object
+//   return object(eventToIndex(this), typeId_event)
+
+// ============================================================================
+public function player.toObject() returns object
+  return object(playerToIndex(this), typeId_player)
+
+// ============================================================================
+public function object.castToPlayer() returns player
+  this.castAssert(typeId_player)
+  return playerFromIndex(this.objectHandle)
+
+// ============================================================================
+public function widget.toObject() returns object
+  return object(widgetToIndex(this), typeId_widget)
+
+// ============================================================================
+public class UnitObjectResolver implements IObjectResolver<unit>
+  static constant IObjectResolver<unit> instance = new UnitObjectResolver()
+  override function toObject(unit object) returns object
+    return object.toObject()
+  override function fromObject(object object) returns unit
+    return object.castToUnit()
+
+// ============================================================================
+public function unit.toObject() returns object
+  return object(unitToIndex(this), typeId_unit)
+
+// ============================================================================
+public function object.castToUnit() returns unit
+  this.castAssert(typeId_unit)
+  return unitFromIndex(this.objectHandle)
+
+// ============================================================================
+public function destructable.toObject() returns object
+  return object(destructableToIndex(this), typeId_destructable)
+
+// ============================================================================
+public function item.toObject() returns object
+  return object(itemToIndex(this), typeId_item)
+
+// ============================================================================
+public function object.castToItem() returns item
+  this.castAssert(typeId_item)
+  return itemFromIndex(this.objectHandle)
+
+// ============================================================================
+public function ability.toObject() returns object
+  return object(abilityToIndex(this), typeId_ability)
+
+// ============================================================================
+// public function buff.toObject() returns object
+//   return object(buffToIndex(this), typeId_buff)
+
+// ============================================================================
+public function force.toObject() returns object
+  return object(forceToIndex(this), typeId_force)
+
+// ============================================================================
+public function group.toObject() returns object
+  return object(groupToIndex(this), typeId_group)
+
+// ============================================================================
+public function trigger.toObject() returns object
+  return object(triggerToIndex(this), typeId_trigger)
+
+// ============================================================================
+public function triggercondition.toObject() returns object
+  return object(triggerconditionToIndex(this), typeId_triggercondition)
+
+// ============================================================================
+public function triggeraction.toObject() returns object
+  return object(triggeractionToIndex(this), typeId_triggeraction)
+
+// ============================================================================
+public function timer.toObject() returns object
+  return object(timerToIndex(this), typeId_timer)
+
+// ============================================================================
+public function location.toObject() returns object
+  return object(locationToIndex(this), typeId_location)
+
+// ============================================================================
+public function region.toObject() returns object
+  return object(regionToIndex(this), typeId_region)
+
+// ============================================================================
+public function rect.toObject() returns object
+  return object(rectToIndex(this), typeId_rect)
+
+// ============================================================================
+// public function boolexpr.toObject() returns object
+//   return object(boolexprToIndex(this), typeId_boolexpr)
+
+// ============================================================================
+public function sound.toObject() returns object
+  return object(soundToIndex(this), typeId_sound)
+
+// ============================================================================
+// public function conditionfunc.toObject() returns object
+//   return object(conditionfuncToIndex(this), typeId_conditionfunc)
+
+// ============================================================================
+// public function filterfunc.toObject() returns object
+//   return object(filterfuncToIndex(this), typeId_filterfunc)
+
+// ============================================================================
+// public function unitpool.toObject() returns object
+//   return object(unitpoolToIndex(this), typeId_unitpool)
+
+// ============================================================================
+// public function itempool.toObject() returns object
+//   return object(itempoolToIndex(this), typeId_itempool)
+
+// ============================================================================
+// public function race.toObject() returns object
+//   return object(raceToIndex(this), typeId_race)
+
+// ============================================================================
+// public function alliancetype.toObject() returns object
+//   return object(alliancetypeToIndex(this), typeId_alliancetype)
+
+// ============================================================================
+// public function racepreference.toObject() returns object
+//   return object(racepreferenceToIndex(this), typeId_racepreference)
+
+// ============================================================================
+// public function gamestate.toObject() returns object
+//   return object(gamestateToIndex(this), typeId_gamestate)
+
+// ============================================================================
+// public function igamestate.toObject() returns object
+//   return object(igamestateToIndex(this), typeId_igamestate)
+
+// ============================================================================
+// public function fgamestate.toObject() returns object
+//   return object(fgamestateToIndex(this), typeId_fgamestate)
+
+// ============================================================================
+// public function playerstate.toObject() returns object
+//   return object(playerstateToIndex(this), typeId_playerstate)
+
+// ============================================================================
+// public function playerscore.toObject() returns object
+//   return object(playerscoreToIndex(this), typeId_playerscore)
+
+// ============================================================================
+// public function playergameresult.toObject() returns object
+//   return object(playergameresultToIndex(this), typeId_playergameresult)
+
+// ============================================================================
+// public function unitstate.toObject() returns object
+//   return object(unitstateToIndex(this), typeId_unitstate)
+
+// ============================================================================
+// public function aidifficulty.toObject() returns object
+//   return object(aidifficultyToIndex(this), typeId_aidifficulty)
+
+// ============================================================================
+// public function eventid.toObject() returns object
+//   return object(eventidToIndex(this), typeId_eventid)
+
+// ============================================================================
+// public function gameevent.toObject() returns object
+//   return object(gameeventToIndex(this), typeId_gameevent)
+
+// ============================================================================
+// public function playerevent.toObject() returns object
+//   return object(playereventToIndex(this), typeId_playerevent)
+
+// ============================================================================
+// public function playerunitevent.toObject() returns object
+//   return object(playeruniteventToIndex(this), typeId_playerunitevent)
+
+// ============================================================================
+// public function unitevent.toObject() returns object
+//   return object(uniteventToIndex(this), typeId_unitevent)
+
+// ============================================================================
+// public function limitop.toObject() returns object
+//   return object(limitopToIndex(this), typeId_limitop)
+
+// ============================================================================
+// public function widgetevent.toObject() returns object
+//   return object(widgeteventToIndex(this), typeId_widgetevent)
+
+// ============================================================================
+// public function dialogevent.toObject() returns object
+//   return object(dialogeventToIndex(this), typeId_dialogevent)
+
+// ============================================================================
+// public function unittype.toObject() returns object
+//   return object(unittypeToIndex(this), typeId_unittype)
+
+// ============================================================================
+// public function gamespeed.toObject() returns object
+//   return object(gamespeedToIndex(this), typeId_gamespeed)
+
+// ============================================================================
+// public function gamedifficulty.toObject() returns object
+//   return object(gamedifficultyToIndex(this), typeId_gamedifficulty)
+
+// ============================================================================
+// public function gametype.toObject() returns object
+//   return object(gametypeToIndex(this), typeId_gametype)
+
+// ============================================================================
+// public function mapflag.toObject() returns object
+//   return object(mapflagToIndex(this), typeId_mapflag)
+
+// ============================================================================
+// public function mapvisibility.toObject() returns object
+//   return object(mapvisibilityToIndex(this), typeId_mapvisibility)
+
+// ============================================================================
+// public function mapsetting.toObject() returns object
+//   return object(mapsettingToIndex(this), typeId_mapsetting)
+
+// ============================================================================
+// public function mapdensity.toObject() returns object
+//   return object(mapdensityToIndex(this), typeId_mapdensity)
+
+// ============================================================================
+// public function mapcontrol.toObject() returns object
+//   return object(mapcontrolToIndex(this), typeId_mapcontrol)
+
+// ============================================================================
+// public function minimapicon.toObject() returns object
+//   return object(minimapiconToIndex(this), typeId_minimapicon)
+
+// ============================================================================
+// public function playerslotstate.toObject() returns object
+//   return object(playerslotstateToIndex(this), typeId_playerslotstate)
+
+// ============================================================================
+// public function volumegroup.toObject() returns object
+//   return object(volumegroupToIndex(this), typeId_volumegroup)
+
+// ============================================================================
+// public function camerafield.toObject() returns object
+//   return object(camerafieldToIndex(this), typeId_camerafield)
+
+// ============================================================================
+// public function camerasetup.toObject() returns object
+//   return object(camerasetupToIndex(this), typeId_camerasetup)
+
+// ============================================================================
+// public function playercolor.toObject() returns object
+//   return object(playercolorToIndex(this), typeId_playercolor)
+
+// ============================================================================
+// public function placement.toObject() returns object
+//   return object(placementToIndex(this), typeId_placement)
+
+// ============================================================================
+// public function startlocprio.toObject() returns object
+//   return object(startlocprioToIndex(this), typeId_startlocprio)
+
+// ============================================================================
+// public function raritycontrol.toObject() returns object
+//   return object(raritycontrolToIndex(this), typeId_raritycontrol)
+
+// ============================================================================
+// public function blendmode.toObject() returns object
+//   return object(blendmodeToIndex(this), typeId_blendmode)
+
+// ============================================================================
+// public function texmapflags.toObject() returns object
+//   return object(texmapflagsToIndex(this), typeId_texmapflags)
+
+// ============================================================================
+public function effect.toObject() returns object
+  return object(effectToIndex(this), typeId_effect)
+
+// ============================================================================
+// public function effecttype.toObject() returns object
+//   return object(effecttypeToIndex(this), typeId_effecttype)
+
+// ============================================================================
+// public function weathereffect.toObject() returns object
+//   return object(weathereffectToIndex(this), typeId_weathereffect)
+
+// ============================================================================
+// public function terraindeformation.toObject() returns object
+//   return object(terraindeformationToIndex(this), typeId_terraindeformation)
+
+// ============================================================================
+// public function fogstate.toObject() returns object
+//   return object(fogstateToIndex(this), typeId_fogstate)
+
+// ============================================================================
+// public function fogmodifier.toObject() returns object
+//   return object(fogmodifierToIndex(this), typeId_fogmodifier)
+
+// ============================================================================
+public function dialog.toObject() returns object
+  return object(dialogToIndex(this), typeId_dialog)
+
+// ============================================================================
+public function button.toObject() returns object
+  return object(buttonToIndex(this), typeId_button)
+
+// ============================================================================
+public function quest.toObject() returns object
+  return object(questToIndex(this), typeId_quest)
+
+// ============================================================================
+public function questitem.toObject() returns object
+  return object(questitemToIndex(this), typeId_questitem)
+
+// ============================================================================
+// public function defeatcondition.toObject() returns object
+//   return object(defeatconditionToIndex(this), typeId_defeatcondition)
+
+// ============================================================================
+// public function timerdialog.toObject() returns object
+//   return object(timerdialogToIndex(this), typeId_timerdialog)
+
+// ============================================================================
+public function leaderboard.toObject() returns object
+  return object(leaderboardToIndex(this), typeId_leaderboard)
+
+// ============================================================================
+public function multiboard.toObject() returns object
+  return object(multiboardToIndex(this), typeId_multiboard)
+
+// ============================================================================
+// public function multiboarditem.toObject() returns object
+//   return object(multiboarditemToIndex(this), typeId_multiboarditem)
+
+// ============================================================================
+public function trackable.toObject() returns object
+  return object(trackableToIndex(this), typeId_trackable)
+
+// ============================================================================
+// public function gamecache.toObject() returns object
+//   return object(gamecacheToIndex(this), typeId_gamecache)
+
+// ============================================================================
+// public function version.toObject() returns object
+//   return object(versionToIndex(this), typeId_version)
+
+// ============================================================================
+// public function itemtype.toObject() returns object
+//   return object(itemtypeToIndex(this), typeId_itemtype)
+
+// ============================================================================
+// public function texttag.toObject() returns object
+//   return object(texttagToIndex(this), typeId_texttag)
+
+// ============================================================================
+// public function attacktype.toObject() returns object
+//   return object(attacktypeToIndex(this), typeId_attacktype)
+
+// ============================================================================
+// public function damagetype.toObject() returns object
+//   return object(damagetypeToIndex(this), typeId_damagetype)
+
+// ============================================================================
+// public function weapontype.toObject() returns object
+//   return object(weapontypeToIndex(this), typeId_weapontype)
+
+// ============================================================================
+// public function soundtype.toObject() returns object
+//   return object(soundtypeToIndex(this), typeId_soundtype)
+
+// ============================================================================
+public function lightning.toObject() returns object
+  return object(lightningToIndex(this), typeId_lightning)
+
+// ============================================================================
+// public function pathingtype.toObject() returns object
+//   return object(pathingtypeToIndex(this), typeId_pathingtype)
+
+// ============================================================================
+// public function mousebuttontype.toObject() returns object
+//   return object(mousebuttontypeToIndex(this), typeId_mousebuttontype)
+
+// ============================================================================
+// public function animtype.toObject() returns object
+//   return object(animtypeToIndex(this), typeId_animtype)
+
+// ============================================================================
+// public function subanimtype.toObject() returns object
+//   return object(subanimtypeToIndex(this), typeId_subanimtype)
+
+// ============================================================================
+public function image.toObject() returns object
+  return object(imageToIndex(this), typeId_image)
+
+// ============================================================================
+public function ubersplat.toObject() returns object
+  return object(ubersplatToIndex(this), typeId_ubersplat)
+
+// ============================================================================
+// public function hashtable.toObject() returns object
+//   return object(hashtableToIndex(this), typeId_hashtable)
+
+// ============================================================================
+public function framehandle.toObject() returns object
+  return object(framehandleToIndex(this), typeId_framehandle)
+
+// ============================================================================
+public function object.castToFramehandle() returns framehandle
+  this.castAssert(typeId_framehandle)
+  return framehandleFromIndex(this.objectHandle)
+
+// ============================================================================
+public class FramehandleObjectResolver implements IObjectResolver<framehandle>
+  static constant IObjectResolver<framehandle> instance = new FramehandleObjectResolver()
+  override function toObject(framehandle object) returns object
+    return object.toObject()
+  override function fromObject(object object) returns framehandle
+    return object.castToFramehandle()
+
+// ============================================================================
+// public function originframetype.toObject() returns object
+//   return object(originframetypeToIndex(this), typeId_originframetype)
+
+// ============================================================================
+// public function framepointtype.toObject() returns object
+//   return object(framepointtypeToIndex(this), typeId_framepointtype)
+
+// ============================================================================
+// public function textaligntype.toObject() returns object
+//   return object(textaligntypeToIndex(this), typeId_textaligntype)
+
+// ============================================================================
+// public function frameeventtype.toObject() returns object
+//   return object(frameeventtypeToIndex(this), typeId_frameeventtype)
+
+// ============================================================================
+public function oskeytype.toObject() returns object
+  return object(oskeytypeToIndex(this), typeId_oskeytype)
+
+// ============================================================================
+// public function abilityintegerfield.toObject() returns object
+//   return object(abilityintegerfieldToIndex(this), typeId_abilityintegerfield)
+
+// ============================================================================
+// public function abilityrealfield.toObject() returns object
+//   return object(abilityrealfieldToIndex(this), typeId_abilityrealfield)
+
+// ============================================================================
+// public function abilitybooleanfield.toObject() returns object
+//   return object(abilitybooleanfieldToIndex(this), typeId_abilitybooleanfield)
+
+// ============================================================================
+// public function abilitystringfield.toObject() returns object
+//   return object(abilitystringfieldToIndex(this), typeId_abilitystringfield)
+
+// ============================================================================
+// public function abilityintegerlevelfield.toObject() returns object
+//   return object(abilityintegerlevelfieldToIndex(this), typeId_abilityintegerlevelfield)
+
+// ============================================================================
+// public function abilityreallevelfield.toObject() returns object
+//   return object(abilityreallevelfieldToIndex(this), typeId_abilityreallevelfield)
+
+// ============================================================================
+// public function abilitybooleanlevelfield.toObject() returns object
+//   return object(abilitybooleanlevelfieldToIndex(this), typeId_abilitybooleanlevelfield)
+
+// ============================================================================
+// public function abilitystringlevelfield.toObject() returns object
+//   return object(abilitystringlevelfieldToIndex(this), typeId_abilitystringlevelfield)
+
+// ============================================================================
+// public function abilityintegerlevelarrayfield.toObject() returns object
+//   return object(abilityintegerlevelarrayfieldToIndex(this), typeId_abilityintegerlevelarrayfield)
+
+// ============================================================================
+// public function abilityreallevelarrayfield.toObject() returns object
+//   return object(abilityreallevelarrayfieldToIndex(this), typeId_abilityreallevelarrayfield)
+
+// ============================================================================
+// public function abilitybooleanlevelarrayfield.toObject() returns object
+//   return object(abilitybooleanlevelarrayfieldToIndex(this), typeId_abilitybooleanlevelarrayfield)
+
+// ============================================================================
+// public function abilitystringlevelarrayfield.toObject() returns object
+//   return object(abilitystringlevelarrayfieldToIndex(this), typeId_abilitystringlevelarrayfield)
+
+// ============================================================================
+// public function unitintegerfield.toObject() returns object
+//   return object(unitintegerfieldToIndex(this), typeId_unitintegerfield)
+
+// ============================================================================
+// public function unitrealfield.toObject() returns object
+//   return object(unitrealfieldToIndex(this), typeId_unitrealfield)
+
+// ============================================================================
+// public function unitbooleanfield.toObject() returns object
+//   return object(unitbooleanfieldToIndex(this), typeId_unitbooleanfield)
+
+// ============================================================================
+// public function unitstringfield.toObject() returns object
+//   return object(unitstringfieldToIndex(this), typeId_unitstringfield)
+
+// ============================================================================
+// public function unitweaponintegerfield.toObject() returns object
+//   return object(unitweaponintegerfieldToIndex(this), typeId_unitweaponintegerfield)
+
+// ============================================================================
+// public function unitweaponrealfield.toObject() returns object
+//   return object(unitweaponrealfieldToIndex(this), typeId_unitweaponrealfield)
+
+// ============================================================================
+// public function unitweaponbooleanfield.toObject() returns object
+//   return object(unitweaponbooleanfieldToIndex(this), typeId_unitweaponbooleanfield)
+
+// ============================================================================
+// public function unitweaponstringfield.toObject() returns object
+//   return object(unitweaponstringfieldToIndex(this), typeId_unitweaponstringfield)
+
+// ============================================================================
+// public function itemintegerfield.toObject() returns object
+//   return object(itemintegerfieldToIndex(this), typeId_itemintegerfield)
+
+// ============================================================================
+// public function itemrealfield.toObject() returns object
+//   return object(itemrealfieldToIndex(this), typeId_itemrealfield)
+
+// ============================================================================
+// public function itembooleanfield.toObject() returns object
+//   return object(itembooleanfieldToIndex(this), typeId_itembooleanfield)
+
+// ============================================================================
+// public function itemstringfield.toObject() returns object
+//   return object(itemstringfieldToIndex(this), typeId_itemstringfield)
+
+// ============================================================================
+// public function movetype.toObject() returns object
+//   return object(movetypeToIndex(this), typeId_movetype)
+
+// ============================================================================
+// public function targetflag.toObject() returns object
+//   return object(targetflagToIndex(this), typeId_targetflag)
+
+// ============================================================================
+// public function armortype.toObject() returns object
+//   return object(armortypeToIndex(this), typeId_armortype)
+
+// ============================================================================
+// public function heroattribute.toObject() returns object
+//   return object(heroattributeToIndex(this), typeId_heroattribute)
+
+// ============================================================================
+// public function defensetype.toObject() returns object
+//   return object(defensetypeToIndex(this), typeId_defensetype)
+
+// ============================================================================
+// public function regentype.toObject() returns object
+//   return object(regentypeToIndex(this), typeId_regentype)
+
+// ============================================================================
+// public function unitcategory.toObject() returns object
+//   return object(unitcategoryToIndex(this), typeId_unitcategory)
+
+// ============================================================================
+// public function pathingflag.toObject() returns object
+//   return object(pathingflagToIndex(this), typeId_pathingflag)
+
+// ============================================================================
+// public function commandbuttoneffect.toObject() returns object
+//   return object(commandbuttoneffectToIndex(this), typeId_commandbuttoneffect)
+
+// ============================================================================
+init
+  Meta.register("Meta", (registrar) -> registerPackageMetadata(registrar))
+
+  nullTimer(() -> Meta.initialize())
+
+///////////////////////////////////////////////////////////////////////////////
+function registerPackageMetadata(MetaRegistrar registrar)
+  registerNativeTypes(registrar)
+  registrar.registerClass(UnitCreationContext.typeId)
+  registrar.registerClass(ItemCreationContext.typeId)
+///////////////////////////////////////////////////////////////////////////////
+
+@test function nullObject_ToString()
+  NULL.toString().assertEquals("NULL")
+
+@test function boolObject_false_ToString()
+  false.toObject().toString().assertEquals("false")
+
+@test function boolObject_true_ToString()
+  true.toObject().toString().assertEquals("true")
+
+@test function realObject_0_ToString()
+  0.0.toObject().toString().assertEquals("0.0")
+
+@test function realObjectToString()
+  220.0.toObject().toString().assertEquals("220.0")
+
+@test function realObject_R2I_MIN_ToString()
+  R2I_MIN.toObject().toString().assertEquals(R2I_MIN.toString())
+
+@test function realObject_R2I_MAX_ToString()
+  R2I_MAX.toObject().toString().assertEquals(R2I_MAX.toString())
+
+@test function stringObject_ToString()
+  "123".toObject().toString().assertEquals("123")
+
+@test function stringObject_empty_ToString()
+  "".toObject().toString().assertEquals("")

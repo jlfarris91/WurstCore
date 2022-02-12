@@ -1,6 +1,5 @@
 package Serialization
 import ByteBuffer
-import initlater Meta
 import initlater Object
 import HashMap
 import LinkedList
@@ -29,7 +28,7 @@ public interface ISerializerTyped<T> extends ISerializer
   function deserialize(SerializationContext context, BinaryReader reader, T object) returns bool
 
 // ============================================================================
-public constant int typeId_ISerializable = Meta.registerInterface("Serialization.ISerializable").getTypeId()
+public constant int typeId_ISerializable = Meta.reserveInterface("Serialization.ISerializable")
 public interface ISerializable
   function getVersion() returns int
   function serialize(SerializationContext context, BinaryWriter writer) returns bool
@@ -71,11 +70,6 @@ public class SerializationContext
     destroy m_objectVersionStack
     destroy m_creationContexts
     destroy m_serializableSerializer
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(SerializationContext.typeId)  
-  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   function setPlayer(player value)
@@ -721,9 +715,10 @@ class SerializableSerializer
 
 // ============================================================================
 init
-  registerPackageMetadata()
+  Meta.register("Serialization", (registrar) -> registerMetadata(registrar))
 
 ///////////////////////////////////////////////////////////////////////////////
-function registerPackageMetadata()
-  SerializationContext.registerMetadata()
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerInterface(typeId_ISerializable, "Serialization.ISerializable")
+  registrar.registerClass(SerializationContext.typeId)
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,46 +1,63 @@
 package InspectionInterfaces
-import Union
+import Object
+import LinkedList
 import HashList
-import Meta
 
 // ============================================================================
-public constant int typeId_IPropertyDescriptor = Meta.registerInterface("InspectionInterfaces.IPropertyDescriptor").getTypeId()
+public constant int typeId_IPropertyDescriptor = Meta.reserveInterface("InspectionInterfaces.IPropertyDescriptor")
 public interface IPropertyDescriptor
   function getName() returns string
 
-  function canGetValue(int context, Union value) returns bool
-  function getValue(int context, Union value) returns bool
+  function canGetValue(object context) returns bool
+  function getValue(object context) returns object
   
-  function canSetValue(int context, Union value) returns bool
-  function setValue(int context, Union value) returns bool
+  function canSetValue(object context, object value) returns bool
+  function setValue(object context, object value)
 
-  function getEditorType() returns string
+  function getEditorType() returns Type
   
   function getCategory() returns string
   function setCategory(string category)
 
+  function getSortOrder() returns int
+  function setSortOrder(int value)
+
 // ============================================================================
-public constant int typeId_IObjectDescriptor = Meta.registerInterface("InspectionInterfaces.IObjectDescriptor").getTypeId()
+public constant int typeId_IObjectDescriptor = Meta.reserveInterface("InspectionInterfaces.IObjectDescriptor")
 public interface IObjectDescriptor
   function getId() returns string
-  function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)
+  function getPropertyDescriptors(object context, PropertyDescriptorCollection propertyDescriptors)
 
 // ============================================================================
 public class PropertyDescriptorCollection
-  private HashList<IPropertyDescriptor> m_descriptors
+  private HashList<IPropertyDescriptor> m_added
+  private LinkedList<IPropertyDescriptor> m_descriptors
 
   // --------------------------------------------------------------------------
-  construct(HashList<IPropertyDescriptor> descriptors)
+  construct(LinkedList<IPropertyDescriptor> descriptors)
     m_descriptors = descriptors
+    m_added = new HashList<IPropertyDescriptor>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_added
 
   // --------------------------------------------------------------------------
   function add(IPropertyDescriptor propertyDescriptor)
-    m_descriptors.add(propertyDescriptor)
+    if (not m_added.has(propertyDescriptor))
+      m_descriptors.add(propertyDescriptor)
+      m_added.add(propertyDescriptor)
 
   // --------------------------------------------------------------------------
-  function iterator() returns HLIterator<IPropertyDescriptor>
+  function iterator() returns LLIterator<IPropertyDescriptor>
     return m_descriptors.iterator()
 
   // --------------------------------------------------------------------------
   function size() returns int
     return m_descriptors.size()
+
+// ============================================================================
+init
+  Meta.register("InspectionInterfaces") (registrar) ->
+    registrar.registerInterface(typeId_IPropertyDescriptor, "InspectionInterfaces.IPropertyDescriptor")
+    registrar.registerInterface(typeId_IObjectDescriptor, "InspectionInterfaces.IObjectDescriptor")

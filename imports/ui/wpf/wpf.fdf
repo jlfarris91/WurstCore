@@ -35,7 +35,7 @@ Frame "BACKDROP" "DebugOutlineWhite_Thick" {
   BackdropTileBackground, //Tile mode enabled
   BackdropBackground  "textures\transparent", //BackgroundFile
   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropCornerSize  0.02, //higher numbers make the corners bigger.
   BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
   BackdropEdgeFile  "textures\debug_backdrop_edge_white",
   BackdropBlendAll,
@@ -59,7 +59,7 @@ Frame "BACKDROP" "DebugOutlineBlack_Thick" {
   BackdropTileBackground, //Tile mode enabled
   BackdropBackground  "textures\transparent", //BackgroundFile
   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropCornerSize  0.02, //higher numbers make the corners bigger.
   BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
   BackdropEdgeFile  "textures\debug_backdrop_edge_black",
   BackdropBlendAll,
@@ -83,7 +83,7 @@ Frame "BACKDROP" "DebugOutlineRed_Thick" {
   BackdropTileBackground, //Tile mode enabled
   BackdropBackground  "textures\transparent", //BackgroundFile
   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropCornerSize  0.02, //higher numbers make the corners bigger.
   BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
   BackdropEdgeFile  "textures\debug_backdrop_edge_red",
   BackdropBlendAll,
@@ -107,7 +107,7 @@ Frame "BACKDROP" "DebugOutlineGreen_Thick" {
   BackdropTileBackground, //Tile mode enabled
   BackdropBackground  "textures\transparent", //BackgroundFile
   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropCornerSize  0.02, //higher numbers make the corners bigger.
   BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
   BackdropEdgeFile  "textures\debug_backdrop_edge_green",
   BackdropBlendAll,
@@ -131,7 +131,7 @@ Frame "BACKDROP" "DebugOutlineBlue_Thick" {
   BackdropTileBackground, //Tile mode enabled
   BackdropBackground  "textures\transparent", //BackgroundFile
   BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
-  BackdropCornerSize  0.1, //higher numbers make the corners bigger.
+  BackdropCornerSize  0.02, //higher numbers make the corners bigger.
   BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
   BackdropEdgeFile  "textures\debug_backdrop_edge_blue",
   BackdropBlendAll,

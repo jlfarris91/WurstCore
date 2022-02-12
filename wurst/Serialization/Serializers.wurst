@@ -4,7 +4,6 @@ import Dictionary
 import Object
 import UnitIds
 import UnitComponent
-import Meta
 import ObjectIds
 import ByteBuffer
 import BinaryReaderWriter

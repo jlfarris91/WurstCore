@@ -1,0 +1,110 @@
+package ContentPresenter
+import Frame
+import HashMap
+import Object
+// import Reflection
+
+// ============================================================================
+public class ContentPresenter extends Frame
+  private IFrameTemplateSelector m_frameTemplateSelector = null
+  private IterableMap<IFrameTemplate, Frame> m_templateToFrameMap = new IterableMap<IFrameTemplate, Frame>()
+  private IFrameTemplate m_activeFrameTemplate = null
+  private Frame m_activeFrame = null
+
+  // --------------------------------------------------------------------------
+  construct ()
+    super(createFrame("FRAME", "CP", GAME_UI, "", 0))
+
+  // --------------------------------------------------------------------------
+  construct (string name)
+    super(createFrame("FRAME", name, GAME_UI, "", 0))
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_templateToFrameMap
+    destroy m_frameTemplateSelector
+    m_frameTemplateSelector = null
+
+  // --------------------------------------------------------------------------
+  function getFrameTemplateSelector() returns IFrameTemplateSelector
+    return m_frameTemplateSelector
+
+  // --------------------------------------------------------------------------
+  function setFrameTemplateSelector(IFrameTemplateSelector value)
+    if (m_frameTemplateSelector != value)
+      m_frameTemplateSelector = value
+      refresh()
+
+  // --------------------------------------------------------------------------
+  override protected function onDataContextChanged(object oldValue, object newValue)
+    refresh()
+
+  // --------------------------------------------------------------------------
+  private function getFrameTemplate(object dataContext) returns IFrameTemplate
+    if (dataContext == NULL)
+      return null
+    return m_frameTemplateSelector == null ? null : m_frameTemplateSelector.getFrameTemplate(dataContext.objectTypeId)
+
+  // --------------------------------------------------------------------------
+  private function refresh()
+
+    let dataContext = getDataContext()
+
+    let frameTemplate = getFrameTemplate(dataContext)
+    if (frameTemplate == m_activeFrameTemplate)
+      if (m_activeFrame != null)
+        m_activeFrame.setDataContext(dataContext)
+      return
+
+    Frame frameToActivate = null
+
+    if (frameTemplate != null)
+      frameToActivate = m_templateToFrameMap.get(frameTemplate)
+      if (frameToActivate == null)
+        frameToActivate = frameTemplate.createFrame()
+        addChild(frameToActivate)
+        m_templateToFrameMap.put(frameTemplate, frameToActivate)
+    
+    if (frameToActivate == m_activeFrame)
+      m_activeFrame.setDataContext(dataContext)
+      return
+
+    if (frameToActivate == null)
+      deactivateActiveFrame()
+    else
+      activateFrame(frameTemplate, frameToActivate, dataContext)
+    
+    invalidateMeasure()      
+
+  // --------------------------------------------------------------------------
+  private function activateFrame(IFrameTemplate frameTemplate, Frame frame, object dataContext)
+    if (m_activeFrame == frame)
+      return
+    deactivateActiveFrame()
+    m_activeFrame = frame
+    m_activeFrameTemplate = frameTemplate
+    if (frame != null)
+      // Log.info("Activate frame " + typeIdToTypeName(frame.typeId) + " dc: " + dataContext.toString())
+      frame..setDataContext(dataContext)..show()
+  
+  // --------------------------------------------------------------------------
+  private function deactivateActiveFrame()
+    let frame = m_activeFrame
+    m_activeFrame = null
+    m_activeFrameTemplate = null
+    if (frame != null)
+      // Log.info("Deactivate frame " + typeIdToTypeName(frame.typeId))
+      frame..hide()..setDataContext(NULL)
+
+  // --------------------------------------------------------------------------
+  override protected function measureOverride(vec2 availableSize) returns vec2
+    if (m_activeFrame != null)
+      m_activeFrame.measure(availableSize)
+      return m_activeFrame.getMeasuredSize()
+    return super.measureOverride(availableSize)
+
+  // --------------------------------------------------------------------------
+  override protected function arrangeOverride(vec2 arrangeSize) returns vec2
+    if (m_activeFrame != null)
+      Frame.arrangeFrame(this, m_activeFrame, getPadding())
+    return arrangeSize

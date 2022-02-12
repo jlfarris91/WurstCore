@@ -26,12 +26,12 @@
 //   // --------------------------------------------------------------------------
 //   function addColumnDefinition(ColumnDefinition columnDefinition)
 //     m_layout.addColumnDefinition(columnDefinition)
-//     invalidateLayout()
+//     invalidateMeasure()
 
 //   // --------------------------------------------------------------------------
 //   function addRowDefinition(RowDefinition rowDefinition)
 //     m_layout.addRowDefinition(rowDefinition)
-//     invalidateLayout()
+//     invalidateMeasure()
 
 // // ============================================================================
 // public class ColumnDefinition
@@ -120,19 +120,21 @@
 //     m_rowDefinitions.add(rowDefinition)
 
 //   // --------------------------------------------------------------------------
-//   override function layout(Frame frame)
+//   override function measure(Frame frame, vec2 size) returns vec2
 
 //     let parentHandle = frame.getFrameHandle()
 //     let children = frame.getChildren()
 //     let padding = frame.getPadding()
 
 //     var remainingSize = frame.getSize() - padding.size()
+//     var panelSize = ZERO2
+
     
 //     // ===== MEASURE COLUMNS =====
 
-//     for col = 0 to m_columnDefinitions.getCount() - 1
+//     for col = 0 to m_columnDefinitions.size() - 1
 //     //{
-//       let colDef = m_columnDefinitions.getItem(col)
+//       let colDef = m_columnDefinitions.get(col)
 //       let sizeMode = colDef.getSizeMode()
 //       var cachedSize = 0.
 
@@ -151,21 +153,22 @@
 
 //     var totalColWeight = 0.0
 
-//     for col = 0 to m_columnDefinitions.getCount() - 1
-//       let colDef = m_columnDefinitions.getItem(col)
+//     for col = 0 to m_columnDefinitions.size() - 1
+//       let colDef = m_columnDefinitions.get(col)
 //       if (colDef.getSizeMode() == PROPORTIONAL)
 //         totalColWeight += colDef.getValue()
 
-//     for col = 0 to m_columnDefinitions.getCount() - 1
-//       let colDef = m_columnDefinitions.getItem(col)
+//     for col = 0 to m_columnDefinitions.size() - 1
+//       let colDef = m_columnDefinitions.get(col)
 //       if (colDef.getSizeMode() == PROPORTIONAL)
 //         colDef.m_desiredSize = remainingSize.x * (colDef.getValue() / totalColWeight)
+//         panelSize.x += colDef.m_desiredSize
 
 //     // ===== MEASURE ROWS =====
 
-//     for row = 0 to m_rowDefinitions.getCount() - 1
+//     for row = 0 to m_rowDefinitions.size() - 1
 //     //{
-//       let rowDef = m_rowDefinitions.getItem(row)
+//       let rowDef = m_rowDefinitions.get(row)
 //       let sizeMode = rowDef.getSizeMode()
 //       var cachedSize = 0.
 
@@ -177,6 +180,7 @@
 //       else if (sizeMode == AUTO)
 //         for childFrame in children
 //           if (childFrame.getGridRow() == row)
+
 //             cachedSize = max(cachedSize, childFrame.getHeight() + childFrame.getMargin().height())
 //         rowDef.m_desiredSize = cachedSize
 //         remainingSize.y -= cachedSize
@@ -184,15 +188,49 @@
 
 //     var totalRowWeight = 0.
 
-//     for row = 0 to m_rowDefinitions.getCount() - 1
-//       let rowDef = m_rowDefinitions.getItem(row)
+//     for row = 0 to m_rowDefinitions.size() - 1
+//       let rowDef = m_rowDefinitions.get(row)
 //       if (rowDef.getSizeMode() == PROPORTIONAL)
 //         totalRowWeight += rowDef.getValue()
 
-//     for row = 0 to m_rowDefinitions.getCount() - 1
-//       let rowDef = m_rowDefinitions.getItem(row)
+//     for row = 0 to m_rowDefinitions.size() - 1
+//       let rowDef = m_rowDefinitions.get(row)
 //       if (rowDef.getSizeMode() == PROPORTIONAL)
 //         rowDef.m_desiredSize = remainingSize.y * (rowDef.getValue() / totalRowWeight)
+//         panelSize.y += rowDef.m_desiredSize
+
+//     for child in children
+
+//       let col = child.getGridColumn()
+//       let row = child.getGridRow()
+
+//       let colDef = m_columnDefinitions.get(col)
+//       let rowDef = m_rowDefinitions.get(row)
+
+//       var childSize = ZERO2
+
+//       switch (colDef.getSizeMode())
+//         case GridSizeMode.AUTO
+//           childSize.x = REAL_MAX
+//         case GridSizeMode.FIXED
+//           childSize.x = colDef.getValue()
+//         case GridSizeMode.PROPORTIONAL
+//           childSize.x = colDef.m_desiredSize
+
+//       switch (rowDef.getSizeMode())
+//         case GridSizeMode.AUTO
+//           childSize.y = REAL_MAX
+//         case GridSizeMode.FIXED
+//           childSize.y = rowDef.getValue()
+//         case GridSizeMode.PROPORTIONAL
+//           childSize.y = rowDef.m_desiredSize
+
+//       measure(child, childSize)
+    
+//     return panelSize
+
+//   // --------------------------------------------------------------------------
+//   override function arrange(Frame frame, vec2 size)
 
 //     // ===== LAYOUT CHILDREN =====
 
@@ -214,24 +252,24 @@
 
 //   // --------------------------------------------------------------------------
 //   private function getCellArea(int row, int col) returns rectr
-//     let rowDefs = m_rowDefinitions.getCount()
-//     let colDefs = m_columnDefinitions.getCount()
+//     let rowDefs = m_rowDefinitions.size()
+//     let colDefs = m_columnDefinitions.size()
 //     var cellArea = ZERORECTR
-//     cellArea.height = (row < rowDefs) ? m_rowDefinitions.getItem(row).m_desiredSize : 0
-//     cellArea.width = (col < colDefs) ? m_columnDefinitions.getItem(col).m_desiredSize : 0
+//     cellArea.height = (row < rowDefs) ? m_rowDefinitions.get(row).m_desiredSize : 0
+//     cellArea.width = (col < colDefs) ? m_columnDefinitions.get(col).m_desiredSize : 0
 //     for r = 0 to row - 1
-//       cellArea.y += (r < rowDefs) ? m_rowDefinitions.getItem(r).m_desiredSize : 0
+//       cellArea.y += (r < rowDefs) ? m_rowDefinitions.get(r).m_desiredSize : 0
 //     for c = 0 to col - 1
-//       cellArea.x += (c < colDefs) ? m_columnDefinitions.getItem(c).m_desiredSize : 0
+//       cellArea.x += (c < colDefs) ? m_columnDefinitions.get(c).m_desiredSize : 0
 //     return cellArea
 
 //   // --------------------------------------------------------------------------
 //   private function getRowClamped(Frame frame) returns int
-//     return clamp(frame.getGridRow(), 0, max(m_rowDefinitions.getCount() - 1, 0))
+//     return clamp(frame.getGridRow(), 0, max(m_rowDefinitions.size() - 1, 0))
 
 //   // --------------------------------------------------------------------------
 //   private function getColumnClamped(Frame frame) returns int
-//     return clamp(frame.getGridColumn(), 0, max(m_columnDefinitions.getCount() - 1, 0))
+//     return clamp(frame.getGridColumn(), 0, max(m_columnDefinitions.size() - 1, 0))
 
 // // ============================================================================
 // public function Frame.getGridColumn() returns int
