@@ -6,7 +6,6 @@ import ClosureEvents
 import initlater UnitComponent
 import UnitExtensions
 import UnitIndexer
-import Inspection
 import Meta
 
 IUnitMetadata array g_unitMetadatas
@@ -21,8 +20,8 @@ function logDebug(string message)
     Log.debug(message)
 
 // ============================================================================
-public constant int typeId_IUnitMetadata = Meta.registerInterface("UnitMetadata.IUnitMetadata")..registerInterface(typeId_IComposite, typeId_IObjectDescriptor).getTypeId()
-public interface IUnitMetadata extends IComposite, IObjectDescriptor
+public constant int typeId_IUnitMetadata = Meta.reserveInterface("UnitMetadata.IUnitMetadata")
+public interface IUnitMetadata extends IComposite
   function getUnit() returns unit
   function attach(unit u)
 
@@ -38,11 +37,6 @@ public class UnitMetadata extends Composable implements IUnitMetadata
   ondestroy
     if (m_unit != null)
       detachAndNullifyUnit()
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(UnitMetadata.typeId)..registerInterface(typeId_IUnitMetadata)
-  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   @inline
@@ -154,18 +148,10 @@ public class UnitMetadata extends Composable implements IUnitMetadata
   // --------------------------------------------------------------------------
   override function getComponent(int componentTypeId) returns IComponent
     return super.getComponent(componentTypeId)
-  
+
   // --------------------------------------------------------------------------
-  override function getId() returns string
-    return "UnitMetadata"
-  
-  // --------------------------------------------------------------------------
-  override function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)
-    if (m_compositionManager != null)
-      for comp in m_compositionManager
-        let objectDescriptor = (comp castTo int) castTo IObjectDescriptor
-        if (objectDescriptor != null)
-          objectDescriptor.getPropertyDescriptors(context, propertyDescriptors)
+  function getComponents() returns LLIterator<IComponent>
+    return m_compositionManager != null ? m_compositionManager.iterator() : null
 
 // ============================================================================
 public function unit.hasMetadata() returns bool
@@ -346,7 +332,7 @@ public function isIgnoringIndexing(player p) returns bool
 
 // ============================================================================
 init
-  registerPackageMetadata()
+  Meta.register("UnitMetadata", (registrar) -> registerMetadata(registrar))
 
   g_unitMetadataFactories = new LinkedList<IUnitMetadataFactory>()
 
@@ -359,7 +345,8 @@ init
   onUnitDeindex(() -> onUnitDeindexed(getIndexingUnit()))
 
 ///////////////////////////////////////////////////////////////////////////////
-function registerPackageMetadata()
-  UnitMetadata.registerMetadata()
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerInterface(typeId_IUnitMetadata, "UnitMetadata.IUnitMetadata")..registerInterface(typeId_IComposite).getTypeId()
+  registrar.registerClass(UnitMetadata.typeId)..registerInterface(typeId_IUnitMetadata)
 ///////////////////////////////////////////////////////////////////////////////
   

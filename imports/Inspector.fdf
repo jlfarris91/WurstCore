@@ -24,6 +24,35 @@ Frame "FRAME" "InspectorTemplate" {
 }
 
 // ============================================================================
+Frame "TEXT" "InspectorEditorRowHeaderTextTemplate" {
+  FontFlags "FIXEDSIZE",
+  FrameFont "fonts\inconsolata-regular.ttf", 0.008, "",
+  FontColor 1.0 1.0 1.0 1.0, //Red Green Blue Alpha 0.0 to 1.0
+  FontShadowColor 0.0 0.0 0.0 0.9,
+  FontShadowOffset 0.001 -0.001,
+  FontJustificationH JUSTIFYLEFT,
+  FontJustificationV JUSTIFYMIDDLE,
+}
+
+// ============================================================================
+Frame "FRAME" "InspectorEditorRowTemplate" {
+  UseActiveContext,
+  Height 0.035,
+
+  Frame "FRAME" "HeaderContainer" {
+    Width 0.1,
+    Height 0.035,
+    SetPoint TOPLEFT, "MemoryViewItemTemplate", TOPLEFT, 0, 0,
+  }
+
+  Frame "FRAME" "EditorContainer" {
+    Height 0.035,
+    SetPoint TOPLEFT, "HeaderContainer", TOPRIGHT, 0, 0,
+    SetPoint BOTTOMRIGHT, "MemoryViewItemTemplate", BOTTOMRIGHT, 0, 0,
+  }
+}
+
+// ============================================================================
 Frame "FRAME" "InspectorCategoryRowTemplate" {
   UseActiveContext,
   Height 0.035,
@@ -41,24 +70,6 @@ Frame "FRAME" "InspectorCategoryRowTemplate" {
     SetPoint BOTTOM, "InspectorCategoryRowTemplate", BOTTOM, 0, 0,
     BackdropBackground "ui\widgets\tooltips\human\horizontalseparator",
    }
-}
-
-// ============================================================================
-Frame "FRAME" "IntEditorTemplate" {
-  UseActiveContext,
-  Height 0.03,
-}
-
-// ============================================================================
-Frame "FRAME" "RealEditorTemplate" {
-  UseActiveContext,
-  Height 0.03,
-}
-
-// ============================================================================
-Frame "FRAME" "StringEditorTemplate" {
-  UseActiveContext,
-  Height 0.03,
 }
 
 // ============================================================================
@@ -84,6 +95,7 @@ Frame "BACKDROP" "InspectorEditBoxBackdropTemplate" {
 
 // ============================================================================
 Frame "EDITBOX" "InspectorEditBoxTemplate" {
+  Width 0.04,
   Height 0.04,
   EditBorderSize 0.005,
   EditCursorColor 1.0 1.0 1.0,
@@ -95,4 +107,47 @@ Frame "EDITBOX" "InspectorEditBoxTemplate" {
   EditTextFrame "InspectorEditBoxBoxText",
   Frame "TEXT" "InspectorEditBoxBoxText" INHERITS "InspectorEditBoxTextTemplate" {
   }
+}
+
+// ============================================================================
+Frame "GLUECHECKBOX" "InspectorCheckBoxTemplate" {
+    Width 0.04,
+    Height 0.04,
+
+    ControlBackdrop "EscMenuCheckBoxBackdrop",
+    Frame "BACKDROP" "EscMenuCheckBoxBackdrop" {
+        DecorateFileNames,
+        BackdropBlendAll,
+        BackdropBackground  "EscMenuCheckBoxBackground",
+    }
+
+    ControlDisabledBackdrop "EscMenuDisabledCheckBoxBackdrop",
+    Frame "BACKDROP" "EscMenuDisabledCheckBoxBackdrop" {
+        DecorateFileNames,
+        BackdropBlendAll,
+        BackdropBackground  "EscMenuDisabledCheckBoxBackground",
+    }
+
+    ControlPushedBackdrop "EscMenuCheckBoxPushedBackdrop",
+    Frame "BACKDROP" "EscMenuCheckBoxPushedBackdrop" {
+        DecorateFileNames,
+        BackdropBlendAll,
+        BackdropBackground  "EscMenuCheckBoxPushedBackground",
+    }
+
+    CheckBoxCheckHighlight "EscMenuCheckHighlightTemplate",
+    Frame "HIGHLIGHT" "EscMenuCheckHighlightTemplate" {
+        DecorateFileNames,
+        HighlightType "FILETEXTURE",
+        HighlightAlphaFile "EscMenuCheckBoxCheckHighlight",
+        HighlightAlphaMode "BLEND",
+    }
+
+    CheckBoxDisabledCheckHighlight "EscMenuDisabledCheckHighlightTemplate",
+    Frame "HIGHLIGHT" "EscMenuDisabledCheckHighlightTemplate" {
+        DecorateFileNames,
+        HighlightType "FILETEXTURE",
+        HighlightAlphaFile "EscMenuDisabledCheckHighlight",
+        HighlightAlphaMode "BLEND",
+    }
 }

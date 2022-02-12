@@ -1,0 +1,264 @@
+package Descriptors
+import Func
+import Action
+import InspectionInterfaces
+import Object
+import ErrorHandling
+import LinkedList
+
+// ============================================================================
+public abstract class PropertyDescriptor implements IPropertyDescriptor
+  private string m_name
+  private string m_category = ""
+  private int m_sortOrder = 0
+
+  // --------------------------------------------------------------------------
+  construct(string name)
+    m_name = name
+
+  // --------------------------------------------------------------------------
+  override function getName() returns string
+    return m_name
+  
+  // --------------------------------------------------------------------------
+  override function getCategory() returns string
+    return m_category
+
+  // --------------------------------------------------------------------------
+  override function setCategory(string category)
+    m_category = category
+
+  // --------------------------------------------------------------------------
+  override function getSortOrder() returns int
+    return m_sortOrder
+  
+  // --------------------------------------------------------------------------
+  override function setSortOrder(int value)
+    m_sortOrder = value
+
+  // --------------------------------------------------------------------------
+  override function canGetValue(object _context) returns bool
+    return true
+
+  // --------------------------------------------------------------------------
+  abstract override function getValue(object context) returns object
+
+  // --------------------------------------------------------------------------
+  override function canSetValue(object _context, object _value) returns bool
+    return true
+
+  // --------------------------------------------------------------------------
+  abstract override function setValue(object _context, object value)
+
+  // --------------------------------------------------------------------------
+  abstract override function getEditorType() returns Type
+
+  // --------------------------------------------------------------------------
+  static function createBool<TContext>(string name, IObjectResolver<TContext> contextResolver, Func1<TContext, bool> getter, Action2<TContext, bool> setter) returns IPropertyDescriptor
+    return new TypedDelegatePropertyDescriptor<TContext, bool>(name, Meta.getType(typeId_bool), contextResolver, BoolObjectResolver.instance, getter, setter)
+  
+  // --------------------------------------------------------------------------
+  static function createInt<TContext>(string name, IObjectResolver<TContext> contextResolver, Func1<TContext, int> getter, Action2<TContext, int> setter) returns IPropertyDescriptor
+    return new TypedDelegatePropertyDescriptor<TContext, int>(name, Meta.getType(typeId_int), contextResolver, IntObjectResolver.instance, getter, setter)
+
+  // --------------------------------------------------------------------------
+  static function createReal<TContext>(string name, IObjectResolver<TContext> contextResolver, Func1<TContext, real> getter, Action2<TContext, real> setter) returns IPropertyDescriptor
+    return new TypedDelegatePropertyDescriptor<TContext, real>(name, Meta.getType(typeId_real), contextResolver, RealObjectResolver.instance, getter, setter)
+
+  // --------------------------------------------------------------------------
+  static function createString<TContext>(string name, IObjectResolver<TContext> contextResolver, Func1<TContext, string> getter, Action2<TContext, string> setter) returns IPropertyDescriptor
+    return new TypedDelegatePropertyDescriptor<TContext, string>(name, Meta.getType(typeId_string), contextResolver, StringObjectResolver.instance, getter, setter)
+
+// ============================================================================
+public class DelegatePropertyDescriptor extends PropertyDescriptor
+  private Type m_editorType
+  private Func1<object, object> m_getter
+  private Action2<object, object> m_setter
+
+  // --------------------------------------------------------------------------
+  construct(string name, Type editorType, Func1<object, object> getter, Action2<object, object> setter)
+    super(name)
+    if (editorType == null)
+      argumentNullError("editorType")
+    if (getter == null)
+      argumentNullError("getter")
+    m_editorType = editorType
+    m_getter = getter.acquire()
+    m_setter = setter != null ? setter.acquire() : null
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_getter != null)
+      m_getter.release()
+      m_getter = null
+
+    if (m_setter != null)
+      m_setter.release()
+      m_setter = null
+
+  // --------------------------------------------------------------------------
+  override function canGetValue(object context) returns bool
+    return m_getter != null
+
+  // --------------------------------------------------------------------------
+  override function getValue(object context) returns object
+    return m_getter.call(context)
+
+  // --------------------------------------------------------------------------
+  override function canSetValue(object _context, object _value) returns bool
+    return m_setter != null
+
+  // --------------------------------------------------------------------------
+  override function setValue(object context, object value)
+    if (m_setter != null)
+      m_setter.call(context, value)
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    return m_editorType
+
+// ============================================================================
+public class TypedDelegatePropertyDescriptor<TContext, TValue> extends PropertyDescriptor
+  private Type m_editorType
+  private Func1<TContext, TValue> m_getter
+  private Action2<TContext, TValue> m_setter
+  private IObjectResolver<TContext> m_contextResolver
+  private IObjectResolver<TValue> m_valueResolver
+
+  // --------------------------------------------------------------------------
+  construct(string name, Type editorType, IObjectResolver<TContext> contextResolver,
+            IObjectResolver<TValue> valueResolver, Func1<TContext, TValue> getter,
+            Action2<TContext, TValue> setter)
+    super(name)
+    if (editorType == null)
+      argumentNullError("editorType")
+    if (contextResolver == null)
+      argumentNullError("contextResolver")
+    if (valueResolver == null)
+      argumentNullError("valueResolver")
+    if (getter == null)
+      argumentNullError("getter")
+    m_editorType = editorType
+    m_contextResolver = contextResolver
+    m_valueResolver = valueResolver
+    m_getter = getter.acquire()
+    m_setter = setter != null ? setter.acquire() : null
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_getter != null)
+      m_getter.release()
+      m_getter = null
+
+    if (m_setter != null)
+      m_setter.release()
+      m_setter = null
+
+  // --------------------------------------------------------------------------
+  override function canGetValue(object context) returns bool
+    return m_getter != null
+
+  // --------------------------------------------------------------------------
+  override function getValue(object context) returns object
+    return m_valueResolver.toObject(m_getter.call(m_contextResolver.fromObject(context)))
+
+  // --------------------------------------------------------------------------
+  override function canSetValue(object _context, object _value) returns bool
+    return m_setter != null
+
+  // --------------------------------------------------------------------------
+  override function setValue(object context, object value)
+    if (m_setter != null)
+      m_setter.call(m_contextResolver.fromObject(context), m_valueResolver.fromObject(value))
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    return m_editorType
+
+// ============================================================================
+public class MetaObjectDescriptor implements IObjectDescriptor
+  private Type m_type
+  private LinkedList<IPropertyDescriptor> m_descriptors = new LinkedList<IPropertyDescriptor>()
+
+  // --------------------------------------------------------------------------
+  construct(Type objectType)
+    m_type = objectType
+
+    for property in m_type.getProperties()
+      m_descriptors.add(new MetaPropertyDescriptor(property))
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    while m_descriptors.isEmpty() == false
+      destroy m_descriptors.pop()
+    destroy m_descriptors
+    m_descriptors = null
+
+  // --------------------------------------------------------------------------
+  override function getId() returns string
+    return m_type.getName()
+
+  // --------------------------------------------------------------------------
+  override function getPropertyDescriptors(object context, PropertyDescriptorCollection propertyDescriptors)
+    for property in m_descriptors
+      propertyDescriptors.add(property)
+
+// ============================================================================
+public class MetaPropertyDescriptor implements IPropertyDescriptor
+  private PropertyInfo m_property
+  private string m_category
+  private int m_sortOrder
+  private Type m_editorTypeOverride
+
+  // --------------------------------------------------------------------------
+  construct(PropertyInfo property)
+    m_property = property
+    m_editorTypeOverride = null
+    m_category = null
+    m_sortOrder = 0
+
+  // --------------------------------------------------------------------------
+  override function getName() returns string
+    return m_property.getName()
+  
+  // --------------------------------------------------------------------------
+  override function getCategory() returns string
+    return m_category
+
+  // --------------------------------------------------------------------------
+  override function setCategory(string category)
+    m_category = category
+
+  // --------------------------------------------------------------------------
+  override function getSortOrder() returns int
+    return m_sortOrder
+  
+  // --------------------------------------------------------------------------
+  override function setSortOrder(int value)
+    m_sortOrder = value
+
+  // --------------------------------------------------------------------------
+  override function canGetValue(object context) returns bool
+    return m_property.canGetValue(context)
+
+  // --------------------------------------------------------------------------
+  override function getValue(object context) returns object
+    return m_property.getValue(context)
+
+  // --------------------------------------------------------------------------
+  override function canSetValue(object context, object value) returns bool
+    return m_property.canSetValue(context, value)
+
+  // --------------------------------------------------------------------------
+  override function setValue(object context, object value)
+    m_property.setValue(context, value)
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    if (m_editorTypeOverride != null)
+      return m_editorTypeOverride
+    return m_property.getPropertyType()
+
+  // --------------------------------------------------------------------------
+  function setEditorType(Type editorType)
+    m_editorTypeOverride = editorType

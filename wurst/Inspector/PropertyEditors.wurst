@@ -1,74 +1,118 @@
 package PropertyEditors
 import Frame
-import LinkedList
 import InspectionInterfaces
-import Union
 import ClosureFrames
+import Vector
+import Object
+import Observable
+import MetaWurstCore
+import Handle
+
+constant string INDETERMINATE_STRING = "?"
+
+// ============================================================================
+public class PropertyEditorVM
+
+  /////////////////////////////////////////////////////////////////////////////
+  static class META
+    static constant string PROPERTY_DESCRIPTOR_NAME = "propertyDescriptor"
+    static constant string OBJECTS_NAME = "objects"
+    protected static function registerMetadata(MetaRegistrar registrar)
+      registrar.registerClass(PropertyEditorVM.typeId)
+        ..registerDestructor((object object) -> destroy object.cast<PropertyEditorVM>(PropertyEditorVM.typeId))
+        ..registerProperty(META.PROPERTY_DESCRIPTOR_NAME, typeId_IPropertyDescriptor,
+            obj -> toObject<IPropertyDescriptor>(obj.cast<PropertyEditorVM>(PropertyEditorVM.typeId).getPropertyDescriptor(), typeId_IPropertyDescriptor),
+            (obj, val) -> obj.cast<PropertyEditorVM>(PropertyEditorVM.typeId).setPropertyDescriptor(val.as<IPropertyDescriptor>(typeId_IPropertyDescriptor)))
+        ..registerProperty(META.OBJECTS_NAME, typeId_Vector_object,
+            obj -> toObject<Vector<object>>(obj.cast<PropertyEditorVM>(PropertyEditorVM.typeId).getObjects(), typeId_Vector_object),
+            (obj, val) -> obj.cast<PropertyEditorVM>(PropertyEditorVM.typeId).setObjects(val.as<Vector<object>>(typeId_Vector_object)))
+  /////////////////////////////////////////////////////////////////////////////
+
+  use Observable
+
+  static constant object INDETERMINATE_VALUE = object(INT_MIN,INT_MIN)
+  private IPropertyDescriptor m_propertyDescriptor
+  private Vector<object> m_objects
+
+  // --------------------------------------------------------------------------
+  function getPropertyDescriptor() returns IPropertyDescriptor
+    return m_propertyDescriptor
+
+  // --------------------------------------------------------------------------
+  function setPropertyDescriptor(IPropertyDescriptor value)
+    if (m_propertyDescriptor != value)
+      m_propertyDescriptor = value
+      raisePropertyChangedEvent(META.PROPERTY_DESCRIPTOR_NAME)
+
+  // --------------------------------------------------------------------------
+  function getObjects() returns Vector<object>
+    return m_objects
+
+  // --------------------------------------------------------------------------
+  function setObjects(Vector<object> value)
+    if (m_objects != value)
+      m_objects = value
+      raisePropertyChangedEvent(META.OBJECTS_NAME)
 
 // ============================================================================
 public abstract class PropertyEditor extends Frame
-  private LinkedList<int> m_contexts
+  private PropertyEditorVM m_propertyEditorVM
   private IPropertyDescriptor m_descriptor
+  private Vector<object> m_objects
   private bool m_isIndeterminate
+  private _handle m_propertyChangedEventHandler
 
   // --------------------------------------------------------------------------
   construct(framehandle frame)
     super(frame)
 
   // --------------------------------------------------------------------------
-  function getPropertyDescriptor() returns IPropertyDescriptor
-    return m_descriptor
-
-  // --------------------------------------------------------------------------
-  function setPropertyDescriptor(IPropertyDescriptor descriptor)
-    if (m_descriptor != descriptor)
-      m_descriptor = descriptor
-      refresh()
-
-  // --------------------------------------------------------------------------
-  function setContexts(LinkedList<int> contexts)
-    if (m_contexts != contexts)
-      m_contexts = contexts
-      refresh()
-
-  // --------------------------------------------------------------------------
-  function setContext(IPropertyDescriptor descriptor, LinkedList<int> contexts)
-    if (m_descriptor == descriptor and m_contexts == contexts)
-      return
-    m_descriptor = descriptor
-    m_contexts = contexts
-    refresh()    
-
-  // --------------------------------------------------------------------------
-  function getContexts() returns LinkedList<int>
-    return m_contexts
-
-  // --------------------------------------------------------------------------
   function refresh()
     skip
 
   // --------------------------------------------------------------------------
-  protected function canGetDescriptorValue(int context, Union value) returns bool
-    return m_descriptor != null and m_descriptor.canGetValue(context, value)
+  override protected function onDataContextChanged(object oldValue, object newValue)
+
+    if (oldValue != NULL)
+      oldValue.castAssert(PropertyEditorVM.typeId)
+
+    if (newValue != NULL)
+      newValue.castAssert(PropertyEditorVM.typeId)
+
+    if (m_propertyChangedEventHandler != INVALID_HANDLE)
+      let oldContext = oldValue.as<PropertyEditorVM>(PropertyEditorVM.typeId)
+      if (oldContext != null)
+        oldContext.unregisterOnPropertyChanged(m_propertyChangedEventHandler)
+        m_propertyChangedEventHandler = INVALID_HANDLE
+
+    let newContext = newValue.as<PropertyEditorVM>(PropertyEditorVM.typeId)
+    if (newContext != null)
+      m_propertyChangedEventHandler = newContext.onPropertyChanged() (PropertyEditorVM sender, string propertyName) ->
+        onDataContextPropertyChanged(propertyName)
+      m_descriptor = newContext.getPropertyDescriptor()
+      m_objects = newContext.getObjects()
+
+    m_propertyEditorVM = newContext
+    m_descriptor = m_propertyEditorVM != null ? m_propertyEditorVM.getPropertyDescriptor() : null
+    m_objects = m_propertyEditorVM != null ? m_propertyEditorVM.getObjects() : null
+
+    refresh()
 
   // --------------------------------------------------------------------------
-  protected function getDescriptorValue(int context, Union value) returns bool
-    return m_descriptor != null and m_descriptor.getValue(context, value)
+  protected function canGetDescriptorValue(object context) returns bool
+    return m_descriptor != null and m_descriptor.canGetValue(context)
 
   // --------------------------------------------------------------------------
-  protected function canSetDescriptorValue(int context, Union value) returns bool
+  protected function getDescriptorValue(object context) returns object
+    return m_descriptor != null ? m_descriptor.getValue(context) : NULL
+
+  // --------------------------------------------------------------------------
+  protected function canSetDescriptorValue(object context, object value) returns bool
     return m_descriptor != null and m_descriptor.canSetValue(context, value)
 
   // --------------------------------------------------------------------------
-  protected function setDescriptorValue(int context, Union value) returns bool
-    if (m_descriptor == null)
-      return false
-    // Log.info("PropertyEditor", "setDescriptorValue", (this castTo int).toString(), "setting descriptor value + " + value.toString() + " for context " + context.toString())
-    if (m_descriptor.setValue(context, value))
-      // Log.info("PropertyEditor", "setDescriptorValue", (this castTo int).toString(), "successfully set descriptor value " + value.toString() +" for context " + context.toString())
-      return true
-    // Log.info("PropertyEditor", "setDescriptorValue", (this castTo int).toString(), "failed to set descriptor value + " + value.toString() + " for context " + context.toString())
-    return false
+  protected function setDescriptorValue(object context, object value)
+    m_descriptor.setValue(context, value)
 
   // --------------------------------------------------------------------------
   function getIsIndeterminate() returns bool
@@ -78,334 +122,302 @@ public abstract class PropertyEditor extends Frame
   protected function setIsIndeterminate(bool value)
     m_isIndeterminate = value
 
-// // ============================================================================
-// public interface IPropertyInfo
-//   function getValue(int source, Union union)
-//   function setValue(int source, Union union)
+  // --------------------------------------------------------------------------
+  protected function onDataContextPropertyChanged(string _propertyName)
+    m_descriptor = m_propertyEditorVM.getPropertyDescriptor()
+    m_objects = m_propertyEditorVM.getObjects()
+    refresh()
 
-// // ============================================================================
-// public class PropertyInfo implements IPropertyInfo
-//   private Action2<int, Union> m_getter
-//   private Action2<int, Union> m_setter
+  // --------------------------------------------------------------------------
+  protected function getSourceValue() returns object
+    var firstValueReceived = false
+    var firstValue = NULL
+    var allValuesMatch = true
+    let vm = getDataContext().as<PropertyEditorVM>(PropertyEditorVM.typeId)
+    if (vm != null)
+      let objects = vm.getObjects()
+      if (objects != null and not objects.isEmpty())
+        var i = 0
+        for object in objects
+          if (canGetDescriptorValue(object))
+            let value = getDescriptorValue(object)
+            // log("gsv", i.toString() + ": " + value.objectHandle.toString() + " " + value.objectTypeId.toString())
+            // log("gsv", i.toString() + ": " + value.toString())
+            if (not firstValueReceived)
+              firstValue = value
+              firstValueReceived = true
+            else
+              if (firstValue != value)
+                allValuesMatch = false
+                // log("gsv", "indeterminate")
+                break
+          i++
+    return allValuesMatch ? firstValue : PropertyEditorVM.INDETERMINATE_VALUE
 
-//   // --------------------------------------------------------------------------
-//   construct(Action2<int, Union> getter, Action2<int, Union> setter)
-//     m_getter = getter
-//     m_setter = setter
-
-//   // --------------------------------------------------------------------------
-//   function getValue(int source, Union union)
-//     m_getter.call(source, union)
-
-//   // --------------------------------------------------------------------------
-//   function setValue(int source, Union union)
-//     m_setter.call(source, union)
-
-// // ============================================================================
-// public class Binding<TSource, TTarget, TValue>
-  
-//   private TSource m_source
-//   private TValue m_sourceValue
-//   private PropertyInfo m_sourceProperty
-
-//   private TTarget m_target  
-//   private TValue m_targetValue
-//   private PropertyInfo m_targetProperty
-
-//   // --------------------------------------------------------------------------
-//   construct (PropertyInfo sourceProperty, PropertyInfo targetProperty)
-//     m_sourceProperty = sourceProperty
-//     m_targetProperty = targetProperty
-
-//   // --------------------------------------------------------------------------
-//   function getTarget() returns TTarget
-//     return m_target
-
-//   // --------------------------------------------------------------------------
-//   function setTarget(TTarget target)
-//     m_target = target
-
-//   // --------------------------------------------------------------------------
-//   function getSource() returns TSource
-//     return m_source
-
-//   // --------------------------------------------------------------------------
-//   function setSource(TSource source)
-//     m_source = source
+  // --------------------------------------------------------------------------
+  protected function setSourceValue(object value)
+    let vm = getDataContext().as<PropertyEditorVM>(PropertyEditorVM.typeId)
+    if (vm != null)
+      let objects = vm.getObjects()
+      if (objects != null and not objects.isEmpty())
+        for object in objects
+          if (canSetDescriptorValue(object, value))
+            setDescriptorValue(object, value)
 
 // ============================================================================
 public class IntEditor extends PropertyEditor
   private framehandle m_editBox
-  private int m_value
+  private int m_value = INT_MAX
 
   // --------------------------------------------------------------------------
   construct()
-    super(createFrame("FRAME", "IntEditor", GAME_UI, "IntEditorTemplate", 0))
+    super(createFrame("FRAME", "EDI", GAME_UI, "", 0))
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
-      "IntEditorTextBox",
+      "IntEditor",
       GAME_UI,
       "InspectorEditBoxTemplate", 0)
     ..onEditboxEnter(() -> onEditboxEnter())
-    ..setText("<MISSING>")
-    ..setLevel(999)
+    ..setText(INDETERMINATE_STRING)
     ..setAllPoints(getFrameHandle())
     ..show()
 
   // --------------------------------------------------------------------------
-  function getTargetValue() returns int
+  function getValue() returns int
     return m_value
 
   // --------------------------------------------------------------------------
-  function updateSourceValue(int value)
-    if (m_value == value)
-      return
-
-    // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "value = " + value.toString())
-    m_value = value
-
-    let contexts = getContexts()
-    if (contexts == null)
-      // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "contexts is null")
-      return
-    if (contexts.isEmpty())
-      // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "contexts is empty")
-      return
-    let union = Union.fromInt(value)
-    for context in contexts
-      if (canSetDescriptorValue(context, union))
-        setDescriptorValue(context, union)
-      else
-        // Log.info("IntEditor", "updateSourceValue", (this castTo int).toString(), "cannot set descriptor value")
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function updateTargetValue(int value)
+  function setValue(int value)
     if (m_value != value)
       // Log.info("IntEditor", "updateTargetValue", (this castTo int).toString(), "value = " + value.toString())
       m_value = value
-      updateEditBoxText()
+      setSourceValue(value.toObject())
+      refresh()
 
   // --------------------------------------------------------------------------
   override function refresh()
-    let union = new Union()
-
-    var firstValue = 0
-    var firstValueReceived = false
-    var allValuesMatch = true
-
-    let contexts = getContexts()
-    if (contexts != null)
-      if (contexts.isEmpty())
-        // Log.info("IntEditor", "refresh", (this castTo int).toString(), "contexts is empty")
-      for context in contexts
-        if (canGetDescriptorValue(context, union) and getDescriptorValue(context, union))
-          if (not firstValueReceived)
-            firstValue = union.getInt()
-            firstValueReceived = true
-          else
-            if (firstValue != union.getInt())
-              allValuesMatch = false
-              break
-    else
-      // Log.info("IntEditor", "refresh", (this castTo int).toString(), "contexts is null")
-
-    setIsIndeterminate(not allValuesMatch)
-    updateTargetValue(union.getInt())
-
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function onEditboxEnter()
-    // Log.info("IntEditor", "onEditboxEnter", (this castTo int).toString(), "value " + m_editBox.getText().toInt().toString())
-    updateSourceValue(m_editBox.getText().toInt())
-    updateEditBoxText()
+    let sourceValue = getSourceValue()
+    setIsIndeterminate(sourceValue == PropertyEditorVM.INDETERMINATE_VALUE)
+    setValue((sourceValue != NULL and sourceValue != PropertyEditorVM.INDETERMINATE_VALUE) ? sourceValue.castToInt() : 0)
 
   // --------------------------------------------------------------------------
   protected override function setIsIndeterminate(bool value)
     if (getIsIndeterminate() != value)
-      updateEditBoxText()
+      super.setIsIndeterminate(value)
+      updateEditboxText()
 
   // --------------------------------------------------------------------------
-  function updateEditBoxText()
-    m_editBox.setText(getIsIndeterminate() ? "<Multiple>" : m_value.toString())
+  private function onEditboxEnter()
+    // Log.info("IntEditor", "onEditboxEnter", (this castTo int).toString(), "value " + m_editBox.getText().toInt().toString())
+    setValue(m_editBox.getText().toInt())
+
+  // --------------------------------------------------------------------------
+  private function updateEditboxText()
+    m_editBox.setText(getIsIndeterminate() ? INDETERMINATE_STRING : m_value.toString())
     // Log.info("edit box -> " + m_editBox.getText())
+
+  // --------------------------------------------------------------------------
+  override protected function log(string methodName, string message)
+    Log.info(typeIdToTypeName(this.typeId), methodName, getDataContext().cast<PropertyEditorVM>(PropertyEditorVM.typeId).getPropertyDescriptor().getName(), message)
 
 // ============================================================================
 public class StringEditor extends PropertyEditor
   private framehandle m_editBox
-  private string m_value
+  private string m_value = null
 
   // --------------------------------------------------------------------------
   construct()
-    super(createFrame("FRAME", "StringEditor", GAME_UI, "StringEditorTemplate", 0))
+    super(createFrame("FRAME", "EDS", GAME_UI, "", 0))
 
     m_editBox = createFrame(
       "GLUEEDITBOX",
-      "StringEditorTextBox",
+      "StringEditor",
       GAME_UI,
       "InspectorEditBoxTemplate", 0)
-    ..setText("<MISSING>")
-    ..setLevel(999)
+    ..setText(INDETERMINATE_STRING)
     ..setAllPoints(getFrameHandle())
     ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 
   // --------------------------------------------------------------------------
-  function getTargetValue() returns string
+  function getValue() returns string
     return m_value
 
   // --------------------------------------------------------------------------
-  function updateSourceValue(string value)
-    if (m_value == value)
-      return
-
-    m_value = value
-
-    let contexts = getContexts()
-    if (contexts != null)
-      return
-    let union = Union.fromString(value)
-    for context in contexts
-      if (canSetDescriptorValue(context, union))
-        setDescriptorValue(context, union)
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function updateTargetValue(string value)
+  function setValue(string value)
     if (m_value != value)
       m_value = value
-      updateEditBoxText()
+      // log("setValue", "v: " + value.toString())
+      setSourceValue(value.toObject())
+      refresh()
 
   // --------------------------------------------------------------------------
   override function refresh()
-    let union = new Union()
+    let sourceValueObject = getSourceValue()
 
-    var firstValue = ""
-    var firstValueReceived = false
-    var allValuesMatch = true
-
-    let contexts = getContexts()    
-    if (contexts != null)
-      for context in contexts
-        if (canGetDescriptorValue(context, union) and getDescriptorValue(context, union))
-          if (not firstValueReceived)
-            firstValue = union.getString()
-            firstValueReceived = true
-          else
-            if (firstValue != union.getString())
-              allValuesMatch = false
-              break
-
-    setIsIndeterminate(not allValuesMatch)
-
-    let newValue = union.getString()
-    if (m_value != newValue)
-      m_value = newValue
-      updateEditBoxText()
-      
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function onEditboxEnter()
-    updateSourceValue(m_editBox.getText())
-    updateEditBoxText()
+    let value = sourceValueObject != NULL and sourceValueObject != PropertyEditorVM.INDETERMINATE_VALUE ? sourceValueObject.castToString() : ""
+    setIsIndeterminate(sourceValueObject == PropertyEditorVM.INDETERMINATE_VALUE)
+    
+    if (m_value != value)
+      m_value = value
+      // log("refresh", "val: " + value.toString())
+      updateEditboxText()
 
   // --------------------------------------------------------------------------
   protected override function setIsIndeterminate(bool value)
     if (getIsIndeterminate() != value)
-      updateEditBoxText()
+      // log("setIsIndeterminate", "indeterminate: " + value.toString())
+      super.setIsIndeterminate(value)
+      updateEditboxText()
 
   // --------------------------------------------------------------------------
-  function updateEditBoxText()
-    m_editBox.setText(getIsIndeterminate() ? "<Multiple>" : m_value)
+  private function onEditboxEnter()
+    let val = m_editBox.getText()
+    // log("onEditBoxEnter", "val: " + val.toString())
+    setValue(val)
+
+  // --------------------------------------------------------------------------
+  private function updateEditboxText()
+    let text = getIsIndeterminate() ? INDETERMINATE_STRING : m_value
+    // log("updateEditboxText", "text: " + text)
+    m_editBox.setText(text)
 
 // ============================================================================
 public class RealEditor extends PropertyEditor
   private framehandle m_editBox
-  private real m_value
+  private real m_value = REAL_MAX
 
   // --------------------------------------------------------------------------
   construct()
-    super(createFrame("FRAME", "RealEditor", GAME_UI, "RealEditorTemplate", 0))
+    super(createFrame("FRAME", "EDR", GAME_UI, "", 0))
     
     m_editBox = createFrame(
       "GLUEEDITBOX",
-      "RealEditorTextBox",
+      "RealEditor",
       GAME_UI,
       "InspectorEditBoxTemplate", 0)
-    ..setText("<MISSING>")
-    ..setLevel(999)
+    ..setText(INDETERMINATE_STRING)
     ..setAllPoints(getFrameHandle())
     ..show()
     m_editBox.onEditboxEnter(() -> onEditboxEnter())
 
   // --------------------------------------------------------------------------
-  function getTargetValue() returns real
+  function getValue() returns real
     return m_value
 
   // --------------------------------------------------------------------------
-  function updateSourceValue(real value)
-    if (m_value == value)
-      return
-
-    m_value = value
-
-    let contexts = getContexts()
-    if (contexts != null)
-      return
-    let union = Union.fromReal(value)
-    for context in contexts
-      if (canSetDescriptorValue(context, union))
-        setDescriptorValue(context, union)
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function updateTargetValue(real value)
+  function setValue(real value)
     if (m_value != value)
       m_value = value
-      updateEditBoxText()
+      // log("setValue", "v: " + value.toString())
+      setSourceValue(value.toObject())
+      refresh()
 
   // --------------------------------------------------------------------------
   override function refresh()
-    let union = new Union()
+    let sourceValueObject = getSourceValue()
 
-    var firstValue = 0.0
-    var firstValueReceived = false
-    var allValuesMatch = true
-
-    let contexts = getContexts()    
-    if (contexts != null)
-      for context in contexts
-        if (canGetDescriptorValue(context, union) and getDescriptorValue(context, union))
-          if (not firstValueReceived)
-            firstValue = union.getReal()
-            firstValueReceived = true
-          else
-            if (firstValue != union.getReal())
-              allValuesMatch = false
-              break
-
-    setIsIndeterminate(not allValuesMatch)
-
-    let newValue = union.getReal()
-    if (m_value != newValue)
-      m_value = newValue
-      updateEditBoxText()
-      
-    destroy union
-
-  // --------------------------------------------------------------------------
-  function onEditboxEnter()
-    updateSourceValue(m_editBox.getText().toReal())
-    updateEditBoxText()
+    let value = sourceValueObject != NULL and sourceValueObject != PropertyEditorVM.INDETERMINATE_VALUE ? sourceValueObject.castToReal() : 0.0
+    setIsIndeterminate(sourceValueObject == PropertyEditorVM.INDETERMINATE_VALUE)
+    
+    if (m_value != value)
+      m_value = value
+      // log("refresh", "val: " + value.toString())
+      updateEditboxText()
 
   // --------------------------------------------------------------------------
   protected override function setIsIndeterminate(bool value)
     if (getIsIndeterminate() != value)
-      updateEditBoxText()
+      // log("setIsIndeterminate", "indeterminate: " + value.toString())
+      super.setIsIndeterminate(value)
+      updateEditboxText()
 
   // --------------------------------------------------------------------------
-  function updateEditBoxText()
-    m_editBox.setText(getIsIndeterminate() ? "<Multiple>" : m_value.toString())
+  private function onEditboxEnter()
+    let val = m_editBox.getText().toReal()
+    // log("onEditBoxEnter", "val: " + val.toString())
+    setValue(val)
+
+  // --------------------------------------------------------------------------
+  private function updateEditboxText()
+    let text = getIsIndeterminate() ? INDETERMINATE_STRING : m_value.toString()
+    // log("updateEditboxText", "text: " + text)
+    m_editBox.setText(text)
+
+// ============================================================================
+public class BoolEditor extends PropertyEditor
+  private framehandle m_checkBox
+  private bool m_value = false
+  private bool m_valueEverSet = false
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(createFrame("FRAME", "EDB", GAME_UI, "", 0))
+    
+    m_checkBox = createFrame(
+      "GLUECHECKBOX",
+      "BoolEditor",
+      GAME_UI,
+      "InspectorCheckBoxTemplate", 0)
+    ..setText(INDETERMINATE_STRING)
+    ..setAllPoints(getFrameHandle())
+    ..show()
+    m_checkBox.onCheckboxCheck(() -> onCheckboxCheck())
+    m_checkBox.onCheckboxUncheck(() -> onCheckboxUncheck())
+
+  // --------------------------------------------------------------------------
+  function getValue() returns bool
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function setValue(bool value)
+    if (m_value != value)
+      m_value = value
+      m_valueEverSet = true
+      // log("setValue", "v: " + value.toString())
+      setSourceValue(value.toObject())
+      refresh()
+
+  // --------------------------------------------------------------------------
+  override function refresh()
+    let sourceValueObject = getSourceValue()
+
+    var value = false
+
+    if (sourceValueObject != NULL and sourceValueObject != PropertyEditorVM.INDETERMINATE_VALUE)
+      value = sourceValueObject.castToBool()
+      m_valueEverSet = true
+
+    setIsIndeterminate(sourceValueObject == PropertyEditorVM.INDETERMINATE_VALUE)
+    
+    if (m_value != value)
+      m_value = value
+      // log("refresh", "val: " + value.toString())
+      updateEditboxText()
+
+  // --------------------------------------------------------------------------
+  protected override function setIsIndeterminate(bool value)
+    if (getIsIndeterminate() != value)
+      // log("setIsIndeterminate", "indeterminate: " + value.toString())
+      super.setIsIndeterminate(value)
+      updateEditboxText()
+
+  // --------------------------------------------------------------------------
+  private function onCheckboxCheck()
+    setValue(true)
+    // log("onCheckboxCheck", m_checkBox.getValue().toString())
+
+  // --------------------------------------------------------------------------
+  private function onCheckboxUncheck()
+    setValue(false)
+    // log("onCheckboxUncheck", m_checkBox.getValue().toString())
+
+  // --------------------------------------------------------------------------
+  private function updateEditboxText()
+    m_checkBox.setValue(m_value ? 1.0 : 0.0)
+
+// ============================================================================
+init
+  Meta.register("PropertyEditors") (MetaRegistrar registrar) ->
+    PropertyEditorVM.META.registerMetadata(registrar)

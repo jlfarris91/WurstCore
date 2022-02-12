@@ -31,6 +31,8 @@ public function string.padRight(int totalLength, string padStr) returns string
 
 // ============================================================================
 public function string.compare(string other) returns int
+  if (this == other)
+    return 0
   let thisLen = this.length()
   let otherLen = other.length()
   let maxLen = max(thisLen, otherLen)

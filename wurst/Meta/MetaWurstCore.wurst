@@ -1,0 +1,9 @@
+package MetaWurstCore
+import Meta
+
+public constant int typeId_Vector_object = Meta.reserveInterface("WurstCore.Vector<object>")
+
+// ============================================================================
+init
+  Meta.register("MetaWurstCore") registrar ->
+    registrar.registerInterface(typeId_Vector_object, "WurstCore.Vector<object>")

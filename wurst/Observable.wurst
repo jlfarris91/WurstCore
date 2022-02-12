@@ -23,10 +23,20 @@ public module Observable
     return m_destructing.register(callback)
 
   // --------------------------------------------------------------------------
+  function unregisterOnDestroy(_handle eventHandler)
+    if (m_destructing != null)
+      m_destructing.unregister(eventHandler)
+
+  // --------------------------------------------------------------------------
   function onPropertyChanged(Event2Callback<thistype, string> callback) returns _handle
     if (m_propertyChanged == null)
       m_propertyChanged = new Event2<thistype, string>()
     return m_propertyChanged.register(callback)
+
+  // --------------------------------------------------------------------------
+  function unregisterOnPropertyChanged(_handle eventHandler)
+    if (m_propertyChanged != null)
+      m_propertyChanged.unregister(eventHandler)
 
   // --------------------------------------------------------------------------
   protected function raisePropertyChangedEvent(string propertyName)

@@ -164,6 +164,10 @@ public function rangeInt.toDamageRangeString() returns string
   return "{0} - {1}".format(I2S(this.min), I2S(this.max))
 
 // ============================================================================
+public function rangeInt.has(int value) returns bool
+  return value >= this.min and value <= this.max
+
+// ============================================================================
 public interface RangeRealFunc
   use RefObject
   function call() returns rangeReal

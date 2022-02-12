@@ -3,7 +3,6 @@ import public UnitMetadata
 import public initlater Component
 import ClosureTimers
 import ErrorHandling
-import Meta
 import Object
 import Events
 import Action
@@ -11,13 +10,9 @@ import Action
 // ============================================================================
 public class UnitComponentCreationContext
   IUnitMetadata owner
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(UnitComponentCreationContext.typeId)
-  /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
-public constant int typeId_UnitComponent = UnitComponent.registerMetadata().getTypeId()
+public constant int typeId_UnitComponent = Meta.reserveAbstractClass("UnitComponent.UnitComponent")
 public abstract class UnitComponent extends Component
   private IUnitMetadata m_owner
   private bool m_disableOnDeath = true
@@ -26,14 +21,6 @@ public abstract class UnitComponent extends Component
   construct(IUnitMetadata ownerUnit)
     super(ownerUnit)
     m_owner = ownerUnit
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata() returns Type
-    let _type = Meta.registerAbstractClass("UnitComponent.UnitComponent")..setBase(typeId_Component)
-    let _typeId = _type.getTypeId()
-    _type.registerDestructor((object object) -> destroy object.cast<UnitComponent>(_typeId))
-    return _type
-  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   override function getOwner() returns IUnitMetadata
@@ -164,9 +151,12 @@ class DispatchedEventCallback extends EventCallback
 
 // ============================================================================
 init
-  registerPackageMetadata()
+  Meta.register("UnitComponent", (registrar) -> registerMetadata(registrar))
 
 ///////////////////////////////////////////////////////////////////////////////
-function registerPackageMetadata()
-  UnitComponentCreationContext.registerMetadata()
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerAbstractClass(typeId_UnitComponent, "UnitComponent.UnitComponent")..setBase(typeId_Component)
+  ..registerDestructor((object object) -> destroy object.cast<UnitComponent>(typeId_Component))
+
+  registrar.registerClass(UnitComponentCreationContext.typeId)
 ///////////////////////////////////////////////////////////////////////////////

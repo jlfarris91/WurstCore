@@ -11,7 +11,7 @@ public class CollectionEnumerator<T>
   // --------------------------------------------------------------------------
   construct(ICollection<T> owner)
     m_owner = owner
-    m_range = rangeInt(0, owner.getCount() - 1)
+    m_range = rangeInt(0, owner.size() - 1)
     reset()
 
   // --------------------------------------------------------------------------

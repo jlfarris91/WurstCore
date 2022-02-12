@@ -4,7 +4,7 @@ import IComposite
 import Meta
 
 // ============================================================================
-public constant int typeId_Component = Meta.registerAbstractClass("Component.Component")..registerInterface(typeId_IComponent).getTypeId()
+public constant int typeId_Component = Meta.reserveAbstractClass("Component.Component")
 public abstract class Component implements IComponent
   private IComposite m_owner
   private bool m_enabled
@@ -53,3 +53,12 @@ public abstract class Component implements IComponent
   // --------------------------------------------------------------------------
   protected function removeThis()
     m_owner.removeComponent(this)
+
+// ============================================================================
+init
+  Meta.register("Component", (registrar) -> registerMetadata(registrar))    
+
+///////////////////////////////////////////////////////////////////////////////
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerAbstractClass(typeId_Component, "Component.Component")..registerInterface(typeId_IComponent).getTypeId()
+///////////////////////////////////////////////////////////////////////////////

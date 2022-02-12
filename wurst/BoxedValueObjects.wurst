@@ -3,12 +3,6 @@ import Meta
 
 // ============================================================================
 public class String
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(String.typeId)
-  /////////////////////////////////////////////////////////////////////////////
-
   private string m_value
   
   // --------------------------------------------------------------------------
@@ -29,12 +23,6 @@ public class String
 
 // ============================================================================
 public class Integer
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(Integer.typeId)
-  /////////////////////////////////////////////////////////////////////////////
-
   private int m_value
   
   // --------------------------------------------------------------------------
@@ -55,12 +43,6 @@ public class Integer
 
 // ============================================================================
 public class Real
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(Real.typeId)
-  /////////////////////////////////////////////////////////////////////////////
-
   private real m_value
   
   // --------------------------------------------------------------------------
@@ -81,12 +63,6 @@ public class Real
 
 // ============================================================================
 public class Bool
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(Bool.typeId)
-  /////////////////////////////////////////////////////////////////////////////
-
   private bool m_value
   
   // --------------------------------------------------------------------------
@@ -106,13 +82,34 @@ public class Bool
     m_value = value
 
 // ============================================================================
+public class Vec2
+  private vec2 m_value
+  
+  // --------------------------------------------------------------------------
+  construct()
+    m_value = ZERO2
+  
+  // --------------------------------------------------------------------------
+  construct(vec2 value)
+    m_value = value
+  
+  // --------------------------------------------------------------------------
+  function getValue() returns vec2
+    return m_value
+    
+  // --------------------------------------------------------------------------
+  function setValue(vec2 value)
+    m_value = value
+
+// ============================================================================
 init
-  registerPackageMetadata()
+  Meta.register("BoxedValueObjects", (registrar) -> registerMetadata(registrar))
 
 ///////////////////////////////////////////////////////////////////////////////
-function registerPackageMetadata()
-  String.registerMetadata()
-  Integer.registerMetadata()
-  Real.registerMetadata()
-  Bool.registerMetadata()
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerClass(String.typeId)
+  registrar.registerClass(Integer.typeId)
+  registrar.registerClass(Real.typeId)
+  registrar.registerClass(Bool.typeId)
+  registrar.registerClass(Vec2.typeId)
 ///////////////////////////////////////////////////////////////////////////////

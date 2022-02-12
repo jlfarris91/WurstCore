@@ -3,7 +3,7 @@ import IComponent
 import Meta
 
 // ============================================================================
-public constant int typeId_IComposite = Meta.registerInterface("IComposite.IComposite").getTypeId()
+public constant int typeId_IComposite = Meta.reserveInterface("IComposite.IComposite")
 public interface IComposite
   function getComponent(int componentTypeId) returns IComponent
   function addComponent(IComponent component) returns IComponent
@@ -13,3 +13,8 @@ public interface IComposite
 // ============================================================================
 public function IComposite.hasComponent(int componentTypeId) returns bool
   return this.hasComponent(componentTypeId)
+
+// ============================================================================
+init
+  Meta.register("IComposite") registrar ->
+    registrar.registerInterface(typeId_IComposite, "IComposite.IComposite")

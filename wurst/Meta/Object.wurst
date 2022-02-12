@@ -1,0 +1,361 @@
+package Object
+import public Meta
+import ErrorHandling
+import HashMap
+import Bitwise
+
+public tuple object(int objectHandle, int objectTypeId)
+
+constant int HANDLE_MASK = 0x7FFFF
+constant int TYPE_MASK = 0x1FFF
+
+// 1111 1111 1111 1111 1111 1111 1111 1111
+// 0000 0000 0000 0000 0001 1111 1111 1111 <- TYPE_MASK
+// 1111 1111 1111 1111 1110 0000 0000 0000 <- HANDLE_MASK
+
+public constant object NULL = object(0, 0)
+
+HashMap<int, int> g_indexToTypeLookup = new HashMap<int, int>()
+HashMap<int, int> array g_handleToIndexLookup
+HashMap<int, int> array g_indexToHandleLookup
+int array g_handleIndex
+
+// ============================================================================
+public function objectFromIndex(int index) returns object
+
+  let handleid = index.shiftr(13).bitAnd(HANDLE_MASK)
+  let typeid = index.bitAnd(TYPE_MASK)
+
+  object o
+  
+  let classification = Meta.getTypeClassification(typeid)
+  if (classification != TypeClassification.Primitive or typeid == typeId_bool)
+    o = object(handleid, typeid)
+  else
+    if (g_handleIndex[typeid] == 0 or not g_indexToHandleLookup[typeid].has(handleid))
+      error("objectFromIndex is called with an index that was not created using objectToIndex: " + index.toString())
+    o = object(g_indexToHandleLookup[typeid].get(handleid), typeid)
+
+  return o
+
+// ============================================================================
+public function objectToIndex(object obj) returns int
+
+  var handleid = obj.objectHandle
+  let typeid = obj.objectTypeId
+
+  let classification = Meta.getTypeClassification(typeid)
+  if (classification == TypeClassification.Primitive and typeid != typeId_bool)
+  //{
+    if (g_handleIndex[typeid] == 0)
+      g_handleIndex[typeid] = 1
+      g_indexToHandleLookup[typeid] = new HashMap<int, int>()
+      g_handleToIndexLookup[typeid] = new HashMap<int, int>()
+
+    let indexToHandleLookup = g_indexToHandleLookup[typeid]
+    let handleToIndexLookup = g_handleToIndexLookup[typeid]
+
+    if (handleToIndexLookup.has(handleid))
+      handleid = handleToIndexLookup.get(handleid)
+    else
+    //{
+      handleid = g_handleIndex[typeid]
+      g_handleIndex[typeid]++
+
+      if (handleToIndexLookup.has(handleid))
+        let existingTypeId = handleToIndexLookup.get(handleid)
+        if (existingTypeId != handleid)
+          error("Object handle " + handleid.toString() + " is already registered with type " + Meta.getType(existingTypeId).getName() + " but is being overwritten by type " + Meta.getType(typeid).getName())
+
+      handleToIndexLookup.put(obj.objectHandle, handleid)
+      indexToHandleLookup.put(handleid, obj.objectHandle)
+    //}
+  //}
+  
+  return convertToIndex(handleid, typeid)
+
+// ============================================================================
+function convertToIndex(int handleid, int typeid) returns int
+  if (handleid > HANDLE_MASK)
+    error("Handle limit exceeded: {0} (max {1}) type: {2}".format(handleid.toString(), HANDLE_MASK.toString(), Meta.getTypeName(typeid)))
+  if (typeid > TYPE_MASK)
+    error("Type id limit exceeded: {0} (max {1}) type: {2}".format(typeid.toString(), TYPE_MASK.toString(), Meta.getTypeName(typeid)))
+  let maskedHandle = handleid.bitAnd(HANDLE_MASK)
+  let maskedType = typeid.bitAnd(TYPE_MASK)
+  let index = maskedHandle.shiftl(13).bitOr(maskedType)
+  return index
+
+// ============================================================================
+public function object.is(int expectedTypeId) returns bool
+  return Meta.is(this.objectTypeId, expectedTypeId)
+
+// ============================================================================
+/** Attempts to cast the object to the given type T. Unlike cast<T> this method
+    will not throw an error if the cast cannot be completed successfully.
+    Null is returned if:
+    1) no metadata has been registered for expectedTypeId or object.objectTypeId
+    2) object.objectTypeId is not a part of the inheritence chain of expectedTypeId
+*/
+public function object.as<T>(int expectedTypeId) returns T
+  return Meta.is(this.objectTypeId, expectedTypeId) ? this.objectHandle castTo T : null
+
+// ============================================================================
+public function object.castAssert(int expectedTypeId) returns Type
+  if (expectedTypeId == 0)
+    error("[object.castAssert] Argument invalid: expectedTypeId must be greater than 0")
+  if (this.objectTypeId == 0)
+    error("[object.castAssert] Argument invalid: object.objectTypeId must be greater than 0")
+  let metaType = Meta.getType(this.objectTypeId)
+  if (metaType == null)
+    error("[object.castAssert] No meta type registered for object type {0}".format(this.getTypeName()))
+  if (metaType.is(expectedTypeId) == false)
+    error("[object.castAssert] Type cast failed. Object: {0} ({1}) Expected: {2} ({3})".format(this.getTypeName(), this.objectTypeId.toString(), Meta.getTypeName(expectedTypeId), expectedTypeId.toString()))
+  return metaType
+
+// ============================================================================
+/**
+  Cannot use cast<T> with primitive types such as bool, int, real, string, or any
+  of the native handles. Instead use toObject() and castToX() as defined in
+  MetaPrimitives.wurst.
+*/
+public function object.cast<T>(int expectedTypeId) returns T
+  if (this == NULL)
+    return null
+  let metaType = this.castAssert(expectedTypeId)
+  if (metaType.isPrimitive())
+    error("[object.cast] Cannot use object.cast<T> with primitive types")
+  return this.objectHandle castTo T
+
+// ============================================================================
+public function object.castUnsafe<T>() returns T
+  return this.objectHandle castTo T
+
+// ============================================================================
+public function object.isNull() returns bool
+  return this.objectHandle == 0
+
+// ============================================================================
+public function object.isTyped() returns bool
+  return this.objectTypeId != 0 and Meta.getType(this.objectTypeId) != null
+
+// ============================================================================
+public function object.getType() returns Type
+  return Meta.getType(this.objectTypeId)
+
+// ============================================================================
+public function object.getTypeName() returns string
+  return Meta.getTypeName(this.objectTypeId)
+
+// ============================================================================
+public function object.toString() returns string
+  if (this == NULL)
+    return "NULL"
+  if (this.objectTypeId == 0)
+    return "[{0}]".format(this.objectHandle.toString())
+  let metaType = Meta.getType(this.objectTypeId)
+  if (metaType != null)
+    return metaType.toString(this)
+  return "[{0} {1}]".format(typeIdToTypeName(this.objectTypeId), this.objectHandle.toString())
+
+// ============================================================================
+public function object.toDebugString() returns string
+  return "[o:{0} t{1}]".format(this.objectHandle.toString(), this.objectTypeId.toString())
+
+// ============================================================================
+public function object.destr()
+  if (this == NULL)
+    error("Calling destroy on a NULL object")
+  if (this.isTyped() == false)
+    error("Calling destroy on a typeless object")
+  let _type = this.getType()
+  if (_type == null)
+    error("No meta type registered for object type {0}".format(this.getTypeName()))
+  let concreteType = _type castTo ConcreteType
+  if (concreteType == null)
+    error("Calling destroy on a type that does not support destruction: " + _type.getFullyQualifiedName())
+  concreteType.destroyObject(this)
+
+// ============================================================================
+public function toObject<T>(T source, int objectTypeId) returns object
+  if (objectTypeId == 0)
+    error("Argument invalid: objectTypeId must be greater than 0")
+  let t = Meta.getType(objectTypeId)
+  if (t == null)
+    error("No meta type registered for object type {0}".format(Meta.getTypeName(objectTypeId)))
+  return object(source castTo int, objectTypeId)
+
+// ============================================================================
+public function toObjectUnsafe<T>(T source) returns object
+  return object(source castTo int, -1)
+
+// ============================================================================
+public function toObjectRef<T>(T source, int objectTypeId) returns Object
+  return toObject<T>(source, objectTypeId).ref()
+
+// ============================================================================
+public class Object
+  private object m_object
+
+  // --------------------------------------------------------------------------
+  construct (object object)
+    m_object = object
+
+  // --------------------------------------------------------------------------
+  function getObject() returns object
+    return m_object
+
+  // --------------------------------------------------------------------------
+  function setObject(object value)
+    m_object = value
+
+  // --------------------------------------------------------------------------
+  function is(int expectedTypeId) returns bool
+    return m_object.is(expectedTypeId)
+
+  // --------------------------------------------------------------------------
+  function as<T>(int expectedTypeId) returns T
+    return m_object.as<T>(expectedTypeId)
+
+  // --------------------------------------------------------------------------
+  function cast<T>(int expectedTypeId) returns T
+    return m_object.cast<T>(expectedTypeId)
+
+  // --------------------------------------------------------------------------
+  function castUnsafe<T>() returns T
+    return m_object.castUnsafe<T>()
+    
+  // --------------------------------------------------------------------------
+  function isNull() returns bool
+    return m_object.isNull()
+
+  // --------------------------------------------------------------------------
+  function isTyped() returns bool
+    return m_object.isTyped()
+
+  // --------------------------------------------------------------------------
+  function getType() returns Type
+    return m_object.getType()
+
+  // --------------------------------------------------------------------------
+  function getTypeName() returns string
+    return m_object.getTypeName()
+
+// ============================================================================
+public function object.ref() returns Object
+  return new Object(this)
+
+// ============================================================================
+public interface ObjectFactory
+  function call() returns object
+
+// ============================================================================
+public interface ObjectFactory1
+  function call(object arg) returns object
+
+// ============================================================================
+public interface ObjectDestructor
+  function call(object object)
+
+// ============================================================================
+public interface ObjectStringifier
+  function call(object object) returns string
+
+// ============================================================================
+public interface IObjectResolver<T>
+  function toObject(T object) returns object
+  function fromObject(object object) returns T
+
+// ============================================================================
+public class ObjectResolver<T> implements IObjectResolver<T>
+  private int m_typeId
+  
+  // --------------------------------------------------------------------------
+  construct(int typeid)
+    m_typeId = typeid
+
+  // --------------------------------------------------------------------------
+  override function fromObject(object object) returns T
+    return object.cast<T>(m_typeId)
+
+  // --------------------------------------------------------------------------
+  override function toObject(T object) returns object
+    return object(object castTo int, m_typeId)
+
+// ============================================================================
+@test function objectToIndex_NULL()
+  let h = 0
+  let t = 0
+  let i = objectToIndex(object(h, t))
+  i.assertEquals(0)
+
+// ============================================================================
+@test function objectToIndex_Object()
+  Meta.register("objectToIndex_Object", registrar -> registrar.registerClass(Object.typeId))
+  Meta.initialize()
+  let obj = new Object(NULL)
+  let i = objectToIndex(toObject(obj, Object.typeId))
+  let o = objectFromIndex(i)
+  o.objectHandle.assertEquals(obj castTo int)
+  o.objectTypeId.assertEquals(Object.typeId)
+  let b = o.cast<Object>(Object.typeId)
+  assertTrue((b castTo int) == (obj castTo int))
+  assertTrue(((b castTo int) castTo Object) == ((obj castTo int) castTo Object))
+  //assertTrue(b == obj) <--- not sure why this is failing
+
+// ============================================================================
+@test function objectToIndex_bool()
+  let i = objectToIndex(object(booleanToIndex(true), typeId_bool))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_bool)
+  booleanFromIndex(o.objectHandle).assertEquals(true)
+
+// ============================================================================
+@test function objectToIndex_int()
+  let i = objectToIndex(object(123, typeId_int))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_int)
+  o.objectHandle.assertEquals(123)
+
+// ============================================================================
+@test function objectToIndex_real()
+  let i = objectToIndex(object(realToIndex(1.23), typeId_real))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_real)
+  realFromIndex(o.objectHandle).assertEquals(1.23)
+
+// ============================================================================
+@test function objectToIndex_realMin()
+  let i = objectToIndex(object(realToIndex(R2I_MIN), typeId_real))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_real)
+  realFromIndex(o.objectHandle).assertEquals(R2I_MIN)
+
+// ============================================================================
+@test function objectToIndex_realMax()
+  let i = objectToIndex(object(realToIndex(R2I_MAX), typeId_real))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_real)
+  realFromIndex(o.objectHandle).assertEquals(R2I_MAX)
+
+// ============================================================================
+@test function objectToIndex_string()
+  let i = objectToIndex(object(stringToIndex("Hello World!"), typeId_string))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_string)
+  stringFromIndex(o.objectHandle).assertEquals("Hello World!")
+
+// ============================================================================
+@test function objectToIndex_string2()
+  let i = objectToIndex(object(stringToIndex("Peasant"), typeId_string))
+  let o = objectFromIndex(i)
+  o.objectTypeId.assertEquals(typeId_string)
+  stringFromIndex(o.objectHandle).assertEquals("Peasant")
+
+// ============================================================================
+@test function objectToIndex_unit()
+  let i = objectToIndex(object(1049349, typeId_unit))
+  let o = objectFromIndex(i)
+  Log.info(typeId_unit.toString())
+  Log.info(i.toString())
+  o.objectTypeId.assertEquals(typeId_unit)
+  o.objectHandle.assertEquals(1049349)

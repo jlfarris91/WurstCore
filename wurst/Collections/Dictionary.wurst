@@ -2,7 +2,6 @@ package Dictionary
 import HashMap
 import HashList
 import Object
-import Meta
 
 tuple dictionaryItem(string key, object object)
 
@@ -15,13 +14,6 @@ public class Dictionary
   construct()
     m_data = new IterableMap<string, int>
     m_dataTypes = new HashMap<string, int>
-
-  /////////////////////////////////////////////////////////////////////////////
-  protected static function registerMetadata()
-    Meta.registerClass(Dictionary.typeId)
-    ..registerFactory(() -> toObject(new Dictionary(), Dictionary.typeId))
-    ..registerDestructor((object object) -> destroy object.cast<Dictionary>(Dictionary.typeId))
-  /////////////////////////////////////////////////////////////////////////////
 
   // --------------------------------------------------------------------------
   function put<TValue>(string key, TValue object, int objectTypeId)
@@ -86,9 +78,7 @@ public class DictionaryIterator
 
 // ============================================================================
 init
-  registerPackageMetadata()
-
-///////////////////////////////////////////////////////////////////////////////
-function registerPackageMetadata()
-  Dictionary.registerMetadata()
-///////////////////////////////////////////////////////////////////////////////
+  Meta.register("Dictionary") (registrar) ->
+    registrar.registerClass(Dictionary.typeId)
+    ..registerFactory(() -> toObject(new Dictionary(), Dictionary.typeId))
+    ..registerDestructor((object object) -> destroy object.cast<Dictionary>(Dictionary.typeId))

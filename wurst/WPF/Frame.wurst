@@ -357,7 +357,7 @@ public class Frame
     m_frameHandle.show()
     if (wasVisible == false)
       signalDesiredSizeChanged()
-      invalidateArrange()
+      invalidateMeasure()
   
   // --------------------------------------------------------------------------
   function show(player _player)
@@ -365,7 +365,7 @@ public class Frame
     m_frameHandle.show(_player)
     if (wasVisible == false)
       signalDesiredSizeChanged()
-      invalidateArrange()
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function showOnly(player _player)
@@ -374,7 +374,7 @@ public class Frame
     m_frameHandle.show(_player)
     if (wasVisible == false)
       signalDesiredSizeChanged()
-      invalidateArrange()
+      invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function hide()
@@ -612,7 +612,6 @@ public class Frame
     arrangeSize.x = min(arrangeSize.x, availableSizeMarginAdjusted.x)
     arrangeSize.y = min(arrangeSize.y, availableSizeMarginAdjusted.y)
 
-    //log("arrangeCore", "arrangeSize: " + arrangeSize.toString())
     // log("as: " + arrangeSize.toString())
 
     var finalSize = arrangeOverride(arrangeSize)
@@ -815,14 +814,6 @@ public interface IFrameLayout
   function arrange(Frame frame, vec2 size) returns vec2
 
 // ============================================================================
-public interface IFrameTemplate
-  function getFrameDefinition() returns FrameDefinition
-  function setFrameDefinition(FrameDefinition definition)
-  function getItemFrameFactory() returns IFrameFactory
-  function setItemFrameFactory(IFrameFactory factory)
-  function createFrame() returns Frame
-
-// ============================================================================
 public class FrameDefinition
   private string m_name = null
   private string m_typeName = null
@@ -859,6 +850,10 @@ public class FrameDefinition
     return createFrame(m_name)
 
 // ============================================================================
+public interface IFrameTemplate
+  function createFrame() returns Frame
+
+// ============================================================================
 public class FrameTemplate implements IFrameTemplate
   private FrameDefinition m_frameDef
   private IFrameFactory m_frameFactory
@@ -873,19 +868,19 @@ public class FrameTemplate implements IFrameTemplate
       m_initializer = null
 
   // --------------------------------------------------------------------------
-  override function getFrameDefinition() returns FrameDefinition
+  function getFrameDefinition() returns FrameDefinition
     return m_frameDef
   
   // --------------------------------------------------------------------------
-  override function setFrameDefinition(FrameDefinition value)
+  function setFrameDefinition(FrameDefinition value)
     m_frameDef = value
 
   // --------------------------------------------------------------------------
-  override function getItemFrameFactory() returns IFrameFactory
+  function getItemFrameFactory() returns IFrameFactory
     return m_frameFactory
   
   // --------------------------------------------------------------------------
-  override function setItemFrameFactory(IFrameFactory value)
+  function setItemFrameFactory(IFrameFactory value)
     m_frameFactory = value
 
   // --------------------------------------------------------------------------
@@ -904,6 +899,35 @@ public class FrameTemplate implements IFrameTemplate
     if (m_initializer != null)
       m_initializer.call(frame)
     return frame
+
+// ============================================================================
+public interface IFrameTemplateSelector
+  function getFrameTemplate(int typeid) returns IFrameTemplate
+
+// ============================================================================
+public class DataTypeTemplateSelector implements IFrameTemplateSelector
+  private IterableMap<int, IFrameTemplate> m_typeIdToTemplateMap = new IterableMap<int, IFrameTemplate>()
+  private IFrameTemplate m_defaultFrameTemplate
+
+  // --------------------------------------------------------------------------
+  function getDefaultFrameTemplate() returns IFrameTemplate
+    return m_defaultFrameTemplate
+
+  // --------------------------------------------------------------------------
+  function setDefaultFrameTemplate(IFrameTemplate value)
+    m_defaultFrameTemplate = value
+
+  // --------------------------------------------------------------------------
+  function registerFrameTemplate(int typeid, IFrameTemplate template)
+    m_typeIdToTemplateMap.put(typeid, template)
+  
+  // --------------------------------------------------------------------------
+  function unregisterFrameTemplate(int typeid)
+    m_typeIdToTemplateMap.remove(typeid)
+
+  // --------------------------------------------------------------------------
+  override function getFrameTemplate(int typeid) returns IFrameTemplate
+    return m_typeIdToTemplateMap.get(typeid)
 
 // ============================================================================
 public enum HorizontalLayoutMode
@@ -1020,16 +1044,22 @@ public class LightweightProperty<T> implements ILightweightProperty
 
   // --------------------------------------------------------------------------
   override function hasValue(Frame context) returns bool
+    if (context == null)
+      argumentNullError("context")
     return m_effectiveValues != null and m_effectiveValues.has(context)
 
   // --------------------------------------------------------------------------
   function getValue(Frame context) returns T
+    if (context == null)
+      argumentNullError("context")
     if (m_effectiveValues == null)
       return m_defaultValue
     return m_effectiveValues.get(context)
 
   // --------------------------------------------------------------------------
   function setValue(Frame context, T value)
+    if (context == null)
+      argumentNullError("context")
     if (m_effectiveValues == null)
       m_effectiveValues = new HashMap<Frame, T>()
     let hasValue = m_effectiveValues.has(context)
@@ -1040,6 +1070,8 @@ public class LightweightProperty<T> implements ILightweightProperty
   
   // --------------------------------------------------------------------------
   override function clearValue(Frame context)
+    if (context == null)
+      argumentNullError("context")
     if (m_effectiveValues != null)
       m_effectiveValues.remove(context)
       if (m_effectiveValues.size() == 0)

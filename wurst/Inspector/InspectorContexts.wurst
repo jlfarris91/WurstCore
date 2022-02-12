@@ -1,0 +1,79 @@
+package InspectorContexts
+import Inspector
+import LinkedList
+import Vector
+import Object
+import Events
+import Inspection
+import GroupUtils
+import RegisterEvents
+import ClosureTimers
+
+// ============================================================================
+public class SelectedUnitsContext implements IInspectorContext
+  protected static constant LinkedList<SelectedUnitsContext> s_contexts = new LinkedList<SelectedUnitsContext>()
+  private player m_player
+  private Vector<object> m_objects = new Vector<object>()
+  private Event1<IInspectorContext> m_objectsChangedEvent = new Event1<IInspectorContext>()
+  private IObjectDescriptor m_descriptor
+
+  // --------------------------------------------------------------------------
+  construct(player p)
+    m_player = p
+    m_descriptor = new UnitObjectDescriptor()
+    s_contexts.add(this)
+    update()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    s_contexts.remove(this)
+
+  // --------------------------------------------------------------------------
+  function getPlayer() returns player
+    return m_player
+
+  // --------------------------------------------------------------------------
+  override function getName() returns string
+    return "Player {0} Selection".format(m_player.getId().toString())
+
+  // --------------------------------------------------------------------------
+  override function getObjects() returns Vector<object>
+    return m_objects
+
+  // --------------------------------------------------------------------------
+  override function getObjectDescriptor() returns IObjectDescriptor
+    return m_descriptor
+
+  // --------------------------------------------------------------------------
+  override function onObjectsChanged(Event1Callback<IInspectorContext> callback) returns _handle
+    return m_objectsChangedEvent.register(callback)
+
+  // --------------------------------------------------------------------------
+  override function unregisterOnObjectsChanged(_handle eventHandler)
+    m_objectsChangedEvent.unregister(eventHandler)
+
+  // --------------------------------------------------------------------------
+  function update()
+    doAfter(0.1) () ->
+      m_objects.clear()
+      let temp = getGroup()
+      temp.enumUnitsSelected(m_player, null)
+      for u in temp
+        let unitAsObject = u.toObject()
+        m_objects.add(unitAsObject)
+      temp.release()
+      m_objectsChangedEvent.call(this)
+
+// ============================================================================
+function onUnitSelectedDeselected()
+  let selectedUnit = GetTriggerUnit()
+  let ownerPlayer = selectedUnit.getOwner()
+  for context in SelectedUnitsContext.s_contexts
+    if (context.getPlayer() == ownerPlayer)
+      context.update()
+
+// ============================================================================
+init 
+
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SELECTED, function onUnitSelectedDeselected)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DESELECTED, function onUnitSelectedDeselected)

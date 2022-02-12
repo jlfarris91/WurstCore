@@ -299,3 +299,12 @@ class FixedArray8192<T> extends FixedArray<T>
   // --------------------------------------------------------------------------
   override function set(int i, T _item)
     m_items[i] = _item
+
+// ============================================================================
+@test function growArray()
+  let a = FixedArray.createArray<int>(8)
+  for i = 0 to 7
+    a.set(i, 10 - i)
+  let b = FixedArray.growArray(a, 9)
+  for i = 0 to 7
+    b.get(i).assertEquals(10-i)

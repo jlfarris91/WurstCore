@@ -19,7 +19,7 @@ public class ListBox extends Panel
   private bool m_needsRebuild
 
   private Vector<object> m_itemsSource
-  private FrameTemplate m_itemFrameTemplate
+  private IFrameTemplate m_itemFrameTemplate
   private Vector<Frame> m_itemFrames
   private Vector<Frame> m_itemFramesPool
   private real m_itemSize
@@ -95,11 +95,11 @@ public class ListBox extends Panel
       updateScrollBarFrame()
 
   // --------------------------------------------------------------------------
-  function getItemFrameTemplate() returns FrameTemplate
+  function getItemFrameTemplate() returns IFrameTemplate
     return m_itemFrameTemplate
   
   // --------------------------------------------------------------------------
-  function setItemFrameTemplate(FrameTemplate value)
+  function setItemFrameTemplate(IFrameTemplate value)
     if (m_itemFrameTemplate != value)
       m_itemFrameTemplate = value
       destroyItemFrames()
@@ -199,6 +199,10 @@ public class ListBox extends Panel
     let maxNumItems = getMaxNumberOfItems(m_itemSize, panelSize)
     m_spacing = getSpacing(m_itemSize, panelSize)
 
+    // log("rebuildItems", "itemSize: " + m_itemSize.toString())
+    // log("rebuildItems", "panelSize: " + panelSize.toString())
+    // log("rebuildItems", "maxNumItems: " + maxNumItems.toString())
+
     var added = 0
     var removed = 0
 
@@ -214,6 +218,7 @@ public class ListBox extends Panel
       frame.hide()
       removed++
 
+    // log("rebuildItems", "m_itemFrames: " + m_itemFrames.size().toString())
     // log("rebuildItems", "a: {0} r: {1}".format(added.toString(), removed.toString()))
 
     m_needsRebuild = false
@@ -289,7 +294,7 @@ public class ListBox extends Panel
     return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
 
   // --------------------------------------------------------------------------
-  function getNewItemFrame(FrameTemplate itemFrameTemplate) returns Frame
+  function getNewItemFrame(IFrameTemplate itemFrameTemplate) returns Frame
     Frame frame
     if (not m_itemFramesPool.isEmpty())
       frame = m_itemFramesPool.pop()
@@ -371,9 +376,11 @@ public class ListBox extends Panel
       let childFrame = m_itemFrames.get(i)
       let itemIndex = m_viewport.min + i
       if (itemIndex < itemsSourceCount)
+        // Log.info(i.toString() + " -> " + m_itemsSource.get(itemIndex).toString())
         childFrame.setDataContext(m_itemsSource.get(itemIndex))
         childFrame.show()
       else
+        // Log.info(i.toString() + " -> NULL")
         childFrame.setDataContext(NULL)
         childFrame.hide()
     //}

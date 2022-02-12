@@ -1,182 +1,202 @@
 package UnitDescriptor
 import InspectionInterfaces
-import PropertyDescriptors
+import Descriptors
 import LinkedList
-import UnitExtensions
-import Union
-import StringComparison
 import initlater UnitMetadata
+import Object
 
 LinkedList<IPropertyDescriptor> s_descriptors = new LinkedList<IPropertyDescriptor>()
 
 // ============================================================================
 public class UnitIntFieldPropertyDescriptor extends PropertyDescriptor
+  private static Type s_editorType
   private unitintegerfield m_field
 
   // --------------------------------------------------------------------------
   construct(string name, unitintegerfield field)
-    super(name, "int")
+    super(name)
     m_field = field
 
   // --------------------------------------------------------------------------
-  override function canGetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canGetValue(object context) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function getValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
+  override function getValue(object context) returns object
+    let contextUnit = context.castToUnit()
     if (contextUnit == null)
-      return false
-    value.setInt(contextUnit.getField(m_field))
-    return true
+      return NULL
+    return contextUnit.getField(m_field).toObject()
 
   // --------------------------------------------------------------------------
-  override function canSetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canSetValue(object context, object value) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function setValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
-    if (contextUnit == null)
-      return false
-    return contextUnit.setField(m_field, value.getInt())
+  override function setValue(object context, object value)
+    let contextUnit = context.castToUnit()
+    if (contextUnit != null)
+      contextUnit.setField(m_field, value.castToInt())
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    if (s_editorType == null)
+      s_editorType = Meta.getType(typeId_int)
+    return s_editorType
 
 // ============================================================================
 public class UnitRealFieldPropertyDescriptor extends PropertyDescriptor
+  private static Type s_editorType
   private unitrealfield m_field
 
   // --------------------------------------------------------------------------
   construct(string name, unitrealfield field)
-    super(name, "real")
+    super(name)
     m_field = field
 
   // --------------------------------------------------------------------------
-  override function canGetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canGetValue(object context) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function getValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
+  override function getValue(object context) returns object
+    let contextUnit = context.castToUnit()
     if (contextUnit == null)
-      return false
-    value.setReal(contextUnit.getField(m_field))
-    return true
+      return NULL
+    return contextUnit.getField(m_field).toObject()
 
   // --------------------------------------------------------------------------
-  override function canSetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canSetValue(object context, object value) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function setValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
-    if (contextUnit == null)
-      return false
-    return contextUnit.setField(m_field, value.getReal())
+  override function setValue(object context, object value)
+    let contextUnit = context.castToUnit()
+    if (contextUnit != null)
+      contextUnit.setField(m_field, value.castToReal())
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    if (s_editorType == null)
+      s_editorType = Meta.getType(typeId_real)
+    return s_editorType
 
 // ============================================================================
 public class UnitBoolFieldPropertyDescriptor extends PropertyDescriptor
+  private static Type s_editorType
   private unitbooleanfield m_field
 
   // --------------------------------------------------------------------------
   construct(string name, unitbooleanfield field)
-    super(name, "bool")
+    super(name)
     m_field = field
 
   // --------------------------------------------------------------------------
-  override function canGetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canGetValue(object context) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function getValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
+  override function getValue(object context) returns object
+    let contextUnit = context.castToUnit()
     if (contextUnit == null)
-      return false
-    value.setBool(contextUnit.getField(m_field))
-    return true
+      return NULL
+    return contextUnit.getField(m_field).toObject()
 
   // --------------------------------------------------------------------------
-  override function canSetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canSetValue(object context, object value) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function setValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
-    if (contextUnit == null)
-      return false
-    return contextUnit.setField(m_field, value.getBool())
+  override function setValue(object context, object value)
+    let contextUnit = context.castToUnit()
+    if (contextUnit != null)
+      contextUnit.setField(m_field, value.castToBool())
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    if (s_editorType == null)
+      s_editorType = Meta.getType(typeId_bool)
+    return s_editorType
 
 // ============================================================================
 public class UnitStringFieldPropertyDescriptor extends PropertyDescriptor
+  private static Type s_editorType
   private unitstringfield m_field
 
   // --------------------------------------------------------------------------
   construct(string name, unitstringfield field)
-    super(name, "string")
+    super(name)
     m_field = field
 
   // --------------------------------------------------------------------------
-  override function canGetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canGetValue(object context) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function getValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
+  override function getValue(object context) returns object
+    let contextUnit = context.castToUnit()
     if (contextUnit == null)
-      return false
-    value.setString(contextUnit.getField(m_field))
-    return true
+      return NULL
+    return contextUnit.getField(m_field).toObject()
 
   // --------------------------------------------------------------------------
-  override function canSetValue(int context, Union value) returns bool
-    return unitFromIndex(context) != null
+  override function canSetValue(object context, object value) returns bool
+    return context != NULL
 
   // --------------------------------------------------------------------------
-  override function setValue(int context, Union value) returns bool
-    let contextUnit = unitFromIndex(context)
-    if (contextUnit == null)
-      return false
-    return contextUnit.setField(m_field, value.getString())
+  override function setValue(object context, object value)
+    let contextUnit = context.castToUnit()
+    if (contextUnit != null)
+      contextUnit.setField(m_field, value.castToString())
+
+  // --------------------------------------------------------------------------
+  override function getEditorType() returns Type
+    if (s_editorType == null)
+      s_editorType = Meta.getType(typeId_string)
+    return s_editorType
 
 // ============================================================================
 public class UnitObjectDescriptor implements IObjectDescriptor
-  protected static StringPropertyDescriptor<unit> m_name
-  protected static StringPropertyDescriptor<unit> m_properName
-  protected static IntPropertyDescriptor<unit> m_xp
-  protected static IntPropertyDescriptor<unit> m_level
-  protected static RealPropertyDescriptor<unit> m_hp
-  protected static IntPropertyDescriptor<unit> m_maxHp
-  protected static RealPropertyDescriptor<unit> m_mana
-  protected static IntPropertyDescriptor<unit> m_maxMana
+  protected static LinkedList<IPropertyDescriptor> m_descriptors
+
+  // --------------------------------------------------------------------------
+  construct()
+    if (m_descriptors == null)
+      m_descriptors= new LinkedList<IPropertyDescriptor>()
+
+      for property in Meta.getType(typeId_unit).getProperties()
+        m_descriptors.add(new MetaPropertyDescriptor(property))
 
   // --------------------------------------------------------------------------
   override function getId() returns string
-    return "Unit"
+    return "unit"
   
   // --------------------------------------------------------------------------
-  override function getPropertyDescriptors(int context, PropertyDescriptorCollection propertyDescriptors)
+  override function getPropertyDescriptors(object context, PropertyDescriptorCollection propertyDescriptors)
 
-    let contextUnit = unitFromIndex(context)
-    if (contextUnit == null)
+    if (not context.is(typeId_unit))
+      // Log.info("UnitObjectDescriptor", "getPropertyDescriptors", "", "context is not type unit")
       return
 
-    propertyDescriptors.add(m_name)
+    let contextUnit = context.castToUnit()
+    if (contextUnit == null)
+      // Log.info("UnitObjectDescriptor", "getPropertyDescriptors", "", "context unit is null " + context.objectHandle.toString())
+      return
 
-    if (contextUnit.isHero())
-      propertyDescriptors.add(m_properName)
-      propertyDescriptors.add(m_xp)
-      propertyDescriptors.add(m_level)
-
-    propertyDescriptors.add(m_hp)
-    propertyDescriptors.add(m_maxHp)
-    propertyDescriptors.add(m_mana)
-    propertyDescriptors.add(m_maxMana)
+    for descritor in m_descriptors
+      propertyDescriptors.add(descritor)
 
     for descriptor in s_descriptors
       propertyDescriptors.add(descriptor)
 
-    let metadata = contextUnit.getMetadata()
+    let metadata = contextUnit.getMetadata() castTo UnitMetadata
     if (metadata != null)
-      metadata.getPropertyDescriptors(context, propertyDescriptors)
+      let iter = metadata.getComponents()
+      while iter != null and iter.hasNext()
+        let comp = iter.next()
+        let objectDescriptor = Meta.as<IComponent, IObjectDescriptor>(comp, comp.typeId, typeId_IObjectDescriptor)
+        if (objectDescriptor != null)
+          objectDescriptor.getPropertyDescriptors(context, propertyDescriptors)
 
 // ============================================================================
 function registerUnitFieldPropertyDescriptor(unitintegerfield field, string name) returns UnitIntFieldPropertyDescriptor
@@ -204,101 +224,91 @@ function registerUnitFieldPropertyDescriptor(unitstringfield field, string name)
 
 // ============================================================================
 init
-
-  UnitObjectDescriptor.m_name = new StringPropertyDescriptor<unit>("Name", u -> u.getName())..setContextResolver(UnitContextResolver.staticInstance)
-  UnitObjectDescriptor.m_hp = new RealPropertyDescriptor<unit>("HP", u -> u.getHP(), (u, hp) -> u.setHP(hp))..setContextResolver(UnitContextResolver.staticInstance)
-  UnitObjectDescriptor.m_maxHp = new IntPropertyDescriptor<unit>("Max HP", u -> u.getIntMaxHP(), (u, hp) -> u.setMaxHP(hp))..setContextResolver(UnitContextResolver.staticInstance)
-  UnitObjectDescriptor.m_mana = new RealPropertyDescriptor<unit>("Mana", u -> u.getMana(), (u, mana) -> u.setMana(mana))..setContextResolver(UnitContextResolver.staticInstance)
-  UnitObjectDescriptor.m_maxMana = new IntPropertyDescriptor<unit>("Max Mana", u -> u.getIntMaxMana(), (u, mana) -> u.setMaxMana(mana))..setContextResolver(UnitContextResolver.staticInstance)
   
-  UnitObjectDescriptor.m_properName = new StringPropertyDescriptor<unit>("Proper Name", u -> u.getProperName())..setCategory("Hero")..setContextResolver(UnitContextResolver.staticInstance)
-  UnitObjectDescriptor.m_xp = new IntPropertyDescriptor<unit>("XP", u -> u.getXp(), (u, xp) -> u.resetLevelAndSetXP(xp, true))..setCategory("Hero")..setContextResolver(UnitContextResolver.staticInstance)
-  UnitObjectDescriptor.m_level = new IntPropertyDescriptor<unit>("Level", u -> u.getLevel(), (u, lvl) -> u.setLevel(lvl, true))..setCategory("Hero")..setContextResolver(UnitContextResolver.staticInstance)
-  
-  registerUnitFieldPropertyDescriptor(UNIT_IF_DEFENSE_TYPE, "DEFENSE_TYPE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_ARMOR_TYPE, "ARMOR_TYPE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_LOOPING_FADE_IN_RATE, "LOOPING_FADE_IN_RATE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_LOOPING_FADE_OUT_RATE, "LOOPING_FADE_OUT_RATE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_AGILITY, "AGILITY")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_INTELLIGENCE, "INTELLIGENCE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_STRENGTH, "STRENGTH")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_AGILITY_PERMANENT, "AGILITY_PERMANENT")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_INTELLIGENCE_PERMANENT, "INTELLIGENCE_PERMANENT")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_STRENGTH_PERMANENT, "STRENGTH_PERMANENT")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_AGILITY_WITH_BONUS, "AGILITY_WITH_BONUS")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_INTELLIGENCE_WITH_BONUS, "INTELLIGENCE_WITH_BONUS")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_STRENGTH_WITH_BONUS, "STRENGTH_WITH_BONUS")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_GOLD_BOUNTY_AWARDED_NUMBER_OF_DICE, "GOLD_BOUNTY_AWARDED_NUMBER_OF_DICE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_GOLD_BOUNTY_AWARDED_BASE, "GOLD_BOUNTY_AWARDED_BASE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_GOLD_BOUNTY_AWARDED_SIDES_PER_DIE, "GOLD_BOUNTY_AWARDED_SIDES_PER_DIE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_LUMBER_BOUNTY_AWARDED_NUMBER_OF_DICE, "LUMBER_BOUNTY_AWARDED_NUMBER_OF_DICE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_LUMBER_BOUNTY_AWARDED_BASE, "LUMBER_BOUNTY_AWARDED_BASE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_LUMBER_BOUNTY_AWARDED_SIDES_PER_DIE, "LUMBER_BOUNTY_AWARDED_SIDES_PER_DIE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_LEVEL, "LEVEL")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_FORMATION_RANK, "FORMATION_RANK")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_ORIENTATION_INTERPOLATION, "ORIENTATION_INTERPOLATION")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_ELEVATION_SAMPLE_POINTS, "ELEVATION_SAMPLE_POINTS")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_RED, "TINTING_COLOR_RED")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_GREEN, "TINTING_COLOR_GREEN")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_BLUE, "TINTING_COLOR_BLUE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_ALPHA, "TINTING_COLOR_ALPHA")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_MOVE_TYPE, "MOVE_TYPE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_TARGETED_AS, "TARGETED_AS")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_UNIT_CLASSIFICATION, "UNIT_CLASSIFICATION")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_HIT_POINTS_REGENERATION_TYPE, "HIT_POINTS_REGENERATION_TYPE")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_PLACEMENT_PREVENTED_BY, "PLACEMENT_PREVENTED_BY")
-  registerUnitFieldPropertyDescriptor(UNIT_IF_PRIMARY_ATTRIBUTE, "PRIMARY_ATTRIBUTE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_DEFENSE_TYPE, "DEFENSE_TYPE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_ARMOR_TYPE, "ARMOR_TYPE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_LOOPING_FADE_IN_RATE, "LOOPING_FADE_IN_RATE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_LOOPING_FADE_OUT_RATE, "LOOPING_FADE_OUT_RATE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_AGILITY, "AGILITY")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_INTELLIGENCE, "INTELLIGENCE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_STRENGTH, "STRENGTH")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_AGILITY_PERMANENT, "AGILITY_PERMANENT")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_INTELLIGENCE_PERMANENT, "INTELLIGENCE_PERMANENT")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_STRENGTH_PERMANENT, "STRENGTH_PERMANENT")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_AGILITY_WITH_BONUS, "AGILITY_WITH_BONUS")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_INTELLIGENCE_WITH_BONUS, "INTELLIGENCE_WITH_BONUS")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_STRENGTH_WITH_BONUS, "STRENGTH_WITH_BONUS")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_GOLD_BOUNTY_AWARDED_NUMBER_OF_DICE, "GOLD_BOUNTY_AWARDED_NUMBER_OF_DICE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_GOLD_BOUNTY_AWARDED_BASE, "GOLD_BOUNTY_AWARDED_BASE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_GOLD_BOUNTY_AWARDED_SIDES_PER_DIE, "GOLD_BOUNTY_AWARDED_SIDES_PER_DIE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_LUMBER_BOUNTY_AWARDED_NUMBER_OF_DICE, "LUMBER_BOUNTY_AWARDED_NUMBER_OF_DICE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_LUMBER_BOUNTY_AWARDED_BASE, "LUMBER_BOUNTY_AWARDED_BASE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_LUMBER_BOUNTY_AWARDED_SIDES_PER_DIE, "LUMBER_BOUNTY_AWARDED_SIDES_PER_DIE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_LEVEL, "LEVEL")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_FORMATION_RANK, "FORMATION_RANK")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_ORIENTATION_INTERPOLATION, "ORIENTATION_INTERPOLATION")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_ELEVATION_SAMPLE_POINTS, "ELEVATION_SAMPLE_POINTS")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_RED, "TINTING_COLOR_RED")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_GREEN, "TINTING_COLOR_GREEN")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_BLUE, "TINTING_COLOR_BLUE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_TINTING_COLOR_ALPHA, "TINTING_COLOR_ALPHA")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_MOVE_TYPE, "MOVE_TYPE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_TARGETED_AS, "TARGETED_AS")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_UNIT_CLASSIFICATION, "UNIT_CLASSIFICATION")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_HIT_POINTS_REGENERATION_TYPE, "HIT_POINTS_REGENERATION_TYPE")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_PLACEMENT_PREVENTED_BY, "PLACEMENT_PREVENTED_BY")
+  // registerUnitFieldPropertyDescriptor(UNIT_IF_PRIMARY_ATTRIBUTE, "PRIMARY_ATTRIBUTE")
 
-  registerUnitFieldPropertyDescriptor(UNIT_RF_STRENGTH_PER_LEVEL, "Strength Per Level")..setCategory("Stats")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_AGILITY_PER_LEVEL, "AGILITY_PER_LEVEL")..setCategory("Stats")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_INTELLIGENCE_PER_LEVEL, "INTELLIGENCE_PER_LEVEL")..setCategory("Stats")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_HIT_POINTS_REGENERATION_RATE, "HIT_POINTS_REGENERATION_RATE")..setCategory("Stats")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_MANA_REGENERATION, "MANA_REGENERATION")..setCategory("Stats")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_FLY_HEIGHT, "FLY_HEIGHT")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SCALING_VALUE, "SCALING_VALUE")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_HP, "HP")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_MANA, "MANA")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_TURN_RATE, "TURN_RATE")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_FOG_OF_WAR_SAMPLE_RADIUS, "FOG_OF_WAR_SAMPLE_RADIUS")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_DEATH_TIME, "DEATH_TIME")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_ELEVATION_SAMPLE_RADIUS, "ELEVATION_SAMPLE_RADIUS")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_MAXIMUM_PITCH_ANGLE_DEGREES, "MAXIMUM_PITCH_ANGLE_DEGREES")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_MAXIMUM_ROLL_ANGLE_DEGREES, "MAXIMUM_ROLL_ANGLE_DEGREES")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_ANIMATION_RUN_SPEED, "ANIMATION_RUN_SPEED")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SELECTION_SCALE, "SELECTION_SCALE")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SELECTION_CIRCLE_HEIGHT, "SELECTION_CIRCLE_HEIGHT")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_HEIGHT, "SHADOW_IMAGE_HEIGHT")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_WIDTH, "SHADOW_IMAGE_WIDTH")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_CENTER_X, "SHADOW_IMAGE_CENTER_X")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_CENTER_Y, "SHADOW_IMAGE_CENTER_Y")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_ANIMATION_WALK_SPEED, "ANIMATION_WALK_SPEED")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_DEFENSE, "DEFENSE")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SIGHT_RADIUS, "SIGHT_RADIUS")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_PRIORITY, "PRIORITY")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_SPEED, "SPEED")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_OCCLUDER_HEIGHT, "OCCLUDER_HEIGHT")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_ACQUISITION_RANGE, "ACQUISITION_RANGE")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_CAST_BACK_SWING, "CAST_BACK_SWING")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_CAST_POINT, "CAST_POINT")
-  registerUnitFieldPropertyDescriptor(UNIT_RF_MINIMUM_ATTACK_RANGE, "MINIMUM_ATTACK_RANGE")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_STRENGTH_PER_LEVEL, "Strength Per Level")..setCategory("Stats")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_AGILITY_PER_LEVEL, "AGILITY_PER_LEVEL")..setCategory("Stats")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_INTELLIGENCE_PER_LEVEL, "INTELLIGENCE_PER_LEVEL")..setCategory("Stats")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_HIT_POINTS_REGENERATION_RATE, "HIT_POINTS_REGENERATION_RATE")..setCategory("Stats")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_MANA_REGENERATION, "MANA_REGENERATION")..setCategory("Stats")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_FLY_HEIGHT, "FLY_HEIGHT")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SCALING_VALUE, "SCALING_VALUE")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_HP, "HP")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_MANA, "MANA")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_TURN_RATE, "TURN_RATE")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_FOG_OF_WAR_SAMPLE_RADIUS, "FOG_OF_WAR_SAMPLE_RADIUS")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_DEATH_TIME, "DEATH_TIME")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_ELEVATION_SAMPLE_RADIUS, "ELEVATION_SAMPLE_RADIUS")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_MAXIMUM_PITCH_ANGLE_DEGREES, "MAXIMUM_PITCH_ANGLE_DEGREES")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_MAXIMUM_ROLL_ANGLE_DEGREES, "MAXIMUM_ROLL_ANGLE_DEGREES")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_ANIMATION_RUN_SPEED, "ANIMATION_RUN_SPEED")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SELECTION_SCALE, "SELECTION_SCALE")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SELECTION_CIRCLE_HEIGHT, "SELECTION_CIRCLE_HEIGHT")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_HEIGHT, "SHADOW_IMAGE_HEIGHT")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_WIDTH, "SHADOW_IMAGE_WIDTH")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_CENTER_X, "SHADOW_IMAGE_CENTER_X")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SHADOW_IMAGE_CENTER_Y, "SHADOW_IMAGE_CENTER_Y")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_ANIMATION_WALK_SPEED, "ANIMATION_WALK_SPEED")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_DEFENSE, "DEFENSE")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SIGHT_RADIUS, "SIGHT_RADIUS")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_PRIORITY, "PRIORITY")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_SPEED, "SPEED")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_OCCLUDER_HEIGHT, "OCCLUDER_HEIGHT")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_ACQUISITION_RANGE, "ACQUISITION_RANGE")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_CAST_BACK_SWING, "CAST_BACK_SWING")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_CAST_POINT, "CAST_POINT")
+  // registerUnitFieldPropertyDescriptor(UNIT_RF_MINIMUM_ATTACK_RANGE, "MINIMUM_ATTACK_RANGE")
 
-  registerUnitFieldPropertyDescriptor(UNIT_BF_RAISABLE, "RAISABLE")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_DECAYABLE, "DECAYABLE")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_IS_A_BUILDING, "IS_A_BUILDING")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_USE_EXTENDED_LINE_OF_SIGHT, "USE_EXTENDED_LINE_OF_SIGHT")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_NEUTRAL_BUILDING_SHOWS_MINIMAP_ICON, "NEUTRAL_BUILDING_SHOWS_MINIMAP_ICON")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_HERO_HIDE_HERO_INTERFACE_ICON, "HERO_HIDE_HERO_INTERFACE_ICON")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_HERO_HIDE_HERO_MINIMAP_DISPLAY, "HERO_HIDE_HERO_MINIMAP_DISPLAY")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_HERO_HIDE_HERO_DEATH_MESSAGE, "HERO_HIDE_HERO_DEATH_MESSAGE")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_HIDE_MINIMAP_DISPLAY, "HIDE_MINIMAP_DISPLAY")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_SCALE_PROJECTILES, "SCALE_PROJECTILES")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_SELECTION_CIRCLE_ON_WATER, "SELECTION_CIRCLE_ON_WATER")
-  registerUnitFieldPropertyDescriptor(UNIT_BF_HAS_WATER_SHADOW, "HAS_WATER_SHADOW")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_RAISABLE, "RAISABLE")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_DECAYABLE, "DECAYABLE")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_IS_A_BUILDING, "IS_A_BUILDING")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_USE_EXTENDED_LINE_OF_SIGHT, "USE_EXTENDED_LINE_OF_SIGHT")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_NEUTRAL_BUILDING_SHOWS_MINIMAP_ICON, "NEUTRAL_BUILDING_SHOWS_MINIMAP_ICON")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_HERO_HIDE_HERO_INTERFACE_ICON, "HERO_HIDE_HERO_INTERFACE_ICON")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_HERO_HIDE_HERO_MINIMAP_DISPLAY, "HERO_HIDE_HERO_MINIMAP_DISPLAY")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_HERO_HIDE_HERO_DEATH_MESSAGE, "HERO_HIDE_HERO_DEATH_MESSAGE")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_HIDE_MINIMAP_DISPLAY, "HIDE_MINIMAP_DISPLAY")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_SCALE_PROJECTILES, "SCALE_PROJECTILES")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_SELECTION_CIRCLE_ON_WATER, "SELECTION_CIRCLE_ON_WATER")
+  // registerUnitFieldPropertyDescriptor(UNIT_BF_HAS_WATER_SHADOW, "HAS_WATER_SHADOW")
 
-  registerUnitFieldPropertyDescriptor(UNIT_SF_NAME, "NAME")
-  registerUnitFieldPropertyDescriptor(UNIT_SF_PROPER_NAMES, "PROPER_NAMES")
-  registerUnitFieldPropertyDescriptor(UNIT_SF_GROUND_TEXTURE, "GROUND_TEXTURE")
-  registerUnitFieldPropertyDescriptor(UNIT_SF_SHADOW_IMAGE_UNIT, "SHADOW_IMAGE_UNIT")
+  // registerUnitFieldPropertyDescriptor(UNIT_SF_NAME, "NAME")
+  // registerUnitFieldPropertyDescriptor(UNIT_SF_PROPER_NAMES, "PROPER_NAMES")
+  // registerUnitFieldPropertyDescriptor(UNIT_SF_GROUND_TEXTURE, "GROUND_TEXTURE")
+  // registerUnitFieldPropertyDescriptor(UNIT_SF_SHADOW_IMAGE_UNIT, "SHADOW_IMAGE_UNIT")
 
-  s_descriptors.sortWith() (IPropertyDescriptor o1, IPropertyDescriptor o2) ->
-    return stringCompare(o1.getName(), o2.getName())
+  // s_descriptors.sortWith() (IPropertyDescriptor o1, IPropertyDescriptor o2) ->
+  //   return stringCompare(o1.getName(), o2.getName())
