@@ -58,21 +58,21 @@ public class TooltipItem
   // --------------------------------------------------------------------------
   construct(string name, Func1<int, string> getter)
     m_name = presetGetter(name, null)
-    addValue(getter)
+    addValue(getter.acquire())
 
   // --------------------------------------------------------------------------
   construct(Func1<int, string> name)
-    m_name = presetGetter(null, name)
+    m_name = presetGetter(null, name.acquire())
 
   // --------------------------------------------------------------------------
   construct(Func1<int, string> name, string value)
-    m_name = presetGetter(null, name)
+    m_name = presetGetter(null, name.acquire())
     addValue(value)
 
   // --------------------------------------------------------------------------
   construct(Func1<int, string> name, Func1<int, string> getter)
-    m_name = presetGetter(null, name)
-    addValue(getter)
+    m_name = presetGetter(null, name.acquire())
+    addValue(getter.acquire())
 
   // --------------------------------------------------------------------------
   private construct(presetGetter name)
