@@ -54,7 +54,7 @@ public function wrapMaxEx(int value, int min, int max) returns int
   return wrap(value, min, max - 1)
 
 // ============================================================================
-public function passesChanceCheck(real chance01) returns bool
+public function passesChanceCheck01(real chance01) returns bool
   return passesChanceCheck(chance01, GetRandomReal(0, 1))
 
 // ============================================================================
