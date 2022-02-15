@@ -1,0 +1,68 @@
+package StunUnit
+import ObjectIdGenerator
+import Range
+import AbilityObjEditing
+import ObjectIds
+import DummyCaster
+import Orders
+import Math
+
+constant int STUN_ABIL_ID = compiletime(ABIL_ID_GEN.next())
+constant int STUN_ABIL_LEVELS = 100
+constant real STUN_ABIL_LEVEL_DURATION_INTERVAL = 0.1
+constant real STUN_ABIL_MAX_DURATION = STUN_ABIL_LEVELS.toReal() * STUN_ABIL_LEVEL_DURATION_INTERVAL
+constant rangeReal STUN_ABIL_DURATION_RANGE = rangeReal(STUN_ABIL_LEVEL_DURATION_INTERVAL, STUN_ABIL_LEVELS * STUN_ABIL_LEVEL_DURATION_INTERVAL)
+public @configurable constant player DEFAULT_STUN_UNIT_OWNER = DUMMY_HOSTILE_PLAYER
+
+// ============================================================================
+@compiletime function createObjects()
+  new AbilityDefinitionWarStompcreep(STUN_ABIL_ID)
+    ..presetAreaofEffect(lvl -> 8.0)
+    ..presetDamage(lvl -> 0.0)
+    ..presetTerrainDeformationAmplitude(lvl -> -50.0)
+    ..presetTerrainDeformationDurationms(lvl -> 300)
+    ..presetCooldown(lvl -> 0.0)
+    ..presetDurationHero(lvl -> 0.0)
+    ..presetManaCost(lvl -> 0)
+    ..setArtCaster("")
+    ..setHeroAbility(false)
+    ..setLevels(STUN_ABIL_LEVELS)
+    ..presetDurationHero(lvl -> STUN_ABIL_DURATION_RANGE.lerp((lvl - 1) / STUN_ABIL_LEVELS.toReal()))
+    ..presetDurationNormal(lvl -> STUN_ABIL_DURATION_RANGE.lerp((lvl - 1) / STUN_ABIL_LEVELS.toReal()))
+    ..presetTargetsAllowed(lvl -> commaList("ground"))
+
+// ============================================================================
+/** Stun a single unit for a maximum of 10s at 0.1s intervals */
+public function stunUnit(unit target, real durationSeconds) returns real
+  return stunUnit(DEFAULT_STUN_UNIT_OWNER, target, durationSeconds)
+
+// ============================================================================
+/** Stun a single unit for a maximum of 10s at 0.1s intervals */
+public function stunUnit(player owner, unit target, real durationSeconds) returns real
+  let level = getStunAbilLevel(durationSeconds)
+  let dummy = new DummyCaster()
+    ..owner(owner)
+    ..origin(target.getPos())
+    ..delay(2)
+  if (dummy.castImmediate(STUN_ABIL_ID, level, OrderIds.stomp) == null)
+    Log.error("Failed to cast ability for stunUnit")
+  return level * STUN_ABIL_LEVEL_DURATION_INTERVAL
+
+// ============================================================================
+function getStunAbilLevel(real seconds) returns int
+  return (clamp(seconds, STUN_ABIL_LEVEL_DURATION_INTERVAL, STUN_ABIL_MAX_DURATION) / STUN_ABIL_LEVEL_DURATION_INTERVAL).round()
+
+// ============================================================================
+@test function test()
+  getStunAbilLevel(0.0).assertEquals(1)
+  getStunAbilLevel(0.1).assertEquals(1)
+  getStunAbilLevel(0.2).assertEquals(2)
+  getStunAbilLevel(0.31).assertEquals(3)
+  getStunAbilLevel(0.39).assertEquals(4)
+  getStunAbilLevel(0.5).assertEquals(5)
+  getStunAbilLevel(1.0).assertEquals(10)
+  getStunAbilLevel(1.5).assertEquals(15)
+  getStunAbilLevel(2.0).assertEquals(20)
+  getStunAbilLevel(5.0).assertEquals(50)
+  getStunAbilLevel(10.0).assertEquals(100)
+  getStunAbilLevel(10.1).assertEquals(100)
