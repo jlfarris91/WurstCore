@@ -35,7 +35,18 @@ class EventTrace
     g_events.remove(e castTo int)
 
 // ============================================================================
-public class Event implements IHandleProvider
+public interface IEvent
+  function register(EventCallback callback) returns _handle
+  function unregister(_handle callbackHandle)
+
+// ============================================================================
+public abstract class EventCallback
+  protected bool markedForRemoval
+  use RefObject
+  abstract function call()
+
+// ============================================================================
+public class Event implements IEvent, IHandleProvider
   private int m_callStackDepth = 0
   private Vector<EventCallback> m_callbacks
 
@@ -58,7 +69,7 @@ public class Event implements IHandleProvider
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(EventCallback callback) returns _handle
+  override function register(EventCallback callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
     
@@ -70,7 +81,7 @@ public class Event implements IHandleProvider
     return _handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(_handle callbackHandle)
+  override function unregister(_handle callbackHandle)
     if (callbackHandle.id castTo EventCallback == null)
       // Log.info("Event", "unregister", "", "callbackHandle.id castTo EventCallback == null")
       return
@@ -118,7 +129,18 @@ public class Event implements IHandleProvider
            m_callbacks.contains(h.id castTo EventCallback)
 
 // ============================================================================
-public class Event1<TArg1> implements IHandleProvider
+public interface IEvent1<TArg1>
+  function register(Event1Callback<TArg1> callback) returns _handle
+  function unregister(_handle callbackHandle)
+
+// ============================================================================
+public abstract class Event1Callback<TArg1>
+  protected bool markedForRemoval
+  use RefObject
+  abstract function call(TArg1 arg1)
+
+// ============================================================================
+public class Event1<TArg1> implements IEvent1<TArg1>, IHandleProvider
   private int m_callStackDepth = 0
   private Vector<Event1Callback<TArg1>> m_callbacks
 
@@ -141,7 +163,7 @@ public class Event1<TArg1> implements IHandleProvider
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Event1Callback<TArg1> callback) returns _handle
+  override function register(Event1Callback<TArg1> callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
     
@@ -153,7 +175,7 @@ public class Event1<TArg1> implements IHandleProvider
     return _handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(_handle callbackHandle)
+  override function unregister(_handle callbackHandle)
     if (callbackHandle.id castTo EventCallback == null)
       return
     let index = m_callbacks.indexOf(callbackHandle.id castTo Event1Callback<TArg1>)
@@ -195,7 +217,18 @@ public class Event1<TArg1> implements IHandleProvider
            m_callbacks.contains(h.id castTo Event1Callback<TArg1>)
 
 // ============================================================================
-public class Event2<TArg1, TArg2> implements IHandleProvider
+public interface IEvent2<TArg1, TArg2>
+  function register(Event2Callback<TArg1, TArg2> callback) returns _handle
+  function unregister(_handle callbackHandle)
+
+// ============================================================================
+public abstract class Event2Callback<TArg1, TArg2>
+  protected bool markedForRemoval
+  use RefObject
+  abstract function call(TArg1 arg1, TArg2 arg2)
+
+// ============================================================================
+public class Event2<TArg1, TArg2> implements IEvent2<TArg1, TArg2>, IHandleProvider
   private int m_callStackDepth = 0
   private Vector<Event2Callback<TArg1, TArg2>> m_callbacks
 
@@ -218,7 +251,7 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
     m_callbacks = null
 
   // --------------------------------------------------------------------------
-  function register(Event2Callback<TArg1, TArg2> callback) returns _handle
+  override function register(Event2Callback<TArg1, TArg2> callback) returns _handle
     if (callback == null)
       argumentNullError("callback")
 
@@ -230,7 +263,7 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
     return _handle(callback castTo int)
 
   // --------------------------------------------------------------------------
-  function unregister(_handle callbackHandle)
+  override function unregister(_handle callbackHandle)
     if (callbackHandle.id castTo EventCallback == null)
       return
     let index = m_callbacks.indexOf(callbackHandle.id castTo Event2Callback<TArg1, TArg2>)
@@ -270,24 +303,6 @@ public class Event2<TArg1, TArg2> implements IHandleProvider
   override function isHandleValid(_handle h) returns bool
     return h.id castTo EventCallback != null and
            m_callbacks.contains(h.id castTo Event2Callback<TArg1, TArg2>)
-
-// ============================================================================
-public abstract class EventCallback
-  protected bool markedForRemoval
-  use RefObject
-  abstract function call()
-
-// ============================================================================
-public abstract class Event1Callback<TArg1>
-  protected bool markedForRemoval
-  use RefObject
-  abstract function call(TArg1 arg1)
-
-// ============================================================================
-public abstract class Event2Callback<TArg1, TArg2>
-  protected bool markedForRemoval
-  use RefObject
-  abstract function call(TArg1 arg1, TArg2 arg2)
 
 // ============================================================================
 @test function stressTest_register()

@@ -2,10 +2,8 @@ package PlayerComponent
 import PlayerMetadata
 import Composition
 import Object
-import ClosureTimers
-import ErrorHandling
-import Events
 import Action
+import Dispatcher
 
 // ============================================================================
 public class PlayerComponentCreationContext
@@ -13,7 +11,7 @@ public class PlayerComponentCreationContext
 
 // ============================================================================
 public constant int typeId_PlayerComponent = Meta.reserveAbstractClass("PlayerComponent.PlayerComponent")
-public abstract class PlayerComponent extends Component
+public abstract class PlayerComponent extends Component implements IDispatcher
 
   private IPlayerMetadata m_owner
 
@@ -31,104 +29,28 @@ public abstract class PlayerComponent extends Component
     return m_owner.getPlayer()
 
   // --------------------------------------------------------------------------
-  protected function dispatch(Action work)
-    dispatch(true, work)
-
-  // --------------------------------------------------------------------------
-  protected function dispatch(bool requireEnabled, Action work)
-    dispatch(getOwnerPlayer(), this.typeId, requireEnabled, work)
-
-  // --------------------------------------------------------------------------
-  protected static function dispatch(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
-    work.acquire()
-    if (ownerPlayer != null and ownerPlayer.getSlotState() == PLAYER_SLOT_STATE_PLAYING)
-      let comp = ownerPlayer.getComponent(componentTypeId)
-      if (comp != null)
-        if (not requireEnabled or comp.getEnabled())
-          work.call()
-    work.release()
-
-  // --------------------------------------------------------------------------
-  protected static function dispatch(player ownerPlayer, int componentTypeId, bool requireEnabled, Action1<IComponent> work)
-    work.acquire()
-    if (ownerPlayer != null and ownerPlayer.getSlotState() == PLAYER_SLOT_STATE_PLAYING)
-      let comp = ownerPlayer.getComponent(componentTypeId)
-      if (comp != null)
-        if (not requireEnabled or comp.getEnabled())
-          work.call(comp)
-    work.release()
-
-  // --------------------------------------------------------------------------
-  protected function dispatch(real seconds, Action work) returns CallbackSingle
-    return dispatch(seconds, true, work)
-
-  // --------------------------------------------------------------------------
-  protected function dispatch(real seconds, bool requireEnabled, Action work) returns CallbackSingle
-    return dispatch(getOwnerPlayer(), this.typeId, seconds, requireEnabled, work)
-
-  // --------------------------------------------------------------------------
-  protected static function dispatch(player ownerPlayer, int componentTypeId, real seconds, bool requireEnabled, Action work) returns CallbackSingle
-    if (ownerPlayer == null)
-      argumentNullError("ownerPlayer")
-    if (work == null)
-      argumentNullError("work")
-    return doAfter(seconds, new DispatchedCallbackSingle(ownerPlayer, componentTypeId, requireEnabled, work))
-
-// --------------------------------------------------------------------------
-public function player.dispatch(int componentTypeId, Action1<IComponent> work)
-  this.dispatch(componentTypeId, true, work)
-
-// --------------------------------------------------------------------------
-public function player.dispatch(int componentTypeId, bool requireEnabled, Action1<IComponent> work)
-  PlayerComponent.dispatch(this, componentTypeId, requireEnabled, work)
+  override function getDispatcherContext(bool requireEnabled) returns DispatcherContext
+    return new PlayerComponentDispatcher(getOwnerPlayer(), this.typeId, requireEnabled)
 
 // ============================================================================
-module DispatchedWorkModule
-  protected player m_ownerPlayer
-  protected int m_componentTypeId
-  protected bool m_requireEnabled
-  protected Action m_work
+class PlayerComponentDispatcher extends DispatcherContext
+  private player m_ownerPlayer
+  private int m_compTypeId
+  private bool m_requireEnabled
 
   // --------------------------------------------------------------------------
-  function _construct(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
-    if (ownerPlayer == null)
-      argumentNullError("ownerPlayer")
-    if (work == null)
-      argumentNullError("work")
+  construct(player ownerPlayer, int compTypeId, bool requireEnabled)
     m_ownerPlayer = ownerPlayer
-    m_componentTypeId = componentTypeId
+    m_compTypeId = compTypeId
     m_requireEnabled = requireEnabled
-    m_work = work.acquire()
-  
-  // --------------------------------------------------------------------------
-  ondestroy
-    if (m_work != null)
-      m_work.release()
-    m_work = null
-
-// ============================================================================
-class DispatchedCallbackSingle extends CallbackSingle
-  use DispatchedWorkModule
 
   // --------------------------------------------------------------------------
-  construct(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
-    _construct(ownerPlayer, componentTypeId, requireEnabled, work)
-
-  // --------------------------------------------------------------------------
-  override function call()
-    PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
-
-// ============================================================================
-class DispatchedEventCallback extends EventCallback
-  use DispatchedWorkModule
-
-  // --------------------------------------------------------------------------
-  construct(player ownerPlayer, int componentTypeId, bool requireEnabled, Action work)
-    _construct(ownerPlayer, componentTypeId, requireEnabled, work)
-
-  // --------------------------------------------------------------------------
-  override function call()
-    PlayerComponent.dispatch(m_ownerPlayer, m_componentTypeId, m_requireEnabled, m_work)
+  override function dispatch(Action work)
+    if (m_ownerPlayer != null and m_ownerPlayer.isIngame())
+      let comp = m_ownerPlayer.getComponent(m_compTypeId)
+      if (comp != null)
+        if (not m_requireEnabled or comp.getEnabled())
+          work.call()
 
 // ============================================================================
 init

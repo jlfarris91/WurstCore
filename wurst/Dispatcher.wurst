@@ -1,0 +1,90 @@
+package Dispatcher
+import Action
+import Events
+import RefObject
+import ErrorHandling
+import ClosureTimers
+
+// ============================================================================
+public interface IDispatcher
+  function getDispatcherContext(bool requireEnabled) returns DispatcherContext
+
+// ============================================================================
+public abstract class DispatcherContext
+  use RefObject
+  abstract function dispatch(Action work)
+
+// ============================================================================
+public function IDispatcher.dispatch(Action work)
+  this.dispatch(true, work)
+
+// ============================================================================
+public function IDispatcher.dispatch(bool requireEnabled, Action work)
+  dispatch_Internal(this.getDispatcherContext(requireEnabled), work)
+
+// ============================================================================
+public function IDispatcher.dispatchAfter(real seconds, Action work) returns CallbackSingle
+  return this.dispatchAfter(seconds, true, work)
+
+// ============================================================================
+public function IDispatcher.dispatchAfter(real seconds, bool requireEnabled, Action work) returns CallbackSingle
+  return doAfter(seconds, new DispatchedCallbackSingle(this.getDispatcherContext(requireEnabled), work))
+
+// ============================================================================
+public function IEvent.registerDispatched(IDispatcher dispatcher, Action handler) returns _handle
+  return this.registerDispatched(dispatcher, true, handler)
+
+// ============================================================================
+public function IEvent.registerDispatched(IDispatcher dispatcher, bool requireEnabled, Action handler) returns _handle
+  return this.register(new DispatchedEventCallback(dispatcher.getDispatcherContext(requireEnabled), handler))
+
+// ============================================================================
+function dispatch_Internal(DispatcherContext context, Action work)
+  context.acquire()
+  work.acquire()
+  context.dispatch(work)
+  work.release()
+  context.release()
+
+// ============================================================================
+module DispatchedWorkModule
+  protected DispatcherContext m_context
+  protected Action m_work
+
+  // --------------------------------------------------------------------------
+  protected function _construct(DispatcherContext context, Action work)
+    if (context == null)
+      argumentNullError("context")
+    if (work == null)
+      argumentNullError("work")
+    m_context = context.acquire()
+    m_work = work.acquire()
+  
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_work.release()
+    m_context.release()
+
+// ============================================================================
+class DispatchedCallbackSingle extends CallbackSingle
+  use DispatchedWorkModule
+
+  // --------------------------------------------------------------------------
+  construct(DispatcherContext context, Action work)
+    _construct(context, work)
+
+  // --------------------------------------------------------------------------
+  override function call()
+    dispatch_Internal(m_context, m_work)
+
+// ============================================================================
+class DispatchedEventCallback extends EventCallback
+  use DispatchedWorkModule
+
+  // --------------------------------------------------------------------------
+  construct(DispatcherContext context, Action work)
+    _construct(context, work)
+
+  // --------------------------------------------------------------------------
+  override function call()
+    dispatch_Internal(m_context, m_work)
