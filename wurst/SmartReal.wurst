@@ -57,7 +57,7 @@ public class SmartReal
   // --------------------------------------------------------------------------
   function getValue() returns real
 
-    if (m_affectors != null or m_affectors.isEmpty())
+    if (m_affectors == null or m_affectors.isEmpty())
       return m_base
 
     var value = m_base
@@ -140,6 +140,8 @@ public class SmartReal
 
   // --------------------------------------------------------------------------
   function removeAffector(_handle h) returns bool
+    if (m_affectors == null)
+      return false
     let iterator = m_affectors.iterator()
     while iterator.hasNext()
       let affector = iterator.current
