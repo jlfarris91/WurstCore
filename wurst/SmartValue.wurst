@@ -1,23 +1,25 @@
-package SmartReal
+package SmartValue
 import LinkedList
 import TimerUtils
 import ClosureTimers
 import Events
 import Dispatcher
+import ErrorHandling
 
+// ============================================================================
 public enum AffectorType
   BASE
   SCALE
   ABSOLUTE
 
 // ============================================================================
-class SmartRealAffector
+class SmartValueAffector
   AffectorType m_type
   real m_value
   CallbackManual m_callback = null
 
   // --------------------------------------------------------------------------
-  construct (SmartReal owner, AffectorType _type, real value, real duration)
+  construct (SmartValue owner, AffectorType _type, real value, real duration)
     m_type = _type
     m_value = value
     if (duration > 0.0)
@@ -29,10 +31,16 @@ class SmartRealAffector
       destroy m_callback
 
 // ============================================================================
-public class SmartReal 
+public abstract class SmartValueBase
+
+// ============================================================================
+public class SmartValue
   private real m_base
-  private LinkedList<SmartRealAffector> m_affectors
-  private Event m_valueChangedEvent
+  protected LinkedList<SmartValueAffector> m_affectors = null
+  protected Event m_valueChangedEvent = null
+  private SmartValue m_source = null
+  private IDispatcher m_onValueChangedCallbackDispatcher = null
+  private _handle m_onValueChangedCallbackHandle = INVALID_HANDLE
 
   // --------------------------------------------------------------------------
   construct ()
@@ -44,12 +52,9 @@ public class SmartReal
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_affectors != null)
-      while (m_affectors.isEmpty() == false)
-        destroy m_affectors.pop()
-      destroy m_affectors
-      m_affectors = null
-    
+    detach()
+    clearAffectors()
+
     if (m_valueChangedEvent != null)
       destroy m_valueChangedEvent
       m_valueChangedEvent = null
@@ -76,10 +81,18 @@ public class SmartReal
     return value * scale + absolute
 
   // --------------------------------------------------------------------------
+  function getIntValue() returns int
+    return getValue().toInt()
+
+  // --------------------------------------------------------------------------
   function setBase(real value)
     if (m_base != value)
       m_base = value
       raiseValueChangedEvent()
+
+  // --------------------------------------------------------------------------
+  function setBase(int value)
+    setBase(value.toReal())
 
   // --------------------------------------------------------------------------
   function setBase(real value, real duration) returns _handle
@@ -110,30 +123,15 @@ public class SmartReal
     return addAffector(AffectorType.ABSOLUTE, -value, duration)
 
   // --------------------------------------------------------------------------
-  function attach(IDispatcher dispatcher) returns SmartRealValue
-    return new SmartRealValue(dispatcher, this)
-
-  // --------------------------------------------------------------------------
-  function onValueChanged() returns IEvent
-    if (m_valueChangedEvent == null)
-      m_valueChangedEvent = new Event()
-    return m_valueChangedEvent
-
-  // --------------------------------------------------------------------------
-  private function raiseValueChangedEvent()
-    if (m_valueChangedEvent != null)
-      m_valueChangedEvent.call()
-
-  // --------------------------------------------------------------------------
-  private function addAffector(AffectorType _type, real value) returns _handle
+  protected function addAffector(AffectorType _type, real value) returns _handle
     return addAffector(_type, value, 0.0)
   
   // --------------------------------------------------------------------------
-  private function addAffector(AffectorType _type, real value, real duration) returns _handle
-    let affector = new SmartRealAffector(this, _type, value, duration)
+  protected function addAffector(AffectorType _type, real value, real duration) returns _handle
+    let affector = new SmartValueAffector(this, _type, value, duration)
     let h = _handle(affector castTo int)
     if (m_affectors == null)
-      m_affectors = new LinkedList<SmartRealAffector>()
+      m_affectors = new LinkedList<SmartValueAffector>()
     m_affectors.add(affector)
     raiseValueChangedEvent()
     return h
@@ -151,25 +149,60 @@ public class SmartReal
         raiseValueChangedEvent()
         return true
     return false
+
+  // --------------------------------------------------------------------------
+  function clearAffectors()
+    if (m_affectors != null)
+      while (m_affectors.isEmpty() == false)
+        destroy m_affectors.pop()
+      destroy m_affectors
+      m_affectors = null
+    raiseValueChangedEvent()
+
+  // --------------------------------------------------------------------------
+  function attach(IDispatcher dispatcher) returns SmartValue
+    let smartValue = new SmartValue()
+    smartValue.attach(this, dispatcher)
+    return smartValue
+
+  // --------------------------------------------------------------------------
+  function attach(SmartValue source, IDispatcher dispatcher)
     
-// ============================================================================
-public class SmartRealValue
-  private real m_value = 0.0
-  private SmartReal m_source = null
-  private _handle m_onValueChangedCallbackHandle = INVALID_HANDLE
+    if (m_source == source and m_onValueChangedCallbackDispatcher == dispatcher)
+      return
+      
+    if (source == null)
+      argumentNullError("source")
 
-  // --------------------------------------------------------------------------
-  construct(IDispatcher dispatcher, SmartReal source)
+    if (dispatcher == null)
+      argumentNullError("dispatcher")
+
+    detach()
+
     m_source = source
-    m_value = m_source.getValue()
-    m_onValueChangedCallbackHandle = source.onValueChanged().registerDispatched(dispatcher) () ->
-      m_value = m_source.getValue()
+    m_onValueChangedCallbackDispatcher = dispatcher
+
+    attach()
 
   // --------------------------------------------------------------------------
-  ondestroy
-    m_source.onValueChanged().unregister(m_onValueChangedCallbackHandle)
-    m_onValueChangedCallbackHandle = INVALID_HANDLE
+  private function attach()
+    setBase(m_source.getValue())
+    m_onValueChangedCallbackHandle = m_source.onValueChanged().registerDispatched(m_onValueChangedCallbackDispatcher) () ->
+      setBase(m_source.getValue())
 
   // --------------------------------------------------------------------------
-  function getValue() returns real
-    return m_value
+  function detach()
+    if (m_source != null and m_onValueChangedCallbackHandle != INVALID_HANDLE)
+      m_source.onValueChanged().unregister(m_onValueChangedCallbackHandle)
+      m_onValueChangedCallbackHandle = INVALID_HANDLE
+
+  // --------------------------------------------------------------------------
+  function onValueChanged() returns IEvent
+    if (m_valueChangedEvent == null)
+      m_valueChangedEvent = new Event()
+    return m_valueChangedEvent
+
+  // --------------------------------------------------------------------------
+  protected function raiseValueChangedEvent()
+    if (m_valueChangedEvent != null)
+      m_valueChangedEvent.call()
