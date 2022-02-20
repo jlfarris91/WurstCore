@@ -525,7 +525,7 @@ public class SerializationContext
 // ============================================================================
 public class Serialization
 
-  @configurable static constant bool DEBUGGING_ENABLED = false
+  @configurable static bool DEBUGGING_ENABLED = false
 
   // --------------------------------------------------------------------------
   static function writeObjectToFile(SerializationContext context, string filePath, object object) returns bool
@@ -574,8 +574,9 @@ public class Serialization
   static function canReadFile(player _player, string filePath) returns bool
     if (localPlayer != _player)
       return false
+    BlzSetAbilityTooltip(FILE_IO_ABIL_ID, " ", 0)
     Preloader(filePath)
-    return BlzGetAbilityTooltip(FILE_IO_ABIL_ID, 0).length() > 0
+    return BlzGetAbilityTooltip(FILE_IO_ABIL_ID, 0) != " "
 
 // ============================================================================
 class SerializableSerializer
