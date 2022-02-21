@@ -285,8 +285,8 @@ public class Task
 
   private static function runOneOffDefinition(TaskDefinition definition, CancellationToken ct, object userData) returns Task
     let task = definition.createTask(null, userData, ct)
-    ..onDestroy((task) -> destroy definition)
-    ..run()
+    task.onDestroy().register((task) -> destroy definition)
+    task.run()
     return task
 
 // ============================================================================

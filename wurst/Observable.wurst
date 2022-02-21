@@ -17,26 +17,16 @@ public module Observable
       m_propertyChanged = null
 
   // --------------------------------------------------------------------------
-  function onDestroy(Event1Callback<thistype> callback) returns _handle
+  function onDestroy() returns IEvent1<thistype>
     if (m_destructing == null)
       m_destructing = new Event1<thistype>()
-    return m_destructing.register(callback)
+    return m_destructing
 
   // --------------------------------------------------------------------------
-  function unregisterOnDestroy(_handle eventHandler)
-    if (m_destructing != null)
-      m_destructing.unregister(eventHandler)
-
-  // --------------------------------------------------------------------------
-  function onPropertyChanged(Event2Callback<thistype, string> callback) returns _handle
+  function onPropertyChanged() returns IEvent2<thistype, string>
     if (m_propertyChanged == null)
       m_propertyChanged = new Event2<thistype, string>()
-    return m_propertyChanged.register(callback)
-
-  // --------------------------------------------------------------------------
-  function unregisterOnPropertyChanged(_handle eventHandler)
-    if (m_propertyChanged != null)
-      m_propertyChanged.unregister(eventHandler)
+    return m_propertyChanged
 
   // --------------------------------------------------------------------------
   protected function raisePropertyChangedEvent(string propertyName)
