@@ -152,12 +152,12 @@ class InspectorEditorRow extends Panel
     if (m_propertyChangedEventHandler != INVALID_HANDLE)
       let oldContext = oldValue.as<PropertyEditorVM>(PropertyEditorVM.typeId)
       if (oldContext != null)
-        oldContext.unregisterOnPropertyChanged(m_propertyChangedEventHandler)
+        oldContext.onPropertyChanged().unregister(m_propertyChangedEventHandler)
         m_propertyChangedEventHandler = INVALID_HANDLE
 
     let newContext = newValue.as<PropertyEditorVM>(PropertyEditorVM.typeId)
     if (newContext != null)
-      m_propertyChangedEventHandler = newContext.onPropertyChanged() (PropertyEditorVM sender, string propertyName) ->
+      m_propertyChangedEventHandler = newContext.onPropertyChanged().register() (PropertyEditorVM sender, string propertyName) ->
         onDataContextPropertyChanged(propertyName)
 
     m_editorPresenterFrame.setDataContext(getDataContext())
@@ -210,12 +210,12 @@ class InspectorCategoryRow extends Frame
     if (m_propertyChangedEventHandler != INVALID_HANDLE)
       let oldContext = oldValue.as<InspectorCategoryRowVM>(InspectorCategoryRowVM.typeId)
       if (oldContext != null)
-        oldContext.unregisterOnPropertyChanged(m_propertyChangedEventHandler)
+        oldContext.onPropertyChanged().unregister(m_propertyChangedEventHandler)
         m_propertyChangedEventHandler = INVALID_HANDLE
 
     let newContext = newValue.as<InspectorCategoryRowVM>(InspectorCategoryRowVM.typeId)
     if (newContext != null)
-      m_propertyChangedEventHandler = newContext.onPropertyChanged() (InspectorCategoryRowVM sender, string propertyName) ->
+      m_propertyChangedEventHandler = newContext.onPropertyChanged().register() (InspectorCategoryRowVM sender, string propertyName) ->
         onDataContextPropertyChanged(propertyName)
 
     updateFrame()

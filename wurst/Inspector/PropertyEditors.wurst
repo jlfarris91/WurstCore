@@ -82,12 +82,12 @@ public abstract class PropertyEditor extends Frame
     if (m_propertyChangedEventHandler != INVALID_HANDLE)
       let oldContext = oldValue.as<PropertyEditorVM>(PropertyEditorVM.typeId)
       if (oldContext != null)
-        oldContext.unregisterOnPropertyChanged(m_propertyChangedEventHandler)
+        oldContext.onPropertyChanged().unregister(m_propertyChangedEventHandler)
         m_propertyChangedEventHandler = INVALID_HANDLE
 
     let newContext = newValue.as<PropertyEditorVM>(PropertyEditorVM.typeId)
     if (newContext != null)
-      m_propertyChangedEventHandler = newContext.onPropertyChanged() (PropertyEditorVM sender, string propertyName) ->
+      m_propertyChangedEventHandler = newContext.onPropertyChanged().register() (PropertyEditorVM sender, string propertyName) ->
         onDataContextPropertyChanged(propertyName)
       m_descriptor = newContext.getPropertyDescriptor()
       m_objects = newContext.getObjects()
