@@ -12,6 +12,14 @@ public function arc.getNormal() returns vec2
   return vec2(Cos(angle), Sin(angle))
 
 // ============================================================================
+public function arc.getBoundingCircle() returns circle
+  let center = this.center + this.getNormal() * this.distanceRange.getMid()
+  let p1 = (this.center + vec2(Cos(this.angleRange.min), Sin(this.angleRange.min)) * this.distanceRange.min) - center
+  let p2 = (this.center + vec2(Cos(this.angleRange.max), Sin(this.angleRange.max)) * this.distanceRange.max) - center
+  let radius = max(p1.length(), p2.length())
+  return circle(center, radius)
+
+// ============================================================================
 public function arc.overlaps(circle circle) returns bool
   let a = this.center.toVec3()
   let b = circle.center.toVec3()
