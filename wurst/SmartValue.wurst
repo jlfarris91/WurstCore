@@ -1,6 +1,5 @@
 package SmartValue
 import LinkedList
-import TimerUtils
 import ClosureTimers
 import Events
 import Dispatcher
@@ -16,14 +15,17 @@ public enum AffectorType
 class SmartValueAffector
   AffectorType m_type
   real m_value
-  CallbackManual m_callback = null
+  CallbackSingle m_callback = null
 
   // --------------------------------------------------------------------------
   construct (SmartValue owner, AffectorType _type, real value, real duration)
     m_type = _type
     m_value = value
+
     if (duration > 0.0)
-      m_callback = getTimer().doManual(duration, true, () -> owner.removeAffector(_handle(this castTo int)))
+      m_callback = doAfter(duration) () ->
+        m_callback = null // destroyed by internal timer cleanup
+        owner.removeAffector(_handle(this castTo int))
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -39,7 +41,7 @@ public class SmartValue
   protected LinkedList<SmartValueAffector> m_affectors = null
   protected Event m_valueChangedEvent = null
   private SmartValue m_source = null
-  private IDispatcher m_onValueChangedCallbackDispatcher = null
+  private IDispatcher m_dispatcher = null
   private _handle m_onValueChangedCallbackHandle = INVALID_HANDLE
 
   // --------------------------------------------------------------------------
@@ -83,6 +85,14 @@ public class SmartValue
   // --------------------------------------------------------------------------
   function getIntValue() returns int
     return getValue().toInt()
+
+  // --------------------------------------------------------------------------
+  function getBase() returns real
+    return m_base
+
+  // --------------------------------------------------------------------------
+  function getIntBase() returns int
+    return getBase().toInt()
 
   // --------------------------------------------------------------------------
   function setBase(real value)
@@ -142,12 +152,14 @@ public class SmartValue
       return false
     let iterator = m_affectors.iterator()
     while iterator.hasNext()
-      let affector = iterator.current
+      let affector = iterator.next()
       if ((affector castTo int) == h.id)
         iterator.remove()
         destroy affector
         raiseValueChangedEvent()
+        iterator.close()
         return true
+    iterator.close()
     return false
 
   // --------------------------------------------------------------------------
@@ -168,7 +180,7 @@ public class SmartValue
   // --------------------------------------------------------------------------
   function attach(SmartValue source, IDispatcher dispatcher)
     
-    if (m_source == source and m_onValueChangedCallbackDispatcher == dispatcher)
+    if (m_source == source and m_dispatcher == dispatcher)
       return
       
     if (source == null)
@@ -180,14 +192,14 @@ public class SmartValue
     detach()
 
     m_source = source
-    m_onValueChangedCallbackDispatcher = dispatcher
+    m_dispatcher = dispatcher
 
     attach()
 
   // --------------------------------------------------------------------------
   private function attach()
     setBase(m_source.getValue())
-    m_onValueChangedCallbackHandle = m_source.onValueChanged().registerDispatched(m_onValueChangedCallbackDispatcher) () ->
+    m_onValueChangedCallbackHandle = m_source.onValueChanged().registerDispatched(m_dispatcher) () ->
       setBase(m_source.getValue())
 
   // --------------------------------------------------------------------------

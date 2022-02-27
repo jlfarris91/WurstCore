@@ -82,15 +82,30 @@ public function parameterize(real start, real _end, real value) returns real
   return diff == 0.0 ? 0.0 : (value - start) / diff
 
 // ============================================================================
-public function parameterize(int start, int _end, int value) returns real
-  return parameterize(I2R(start), I2R(_end), I2R(value))
-
-// ============================================================================
 public function parameterize01(real start, real _end, real value) returns real
   return clamp01(parameterize(start, _end, value))
 
 // ============================================================================
+public function parameterize(int start, int _end, int value) returns real
+  return parameterize(I2R(start), I2R(_end), I2R(value))
+
+// ============================================================================
 public function parameterize01(int start, int _end, int value) returns real
+  return clamp01(parameterize(start, _end, value))
+
+// ============================================================================
+public function parameterize(vec2 start, vec2 _end, vec2 value) returns real
+  let v = _end - start
+  if (v == ZERO2)
+    return 0.0
+  let v2 = value - start
+  if (v2 == ZERO2)
+    return 0.0
+  let p = v2.project(v)
+  return parameterize(0.0, v.length(), p.length() * v.dot(p).sign())
+
+// ============================================================================
+public function parameterize01(vec2 start, vec2 _end, vec2 value) returns real
   return clamp01(parameterize(start, _end, value))
 
 // ============================================================================
@@ -112,6 +127,10 @@ public function vec3.angleBetween(vec3 other) returns real
   if (otherLen == 0.0)
     return 0.0
   return Acos(this.dot(other) / (thisLen * otherLen))
+
+// ============================================================================
+public function lerp(vec2 start, vec2 _end, real t) returns vec2
+  return vec2(lerp(start.x, _end.x, t), lerp(start.y, _end.y, t))
 
 // ============================================================================
 public function lerp(vec3 start, vec3 _end, real t) returns vec3
