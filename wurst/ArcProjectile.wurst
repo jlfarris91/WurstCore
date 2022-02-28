@@ -7,11 +7,14 @@ import Math
 import Func
 import Arc
 import Circle
+import ClosureTimers
 
 let tempGroup = CreateGroup()
 
 // ============================================================================
 public class ArcProjectile implements IRealtimeListener
+  static bool SHOW_DEBUG = true
+
   private unit m_owner
   private vec2 m_startPos
   private vec2 m_endPos
@@ -96,6 +99,10 @@ public class ArcProjectile implements IRealtimeListener
     m_arc.distanceRange.max = getDistance()
 
     let boundingCircle = m_arc.getBoundingCircle()
+
+    if (SHOW_DEBUG)
+      let fx = addEffect("circle.mdl", boundingCircle.center)..setScale(boundingCircle.radius / 64.0)
+      doAfter(3.0, () -> fx.destr())
 
     tempGroup.enumUnitsInRange(boundingCircle.center, boundingCircle.radius)
     for u in tempGroup
