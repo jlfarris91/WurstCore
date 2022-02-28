@@ -13,7 +13,7 @@ let tempGroup = CreateGroup()
 
 // ============================================================================
 public class ArcProjectile implements IRealtimeListener
-  static bool SHOW_DEBUG = true
+  static bool SHOW_DEBUG = false
 
   private unit m_owner
   private vec2 m_startPos
