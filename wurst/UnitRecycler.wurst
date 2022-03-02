@@ -83,7 +83,7 @@ public class UnitRecycler
     m_owner = owner
     m_unitId = unitId
     g_unitIdToUnitRecyclerMap.put(unitId, this)
-    m_units = new Vector<unit>(capacity)..setSize(capacity)
+    m_units = new Vector<unit>(capacity)
     m_isActiveMap = new HashMap<unit, bool>()
     m_generationMap = new HashMap<unit, int>()
 
@@ -157,7 +157,7 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   function preload(int count)
-    while (m_units.size() < count)
+    while (getInactiveCount() + getActiveCount() < count)
       stockUnit(createUnitInternal(m_owner, ZERO2, angle(0)))
 
   // --------------------------------------------------------------------------
