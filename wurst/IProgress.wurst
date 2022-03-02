@@ -9,8 +9,9 @@ public interface IProgress
 
 // ============================================================================
 public interface IProgressReporter
-  function setProgress(real progress)
-  function setMessage(string message)
+  function report(real progress)
+  function report(string message)
+  function report(real progress, string message)
 
 // ============================================================================
 public class Progress implements IProgress, IProgressReporter
@@ -32,14 +33,23 @@ public class Progress implements IProgress, IProgressReporter
     return m_message
 
   // --------------------------------------------------------------------------
-  override function setMessage(string message)
-    m_message = message
-    if (m_progressChangedEvent != null)
-      m_progressChangedEvent.call(this)
+  override function report(real progress)
+    m_progress = progress
+    raiseProgressChangedEvent()
 
   // --------------------------------------------------------------------------
-  override function setProgress(real progress)
-    m_progress = progress  
+  override function report(string message)
+    m_message = message
+    raiseProgressChangedEvent()
+
+  // --------------------------------------------------------------------------
+  override function report(real progress, string message)
+    m_progress = progress
+    m_message = message
+    raiseProgressChangedEvent()
+
+  // --------------------------------------------------------------------------
+  private function raiseProgressChangedEvent()
     if (m_progressChangedEvent != null)
       m_progressChangedEvent.call(this)
 

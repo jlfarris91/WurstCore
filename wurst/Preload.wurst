@@ -98,39 +98,39 @@ class PreloadTaskContext
   // --------------------------------------------------------------------------
   function preloadNextUnit() returns bool
     if (unitIndex == 0)
-      progress.setMessage("Preloading " + g_unitIdCount.toString() + " units...")
+      progress.report("Preloading " + g_unitIdCount.toString() + " units...")
     try() () ->
       Preload.preloadUnit(g_unitIds[unitIndex])
     if (lastError != "")
       error("Error preloading unit " + g_unitIds[unitIndex].toRawCode() + ": " + lastError)
     steps++
-    progress.setProgress(steps / totalSteps.toReal())
+    progress.report(steps / totalSteps.toReal())
     unitIndex++
     return unitIndex < g_unitIdCount
   
   // --------------------------------------------------------------------------
   function preloadNextAbility() returns bool
     if (abilityIndex == 0)
-      progress.setMessage("Preloading " + g_abilityIdCount.toString() + " abilities...")
+      progress.report(0.0, "Preloading " + g_abilityIdCount.toString() + " abilities...")
     try() () ->
       Preload.preloadAbility(g_abilityIds[abilityIndex])
     if (lastError != "")
       error("Error preloading ability " + g_abilityIds[abilityIndex].toRawCode() + ": " + lastError)
     steps++
-    progress.setProgress(steps / totalSteps.toReal())
+    progress.report(steps / totalSteps.toReal())
     abilityIndex++
     return abilityIndex < g_abilityIdCount
 
   // --------------------------------------------------------------------------
   function preloadNextUnitRecycler() returns bool
     if (recyclerIndex == 0)
-      progress.setMessage("Preloading " + g_unitRecyclerPreloadCount.toString() + " recyclers...")
+      progress.report("Preloading " + g_unitRecyclerPreloadCount.toString() + " recyclers...")
     try() () ->
       createUnitRecycler(g_unitRecyclerPreloads[recyclerIndex].unitTypeId, g_unitRecyclerPreloads[recyclerIndex].count).preload(g_unitRecyclerPreloads[recyclerIndex].count)
     if (lastError != "")
       error("Error preloading unit recycler " + g_unitRecyclerPreloads[recyclerIndex].unitTypeId.toRawCode() + ": " + lastError)
     steps++
-    progress.setProgress(steps / totalSteps.toReal())
+    progress.report(steps / totalSteps.toReal())
     recyclerIndex++
     return recyclerIndex < g_unitRecyclerPreloadCount
 
@@ -140,7 +140,7 @@ init
   g_preloadTaskDefinition = TaskDefinition.build(
     builder -> begin
       builder
-      ..executeWhile2<PreloadTaskContext>("Preload units", ANIMATION_PERIOD, 10, (Task task, PreloadTaskContext context) -> context.preloadNextUnit())
-      ..executeWhile2<PreloadTaskContext>("Preload abilities", ANIMATION_PERIOD, 10, (Task task, PreloadTaskContext context) -> context.preloadNextAbility())
-      ..executeWhile2<PreloadTaskContext>("Preload unit recyclers", ANIMATION_PERIOD, 10, (Task task, PreloadTaskContext context) -> context.preloadNextUnitRecycler())
+      ..executeWhile2<PreloadTaskContext>("Preload units", ANIMATION_PERIOD, 1, (Task task, PreloadTaskContext context) -> context.preloadNextUnit())
+      ..executeWhile2<PreloadTaskContext>("Preload abilities", ANIMATION_PERIOD, 1, (Task task, PreloadTaskContext context) -> context.preloadNextAbility())
+      ..executeWhile2<PreloadTaskContext>("Preload unit recyclers", ANIMATION_PERIOD, 1, (Task task, PreloadTaskContext context) -> context.preloadNextUnitRecycler())
     end)
