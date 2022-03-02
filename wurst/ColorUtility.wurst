@@ -38,9 +38,9 @@ public class Colors
   // Misc
   static constant colorA grey           = colorA(100, 100, 100, 255)
   static constant colorA lightBrown     = colorA(165, 145, 115, 255)
-
   static constant colorA gold           = colorA(255, 204, 0, 255)
   static constant colorA lumber         = colorA(0, 199, 80, 255)
+  static constant colorA cornflowerBlue = colorA(100, 149, 237, 255)
 
 // ============================================================================
 public function color.getRed01() returns real

@@ -1,0 +1,69 @@
+package ProgressBar
+import Frame
+import IProgress
+import Handle
+import RealExtensions
+
+// ============================================================================
+public class ProgressBar extends Frame
+  private IProgress m_progress = null
+  private framehandle m_textFrame = null
+  private _handle m_progressChangedHandler = INVALID_HANDLE
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(createSimpleFrame("ProgressBarTemplate"))
+    m_textFrame = getFrame("ProgressBarText")
+    getFrameHandle().setMinMax(0.0, 1.0)
+
+  // --------------------------------------------------------------------------
+  function setProgress(IProgress progress)
+    if (m_progress != progress)
+      unregisterEventHandlers()
+      m_progress = progress
+      registerEventHandlers()
+      updateFrame()
+
+  // --------------------------------------------------------------------------
+  function getProgress() returns IProgress
+    return m_progress
+
+  // --------------------------------------------------------------------------
+  function setBarColor(colorA color)
+    getFrameHandle().setVertexColor(color)
+
+  // --------------------------------------------------------------------------
+  function setBarTexture(string model)
+    getFrameHandle().setTexture(model, 0, false)
+
+  // --------------------------------------------------------------------------
+  function setTextColor(colorA color)
+    if (m_textFrame != null)
+      m_textFrame.setTextColor(color)
+
+  // --------------------------------------------------------------------------
+  private function updateFrame()
+
+    let progress = m_progress != null ? m_progress.getProgress() : 0.0
+
+    string text = ""
+    if (m_progress != null)
+      let message = m_progress.getMessage()
+      if (message == "")
+        text = progress.toPercentageString01()
+      else
+        text = "{0} {1}".format(message, progress.toPercentageString01())
+
+    getFrameHandle().setValue(progress)
+    m_textFrame.setText(text)
+
+  // --------------------------------------------------------------------------
+  private function registerEventHandlers()
+    if (m_progress != null)
+      m_progressChangedHandler = m_progress.onProgressChanged().register((_) -> updateFrame())
+
+  // --------------------------------------------------------------------------
+  private function unregisterEventHandlers()
+    if (m_progress != null)
+      m_progress.onProgressChanged().unregister(m_progressChangedHandler)
+      m_progressChangedHandler = INVALID_HANDLE

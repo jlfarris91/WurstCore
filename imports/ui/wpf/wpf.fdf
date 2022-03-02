@@ -350,3 +350,34 @@ Frame "SLIDER" "VerticalSliderTemplate" {
         }
     }
 }
+
+// ============================================================================
+String "ProgressBarTextTemplate" {
+  FontColor 1.0 1.0 1.0 1.0,
+  FontShadowColor 0.0 0.0 0.0 0.9,
+  FontShadowOffset 0.001 -0.001,
+  Font "MasterFont", 0.01, //MasterFont is only valid with "DecorateFileNames,"
+}
+
+// ============================================================================
+Frame "SIMPLESTATUSBAR" "ProgressBarTemplate" {
+  Width 0.07,
+  Height 0.012,
+  BarTexture "ui\feedback\xpbar\human-bigbar-fill",
+  Layer "BACKGROUND" {
+    Texture "ProgressBarBackground"{
+        File "textures\black32",
+    }
+  }
+  Frame "SIMPLEFRAME" "ProgressBarFrame" {
+    DecorateFileNames,
+    SetAllPoints,
+    Layer "ARTWORK" {
+      Texture "ProgressBarBorder" {
+        File "SimpleXpBarBorder",
+      }
+      String "ProgressBarText" INHERITS "ProgressBarTextTemplate" {
+      }
+    }
+  }
+}

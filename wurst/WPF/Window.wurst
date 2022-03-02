@@ -27,6 +27,10 @@ public class Window extends Panel
   private anchoredRectr array[MAX_AREAS] m_areas
   private int m_areaIndex = 0
 
+  private bool m_canClose = true
+  private bool m_canMaximize = true
+  private bool m_showIcon = true
+
   // --------------------------------------------------------------------------
   construct()
     super(createFrame("WindowTemplate"))
@@ -76,6 +80,10 @@ public class Window extends Panel
     return m_headerContent
 
   // --------------------------------------------------------------------------
+  function getContentAreaFrameHandle() returns framehandle
+    return m_contentContainer.getFrameHandle()
+
+  // --------------------------------------------------------------------------
   function setWindowArea(int index, anchoredRectr area)
     let indexClamped = clamp(index, 0, MAX_AREAS-1)
     m_areas[indexClamped] = area
@@ -100,6 +108,39 @@ public class Window extends Panel
   // --------------------------------------------------------------------------
   function advanceWindowAreaIndex()
     setWindowAreaIndex(wrap(m_areaIndex + 1, 0, MAX_AREAS-1))
+
+  // --------------------------------------------------------------------------
+  function canClose() returns bool
+    return m_canClose
+
+  // --------------------------------------------------------------------------
+  function canClose(bool value)
+    if (m_canClose != value)
+      m_canClose = value
+      if (m_closeButtonFrame != null)
+        m_closeButtonFrame.setVisible(value)
+
+  // --------------------------------------------------------------------------
+  function canMaximize() returns bool
+    return m_canMaximize
+
+  // --------------------------------------------------------------------------
+  function canMaximize(bool value)
+    if (m_canMaximize != value)
+      m_canMaximize = value
+      if (m_maximizeButtonFrame != null)
+        m_maximizeButtonFrame.setVisible(value)
+
+  // --------------------------------------------------------------------------
+  function showIcon() returns bool
+    return m_showIcon
+
+  // --------------------------------------------------------------------------
+  function showIcon(bool value)
+    if (m_showIcon != value)
+      m_showIcon = value
+      if (m_iconFrame != null)
+        m_iconFrame.setVisible(value)
 
   // --------------------------------------------------------------------------
   override protected function measureOverride(vec2 availableSize) returns vec2
@@ -155,7 +196,7 @@ public class Window extends Panel
   private function onHeaderContentChanged()
     
     m_iconFrame = getFrame("IconBackdrop")
-    if (m_iconFrame != null and m_iconPath != null)
+    if (m_iconFrame != null and m_iconPath != null and m_showIcon)
       m_iconFrame.setTexture(m_iconPath, 0, true)
 
     m_titleFrame = getFrame("TitleText")
@@ -163,9 +204,9 @@ public class Window extends Panel
       m_titleFrame.setText(m_title)
 
     m_closeButtonFrame = getFrame("CloseButton")
-    if (m_closeButtonFrame != null)
+    if (m_closeButtonFrame != null and m_canClose)
       m_closeButtonFrame.onClick(() -> onCloseButtonPressed())
 
     m_maximizeButtonFrame = getFrame("MaximizeButton")
-    if (m_maximizeButtonFrame != null)
+    if (m_maximizeButtonFrame != null and m_canMaximize)
       m_maximizeButtonFrame.onClick(() -> onMaximizeButtonPressed())
