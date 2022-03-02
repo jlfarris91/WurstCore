@@ -156,6 +156,11 @@ public class UnitRecycler
     return doesUnitBelongToRecycler(_unit) and not m_isActiveMap.get(_unit)
 
   // --------------------------------------------------------------------------
+  function preload(int count)
+    while (m_units.size() < count)
+      stockUnit(createUnitInternal(m_owner, ZERO2, angle(0)))
+
+  // --------------------------------------------------------------------------
   private function setUnitIsActive(unit _unit, bool active)
 
     let isStocked = m_isActiveMap.has(_unit)
@@ -368,9 +373,7 @@ public class UnitRecycler
 
 // ============================================================================
 public function createUnitRecycled(player owner, int unitId, vec2 pos, angle facing) returns unit
-  var recycler = getUnitRecycler(unitId)
-  if (recycler == null)
-    recycler = new UnitRecycler(UNIT_RECYCLER_OWNER, unitId, INITIAL_CAPACITY)
+  let recycler = getOrCreateUnitRecycler(unitId)
   let u = recycler.getUnit(owner, pos, facing)
   g_unitToRecyclerMap.put(u, recycler)
   return u
@@ -395,6 +398,20 @@ public function unit.stock()
 // ============================================================================
 public function getUnitRecycler(int unitId) returns UnitRecycler
   return g_unitIdToUnitRecyclerMap.get(unitId)
+
+// ============================================================================
+public function getOrCreateUnitRecycler(int unitId) returns UnitRecycler
+  var recycler = getUnitRecycler(unitId)
+  if (recycler == null)
+    recycler = createUnitRecycler(unitId, INITIAL_CAPACITY)
+  return recycler
+
+// ============================================================================
+public function createUnitRecycler(int unitId, int initialCount) returns UnitRecycler
+  var recycler = getUnitRecycler(unitId)
+  if (recycler == null)
+    recycler = new UnitRecycler(UNIT_RECYCLER_OWNER, unitId, initialCount)
+  return recycler
 
 // ============================================================================
 function onUnitDeathAfterDeathTime(unit dyingUnit)

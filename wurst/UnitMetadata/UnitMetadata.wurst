@@ -7,6 +7,7 @@ import initlater UnitComponent
 import UnitExtensions
 import UnitIndexer
 import Meta
+import Preload
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
@@ -304,6 +305,10 @@ function onUnitKilled()
 
 // ============================================================================
 function onUnitIndexed(unit indexingUnit)
+
+  if (Preload.isPreloading())
+    return
+
   if (isIgnoringIndexing(indexingUnit.getOwner()))
     logDebug("[onUnitIndexed] Ignoring indexed unit {0}".format(indexingUnit.getName()))
     return
@@ -311,6 +316,10 @@ function onUnitIndexed(unit indexingUnit)
 
 // ============================================================================
 function onUnitDeindexed(unit indexingUnit)
+  
+  if (Preload.isPreloading())
+    return
+
   if (isIgnoringIndexing(indexingUnit.getOwner()))
     logDebug("[onUnitDeindexed] Ignoring deindexed unit {0}".format(indexingUnit.getName()))
     return

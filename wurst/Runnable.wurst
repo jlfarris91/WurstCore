@@ -169,7 +169,11 @@ public abstract class Runnable implements IRunnable, IProgress
     return 0.0
 
   // --------------------------------------------------------------------------
-  override function getProgressChangedEvent() returns Event1<IProgress>
+  override function getMessage() returns string
+    return ""
+
+  // --------------------------------------------------------------------------
+  override function onProgressChanged() returns Event1<IProgress>
     if (m_progressChangedEvent == null)
       m_progressChangedEvent = new Event1<IProgress>()
     return m_progressChangedEvent

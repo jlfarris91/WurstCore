@@ -4,4 +4,47 @@ import Events
 // ============================================================================
 public interface IProgress
   function getProgress() returns real
-  function getProgressChangedEvent() returns Event1<IProgress>
+  function getMessage() returns string
+  function onProgressChanged() returns IEvent1<IProgress>
+
+// ============================================================================
+public interface IProgressReporter
+  function setProgress(real progress)
+  function setMessage(string message)
+
+// ============================================================================
+public class Progress implements IProgress, IProgressReporter
+  private real m_progress = 0.0
+  private string m_message = ""
+  private Event1<IProgress> m_progressChangedEvent
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_progressChangedEvent != null)
+      destroy m_progressChangedEvent
+
+  // --------------------------------------------------------------------------
+  override function getProgress() returns real
+    return m_progress
+
+  // --------------------------------------------------------------------------
+  override function getMessage() returns string
+    return m_message
+
+  // --------------------------------------------------------------------------
+  override function setMessage(string message)
+    m_message = message
+    if (m_progressChangedEvent != null)
+      m_progressChangedEvent.call(this)
+
+  // --------------------------------------------------------------------------
+  override function setProgress(real progress)
+    m_progress = progress  
+    if (m_progressChangedEvent != null)
+      m_progressChangedEvent.call(this)
+
+  // --------------------------------------------------------------------------
+  override function onProgressChanged() returns IEvent1<IProgress>
+    if (m_progressChangedEvent == null)
+      m_progressChangedEvent = new Event1<IProgress>()
+    return m_progressChangedEvent

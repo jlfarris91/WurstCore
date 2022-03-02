@@ -1,0 +1,151 @@
+package Preload
+import UnitRecycler
+import IProgress
+import Execute
+import ErrorHandling
+import DummyRecycler
+import ObjectIds
+import Tasks
+
+int array g_unitIds
+int g_unitIdCount = 0
+
+int array g_abilityIds
+int g_abilityIdCount = 0
+
+tuple unitRecyclerPreloadData(int unitTypeId, int count)
+
+unitRecyclerPreloadData array g_unitRecyclerPreloads
+int g_unitRecyclerPreloadCount = 0
+
+group g_preloadedUnits
+unit g_dummyUnit
+
+TaskDefinition g_preloadTaskDefinition
+bool g_isPreloading = false
+
+// ============================================================================
+public class Preload
+
+  // --------------------------------------------------------------------------
+  static function isPreloading() returns bool
+    return g_isPreloading
+
+  // --------------------------------------------------------------------------
+  static function registerUnitTypeId(int unitTypeId)
+    g_unitIds[g_unitIdCount] = unitTypeId
+    g_unitIdCount++
+
+  // --------------------------------------------------------------------------
+  static function registerAbilityTypeId(int abilityTypeId)
+    g_abilityIds[g_abilityIdCount] = abilityTypeId
+    g_abilityIdCount++
+
+  // --------------------------------------------------------------------------
+  static function registerUnitRecycler(int unitTypeId, int count)
+    g_unitRecyclerPreloads[g_unitRecyclerPreloadCount] = unitRecyclerPreloadData(unitTypeId, count)
+    g_unitRecyclerPreloadCount++
+
+  // --------------------------------------------------------------------------
+  static function runPreloader(IProgressReporter progress) returns Task
+    let context = new PreloadTaskContext()
+    context.progress = progress
+    let task = g_preloadTaskDefinition.run(context)
+    task.onDestroy().register(task -> destroy context)
+    return task
+
+  // --------------------------------------------------------------------------
+  protected static function preloadUnit(int unitId) returns boolean
+    let u = createUnit(DUMMY_PLAYER, unitId, vec2(0,0), angle(0))
+    let valid = u != null and u.isAlive()
+    if (valid)
+      g_preloadedUnits.addUnit(u)
+    else
+      Log.trace("Preload: Unit " + unitId.toRawCode() + " does not exist.")
+    return valid
+
+  // --------------------------------------------------------------------------
+  protected static function preloadAbility(int abilId) returns boolean
+    g_dummyUnit.addAbility(abilId)
+    let valid = g_dummyUnit.hasAbility(abilId)
+    if not valid
+      Log.trace("Preload: Ability " + abilId.toRawCode() + " does not exist.")
+    return valid
+
+// ============================================================================
+class PreloadTaskContext
+  IProgressReporter progress
+  int totalSteps = g_abilityIdCount + g_unitIdCount + g_unitRecyclerPreloadCount
+  int steps = 0
+
+  int unitIndex = 0
+  int abilityIndex = 0
+  int recyclerIndex = 0
+
+  // --------------------------------------------------------------------------
+  construct()
+    g_isPreloading = true
+    g_preloadedUnits = CreateGroup()
+    g_dummyUnit = createUnit(DUMMY_PLAYER, DUMMY_UNIT_ID, vec2(0,0), angle(0))
+    if g_dummyUnit == null
+      error("DUMMY_UNITID (" + DUMMY_UNIT_ID.toRawCode() + ") not added correctly to the map.")
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    g_dummyUnit.remove()
+    g_dummyUnit = null
+    for u from g_preloadedUnits
+      u.remove()
+    g_preloadedUnits.destr()
+    g_preloadedUnits = null
+    g_isPreloading = false
+
+  // --------------------------------------------------------------------------
+  function preloadNextUnit() returns bool
+    if (unitIndex == 0)
+      progress.setMessage(g_unitIdCount.toString() + " units...")
+    try() () ->
+      Preload.preloadUnit(g_unitIds[unitIndex])
+    if (lastError != "")
+      error("Error preloading unit " + g_unitIds[unitIndex].toRawCode() + ": " + lastError)
+    steps++
+    progress.setProgress(steps / totalSteps.toReal())
+    unitIndex++
+    return unitIndex < g_unitIdCount
+  
+  // --------------------------------------------------------------------------
+  function preloadNextAbility() returns bool
+    if (abilityIndex == 0)
+      progress.setMessage(g_abilityIdCount.toString() + " abilities...")
+    try() () ->
+      Preload.preloadAbility(g_abilityIds[abilityIndex])
+    if (lastError != "")
+      error("Error preloading ability " + g_abilityIds[abilityIndex].toRawCode() + ": " + lastError)
+    steps++
+    progress.setProgress(steps / totalSteps.toReal())
+    abilityIndex++
+    return abilityIndex < g_abilityIdCount
+
+  // --------------------------------------------------------------------------
+  function preloadNextUnitRecycler() returns bool
+    if (recyclerIndex == 0)
+      progress.setMessage(g_unitRecyclerPreloadCount.toString() + " recyclers...")
+    try() () ->
+      createUnitRecycler(g_unitRecyclerPreloads[recyclerIndex].unitTypeId, g_unitRecyclerPreloads[recyclerIndex].count).preload(g_unitRecyclerPreloads[recyclerIndex].count)
+    if (lastError != "")
+      error("Error preloading unit recycler " + g_unitRecyclerPreloads[recyclerIndex].unitTypeId.toRawCode() + ": " + lastError)
+    steps++
+    progress.setProgress(steps / totalSteps.toReal())
+    recyclerIndex++
+    return recyclerIndex < g_unitRecyclerPreloadCount
+
+// ============================================================================
+init
+  
+  g_preloadTaskDefinition = TaskDefinition.build(
+    builder -> begin
+      builder
+      ..executeWhile2<PreloadTaskContext>("Preload units", ANIMATION_PERIOD, 1, (Task task, PreloadTaskContext context) -> context.preloadNextUnit())
+      ..executeWhile2<PreloadTaskContext>("Preload abilities", ANIMATION_PERIOD, 1, (Task task, PreloadTaskContext context) -> context.preloadNextAbility())
+      ..executeWhile2<PreloadTaskContext>("Preload unit recyclers", ANIMATION_PERIOD, 1, (Task task, PreloadTaskContext context) -> context.preloadNextUnitRecycler())
+    end)
