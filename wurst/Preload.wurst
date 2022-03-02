@@ -33,16 +33,26 @@ public class Preload
 
   // --------------------------------------------------------------------------
   static function registerUnitTypeId(int unitTypeId)
+    for i = 0 to g_unitIdCount-1
+      if (g_unitIds[i] == unitTypeId)
+        return
     g_unitIds[g_unitIdCount] = unitTypeId
     g_unitIdCount++
 
   // --------------------------------------------------------------------------
   static function registerAbilityTypeId(int abilityTypeId)
+    for i = 0 to g_abilityIdCount-1
+      if (g_abilityIds[i] == abilityTypeId)
+        return
     g_abilityIds[g_abilityIdCount] = abilityTypeId
     g_abilityIdCount++
 
   // --------------------------------------------------------------------------
   static function registerUnitRecycler(int unitTypeId, int count)
+    for i = 0 to g_unitRecyclerPreloadCount-1
+      if (g_unitRecyclerPreloads[i].unitTypeId == unitTypeId)
+        g_unitRecyclerPreloads[i].count = count
+        return
     g_unitRecyclerPreloads[g_unitRecyclerPreloadCount] = unitRecyclerPreloadData(unitTypeId, count)
     g_unitRecyclerPreloadCount++
 
