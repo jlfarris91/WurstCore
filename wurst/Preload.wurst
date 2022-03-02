@@ -75,12 +75,14 @@ public class Preload
 // ============================================================================
 class PreloadTaskContext
   IProgressReporter progress
-  int totalSteps = g_abilityIdCount + g_unitIdCount + g_unitRecyclerPreloadCount
+  int totalSteps = 0
   int steps = 0
 
   int unitIndex = 0
   int abilityIndex = 0
   int recyclerIndex = 0
+  int recyclerUnitIndex = 0
+  group recycledUnitGroup = CreateGroup()
 
   // --------------------------------------------------------------------------
   construct()
@@ -89,11 +91,16 @@ class PreloadTaskContext
     if g_dummyUnit == null
       error("DUMMY_UNITID (" + DUMMY_UNIT_ID.toRawCode() + ") not added correctly to the map.")
 
+    totalSteps = g_abilityIdCount + g_unitIdCount
+    for i = 0 to g_unitRecyclerPreloadCount-1
+      totalSteps += g_unitRecyclerPreloads[i].count
+
   // --------------------------------------------------------------------------
   ondestroy
     g_dummyUnit.remove()
     g_dummyUnit = null
     g_isPreloading = false
+    recycledUnitGroup.destr()
 
   // --------------------------------------------------------------------------
   function preloadNextUnit() returns bool
@@ -123,15 +130,27 @@ class PreloadTaskContext
 
   // --------------------------------------------------------------------------
   function preloadNextUnitRecycler() returns bool
-    if (recyclerIndex == 0)
+    if (recyclerIndex == 0 and recyclerUnitIndex == 0)
       progress.report("Preloading " + g_unitRecyclerPreloadCount.toString() + " recyclers...")
+    let recyclerData = g_unitRecyclerPreloads[recyclerIndex]
     try() () ->
-      createUnitRecycler(g_unitRecyclerPreloads[recyclerIndex].unitTypeId, g_unitRecyclerPreloads[recyclerIndex].count).preload(g_unitRecyclerPreloads[recyclerIndex].count)
+      var recycler = getUnitRecycler(recyclerData.unitTypeId)
+      if (recycler == null)
+        recycler = createUnitRecycler(recyclerData.unitTypeId, recyclerData.count)
+      let recycledUnit = recycler.getUnit(DUMMY_PLAYER, ZERO2, angle(0))
+      if (recycledUnit == null or not recycledUnit.isAlive())
+        error("Unable to stock recycled unit")
+      recycledUnitGroup.addUnit(recycledUnit)
     if (lastError != "")
-      error("Error preloading unit recycler " + g_unitRecyclerPreloads[recyclerIndex].unitTypeId.toRawCode() + ": " + lastError)
+      error("Error preloading unit recycler " + recyclerData.unitTypeId.toRawCode() + ": " + lastError)
     steps++
     progress.report(steps / totalSteps.toReal())
-    recyclerIndex++
+    recyclerUnitIndex++
+    if (recyclerUnitIndex == recyclerData.count)
+      recyclerIndex++
+      recyclerUnitIndex = 0
+      for u from recycledUnitGroup
+        u.getRecycler().stock(u)
     return recyclerIndex < g_unitRecyclerPreloadCount
 
 // ============================================================================

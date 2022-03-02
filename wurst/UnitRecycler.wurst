@@ -16,7 +16,7 @@ import Suspend
 
 @configurable public bool g_enableLogging = false
 @configurable constant player UNIT_RECYCLER_OWNER = DUMMY_PLAYER
-@configurable constant int INITIAL_CAPACITY = 512
+@configurable constant int INITIAL_CAPACITY = 32
 @configurable constant real INITIAL_AUTO_RECYCLE_TIME = 30.0
 
 constant int MAX_CAPACITY = 8192
