@@ -1,8 +1,62 @@
 package UnitDefinitionInitModule
+import LinkedList
+import Classification
+import UnitObjEditing
 
 // ============================================================================
 public module UnitDefinitionInitModule
-  
+  protected string m_name
+  protected string m_iconGameInterface
+  protected string m_iconGameInterfaceDisabled
+  protected string m_modelFile
+  protected ArmorType m_armorType
+  protected color m_vertexColor = color(255,255,255)
+
+  protected int m_attack1DamageBase
+  protected int m_attack1DamageNumberofDice
+  protected int m_attack1DamageSidesperDie
+  protected int m_attack1Range
+  protected real m_attack1CooldownTime
+  protected AttackType m_attack1AttackType
+  protected string m_attack1TargetsAllowed
+  protected LinkedList<string> m_attack1Targets = new LinkedList<string>()
+
+  protected int m_attack2DamageBase
+  protected int m_attack2DamageNumberofDice
+  protected int m_attack2DamageSidesperDie
+  protected int m_attack2Range
+  protected real m_attack2CooldownTime
+  protected AttackType m_attack2AttackType
+  protected string m_attack2TargetsAllowed
+  protected LinkedList<string> m_attack2Targets = new LinkedList<string>()
+
+  protected int m_attacksEnabled
+  protected int m_hitPointsMaximumBase
+  protected int m_manaMaximum
+  protected string m_tooltipBasic
+  protected string m_tooltipExtended
+  protected string m_description
+  protected int m_goldCost
+  protected int m_lumberCost
+  protected int m_recycleGoldRewarded
+  protected int m_recycleLumberRewarded
+  protected string m_upgradesTo
+  protected int m_foodProduced
+
+  protected LinkedList<TlsUnitClassification> m_tlsUnitClassifications
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_tlsUnitClassifications != null)
+      destroy m_tlsUnitClassifications
+      m_tlsUnitClassifications = null
+    if (m_attack1Targets != null)
+      destroy m_attack1Targets
+      m_attack1Targets = null
+    if (m_attack2Targets != null)
+      destroy m_attack2Targets
+      m_attack2Targets = null
+
   // --------------------------------------------------------------------------
   protected function init_all()
     init_abilities()
