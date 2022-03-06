@@ -1,6 +1,5 @@
 package UnitDefinitionInitModule
 import LinkedList
-import Classification
 import UnitObjEditing
 
 // ============================================================================
@@ -43,13 +42,10 @@ public module UnitDefinitionInitModule
   protected string m_upgradesTo
   protected int m_foodProduced
 
-  protected LinkedList<TlsUnitClassification> m_tlsUnitClassifications
+  protected int m_unitClass = 0
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_tlsUnitClassifications != null)
-      destroy m_tlsUnitClassifications
-      m_tlsUnitClassifications = null
     if (m_attack1Targets != null)
       destroy m_attack1Targets
       m_attack1Targets = null
