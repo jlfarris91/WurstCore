@@ -2,8 +2,8 @@ package Flags
 import public Bitwise
 import ErrorHandling
 
-constant int array FLAG_VALUES      = [0x00000001, 0x00000002, 0x00000004, 0x00000008, 0x00000010, 0x00000020, 0x00000040, 0x00000080, 0x00000100, 0x00000200, 0x00000400, 0x00000800, 0x00001000, 0x00002000, 0x00004000, 0x00008000, 0x00010000, 0x00020000, 0x00040000, 0x00080000, 0x00100000, 0x00200000, 0x00400000, 0x00800000, 0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000]
-constant int array FLAG_INV_VALUES  = [0xFFFFFFFE, 0xFFFFFFFD, 0xFFFFFFFB, 0xFFFFFFF7, 0xFFFFFFEF, 0xFFFFFFDF, 0xFFFFFFBF, 0xFFFFFF7F, 0xFFFFFEFF, 0xFFFFFDFF, 0xFFFFFBFF, 0xFFFFF7FF, 0xFFFFEFFF, 0xFFFFDFFF, 0xFFFFBFFF, 0xFFFF7FFF, 0xFFFEFFFF, 0xFFFDFFFF, 0xFFFBFFFF, 0xFFF7FFFF, 0xFFEFFFFF, 0xFFDFFFFF, 0xFFBFFFFF, 0xFF7FFFFF, 0xFEFFFFFF, 0xFDFFFFFF, 0xFBFFFFFF, 0xF7FFFFFF, 0xEFFFFFFF, 0xDFFFFFFF, 0xBFFFFFFF, 0x7FFFFFFF]
+constant int array FLAG_BIT_MASKS     = [0x00000001, 0x00000002, 0x00000004, 0x00000008, 0x00000010, 0x00000020, 0x00000040, 0x00000080, 0x00000100, 0x00000200, 0x00000400, 0x00000800, 0x00001000, 0x00002000, 0x00004000, 0x00008000, 0x00010000, 0x00020000, 0x00040000, 0x00080000, 0x00100000, 0x00200000, 0x00400000, 0x00800000, 0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000]
+constant int array FLAG_BIT_INV_MASKS = [0xFFFFFFFE, 0xFFFFFFFD, 0xFFFFFFFB, 0xFFFFFFF7, 0xFFFFFFEF, 0xFFFFFFDF, 0xFFFFFFBF, 0xFFFFFF7F, 0xFFFFFEFF, 0xFFFFFDFF, 0xFFFFFBFF, 0xFFFFF7FF, 0xFFFFEFFF, 0xFFFFDFFF, 0xFFFFBFFF, 0xFFFF7FFF, 0xFFFEFFFF, 0xFFFDFFFF, 0xFFFBFFFF, 0xFFF7FFFF, 0xFFEFFFFF, 0xFFDFFFFF, 0xFFBFFFFF, 0xFF7FFFFF, 0xFEFFFFFF, 0xFDFFFFFF, 0xFBFFFFFF, 0xF7FFFFFF, 0xEFFFFFFF, 0xDFFFFFFF, 0xBFFFFFFF, 0x7FFFFFFF]
 
 // ============================================================================
 @inline
@@ -26,22 +26,25 @@ public function int.writeFlag32(int flag, bool value) returns int
   return value ? this.or32(flag) : this.and32(flag.not32())
 
 // ============================================================================
-public function int.isBitSet(int index) returns bool
-  if (index < 0 or index >= 32)
-    argumentOutOfRange("index", index)
-  return BlzBitAnd(this, FLAG_VALUES[index]) != 0
+public function int.isBitSet<T>(T index) returns bool
+  let intdex = index castTo int
+  if (intdex < 0 or intdex >= 32)
+    argumentOutOfRange("index", intdex)
+  return BlzBitAnd(this, FLAG_BIT_MASKS[intdex]) != 0
 
 // ============================================================================
-public function int.setBit(int index) returns int
-  if (index < 0 or index >= 32)
-    argumentOutOfRange("index", index)
-  return BlzBitOr(this, FLAG_VALUES[index])
+public function int.setBit<T>(T index) returns int
+  let intdex = index castTo int
+  if (intdex < 0 or intdex >= 32)
+    argumentOutOfRange("index", intdex)
+  return BlzBitOr(this, FLAG_BIT_MASKS[intdex])
 
 // ============================================================================
-public function int.clearBit(int index) returns int
-  if (index < 0 or index >= 32)
-    argumentOutOfRange("index", index)
-  return BlzBitAnd(this, FLAG_INV_VALUES[index])
+public function int.clearBit<T>(T index) returns int
+  let intdex = index castTo int
+  if (intdex < 0 or intdex >= 32)
+    argumentOutOfRange("index", intdex)
+  return BlzBitAnd(this, FLAG_BIT_INV_MASKS[intdex])
 
 // ============================================================================
 public function int.iterator() returns BitsIterator
@@ -64,12 +67,14 @@ public class BitsIterator
 
   // --------------------------------------------------------------------------
   function hasNext() returns bool
-    findNextSetFlag()
     return m_index < 32
 
   // --------------------------------------------------------------------------
   function next() returns int
-    return m_index
+    let curr = m_index
+    m_index++
+    findNextSetFlag()
+    return curr
 
   // --------------------------------------------------------------------------
   function close()
@@ -83,19 +88,13 @@ public class BitsIterator
       m_index++
 
 // ============================================================================
-enum TestEnum
-  A
-  B
-  C
-
-// ============================================================================
-@test function iterateEnum()
-  Log.info("1")
+@test function iterator()
   var flags = 0
-  flags = flags.setBit(TestEnum.A castTo int)
-  Log.info("2")
-  flags = flags.setBit(TestEnum.C castTo int)
-  Log.info("3")
-  for f in flags
-    Log.info(f.toString())
-  Log.info("4")
+  flags = flags.setBit(0)
+  flags = flags.setBit(2)
+  let iter = flags.iterator()
+  iter.hasNext().assertTrue()
+  iter.next().assertEquals(0)
+  iter.hasNext().assertTrue()
+  iter.next().assertEquals(2)
+  iter.hasNext().assertFalse()

@@ -25,7 +25,7 @@ class SmartValueAffector
     if (duration > 0.0)
       m_callback = doAfter(duration) () ->
         m_callback = null // destroyed by internal timer cleanup
-        owner.removeAffector(_handle(this castTo int))
+        owner.remove(_handle(this castTo int))
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -105,39 +105,43 @@ public class SmartValue
     setBase(value.toReal())
 
   // --------------------------------------------------------------------------
-  function setBase(real value, real duration) returns _handle
-    return addAffector(AffectorType.BASE, value, duration)
+  function affectBase(real value) returns _handle
+    return affect(AffectorType.BASE, value)
 
   // --------------------------------------------------------------------------
-  function scale(real value) returns _handle
-    return addAffector(AffectorType.SCALE, value)
+  function affectBase(real value, real duration) returns _handle
+    return affect(AffectorType.BASE, value, duration)
 
   // --------------------------------------------------------------------------
-  function scale(real value, real duration) returns _handle
-    return addAffector(AffectorType.SCALE, value, duration)
+  function affectScale(real value) returns _handle
+    return affect(AffectorType.SCALE, value)
 
   // --------------------------------------------------------------------------
-  function add(real value) returns _handle
-    return addAffector(AffectorType.ABSOLUTE, value)
+  function affectScale(real value, real duration) returns _handle
+    return affect(AffectorType.SCALE, value, duration)
 
   // --------------------------------------------------------------------------
-  function add(real value, real duration) returns _handle
-    return addAffector(AffectorType.ABSOLUTE, value, duration)
+  function affectAdd(real value) returns _handle
+    return affect(AffectorType.ABSOLUTE, value)
 
   // --------------------------------------------------------------------------
-  function subtract(real value) returns _handle
-    return addAffector(AffectorType.ABSOLUTE, -value)
+  function affectAdd(real value, real duration) returns _handle
+    return affect(AffectorType.ABSOLUTE, value, duration)
 
   // --------------------------------------------------------------------------
-  function subtract(real value, real duration) returns _handle
-    return addAffector(AffectorType.ABSOLUTE, -value, duration)
+  function affectSub(real value) returns _handle
+    return affect(AffectorType.ABSOLUTE, -value)
 
   // --------------------------------------------------------------------------
-  protected function addAffector(AffectorType _type, real value) returns _handle
-    return addAffector(_type, value, 0.0)
+  function affectSub(real value, real duration) returns _handle
+    return affect(AffectorType.ABSOLUTE, -value, duration)
+
+  // --------------------------------------------------------------------------
+  function affect(AffectorType _type, real value) returns _handle
+    return affect(_type, value, 0.0)
   
   // --------------------------------------------------------------------------
-  protected function addAffector(AffectorType _type, real value, real duration) returns _handle
+  function affect(AffectorType _type, real value, real duration) returns _handle
     let affector = new SmartValueAffector(this, _type, value, duration)
     let h = _handle(affector castTo int)
     if (m_affectors == null)
@@ -147,7 +151,7 @@ public class SmartValue
     return h
 
   // --------------------------------------------------------------------------
-  function removeAffector(_handle h) returns bool
+  function remove(_handle h) returns bool
     if (m_affectors == null)
       return false
     let iterator = m_affectors.iterator()

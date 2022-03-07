@@ -587,6 +587,10 @@ public class ChatCommandArgument
       m_options.add(Union.fromString(option))
 
   // --------------------------------------------------------------------------
+  function addStringOption(string option)
+    m_options.add(Union.fromString(option))
+
+  // --------------------------------------------------------------------------
   function setIntOptions(vararg int options)
     m_options.clear()
     for option in options
