@@ -19,7 +19,7 @@ bool g_initialized
 
 // ============================================================================
 @configurable public function trackSubgroupSelectionChanges(player _player) returns bool
-  return GetPlayerController(_player) == MAP_CONTROL_USER
+  return _player.isIngame()
 
 // ============================================================================
 public function registerPlayerSubgroupUnitChanged(code callback)

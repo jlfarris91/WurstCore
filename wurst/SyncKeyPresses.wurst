@@ -1,0 +1,114 @@
+package SyncKeyPresses
+import Action
+import SyncSimple
+import StringUtils
+import ErrorHandling
+import LinkedList
+import HashMap
+
+constant string SYNC_DATA_PREFIX = "WC_SKP"
+
+trigger KEY_TRIGGER = CreateTrigger()..addAction(function onKeyEvent)
+HashMap<int, SyncedKeyPressListener> KEY_MAP = new HashMap<int, SyncedKeyPressListener>()
+
+// ============================================================================
+public function oskeytype.sync(player p, Action2<player, oskeytype> callback)
+  callback.acquire()
+  this.getHandleId().sync(p) data ->
+    callback.call(GetTriggerPlayer(), ConvertOsKeyType(data))
+    callback.release()
+
+// ============================================================================
+public function onSyncedKeyPress(oskeytype key, SyncedKeyPressListener listener) returns SyncedKeyPressListener
+  return onSyncedKeyPress(key, OSKEY_META.NONE, true, listener)
+
+// ============================================================================
+public function onSyncedKeyPress(oskeytype key, OSKEY_META metaKey, SyncedKeyPressListener listener) returns SyncedKeyPressListener
+  return onSyncedKeyPress(key, metaKey, true, listener)
+
+// ============================================================================
+public function onSyncedKeyRelease(oskeytype key, SyncedKeyPressListener listener) returns SyncedKeyPressListener
+  return onSyncedKeyPress(key, OSKEY_META.NONE, false, listener)
+
+// ============================================================================
+public function onSyncedKeyRelease(oskeytype key, OSKEY_META metaKey, SyncedKeyPressListener listener) returns SyncedKeyPressListener
+  return onSyncedKeyPress(key, metaKey, false, listener)
+
+// ============================================================================
+public function onSyncedKeyPress(oskeytype key, OSKEY_META metaKey, bool onKeyDown, SyncedKeyPressListener listener) returns SyncedKeyPressListener
+  for i = 0 to bj_MAX_PLAYERS
+    if players[i].isIngame()
+      KEY_TRIGGER.registerPlayerKeyPress(players[i], key, metaKey, onKeyDown)
+  return registerListener(listener, key, metaKey, onKeyDown)
+
+// ============================================================================
+function registerListener(SyncedKeyPressListener listener, oskeytype key, OSKEY_META metaKey, bool onKeyDown) returns SyncedKeyPressListener
+  listener.key = key
+  listener.metaKey = metaKey.toInt()
+  listener.onKeyDown = onKeyDown
+  let id = key.getHandleId()
+  let first = KEY_MAP.get(id)
+  if first != null 
+    first.prev = listener 
+    listener.next = first 
+  KEY_MAP.put(id, listener)
+  return listener 
+
+// ============================================================================
+function onKeyEvent()
+  if (GetTriggerPlayer() == localPlayer)
+    BlzSendSyncData(SYNC_DATA_PREFIX, "{0},{1},{2},{3}".format(
+      GetTriggerPlayer().getId().toString(),
+      BlzGetTriggerPlayerKey().getHandleId().toString(),
+      BlzGetTriggerPlayerMetaKey().toString(),
+      BlzGetTriggerPlayerIsKeyDown().toString()))
+
+// ============================================================================
+function onSyncedKeyEvent()
+  let data = BlzGetTriggerSyncData()
+  let parts = data.split(",")
+  if (parts.size() != 4)
+    error("Data format mismatch")
+
+  let triggerPlayer = Player(parts.get(0).toInt())
+  let triggerKeyInt = parts.get(1).toInt()
+  let triggerMeta = parts.get(2).toInt()
+  let triggerKeyDown = parts.get(3).toBool()
+
+  var listener = KEY_MAP.get(triggerKeyInt)
+  while listener != null 
+    if listener.metaKey == triggerMeta and listener.onKeyDown == triggerKeyDown
+      listener.onEvent(triggerPlayer)
+    listener = listener.next 
+
+// ============================================================================
+abstract class SyncedKeyPressListener
+  oskeytype key 
+  int metaKey
+  bool onKeyDown
+  thistype next = null
+  thistype prev = null
+
+  abstract function onEvent(player triggerPlayer)
+
+  ondestroy
+    let id = key.getHandleId() 
+    let first = KEY_MAP.get(id)
+    if first == this 
+      if next == null 
+        KEY_MAP.remove(id)
+      else 
+        KEY_MAP.put(id, next)
+    else if prev != null
+      prev.next = next
+    next.prev = prev
+
+// ============================================================================
+init
+
+  let trig = CreateTrigger()
+  for i = 0 to bj_MAX_PLAYERS-1
+    if (players[i].isIngame())
+      BlzTriggerRegisterPlayerSyncEvent(trig, players[i], SYNC_DATA_PREFIX, false)
+  trig.addCondition(Filter(() -> BlzGetTriggerSyncPrefix() == SYNC_DATA_PREFIX))
+  trig.addAction(() -> onSyncedKeyEvent())

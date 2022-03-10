@@ -30,7 +30,6 @@ public class Frame
   static constant LightweightProperty<object>         dataContextProperty   = new LightweightProperty<object>(NULL, (frame, args) -> frame.onDataContextChanged(args.oldValue, args.newValue))
   static constant LightweightProperty<Thickness>      marginProperty        = new LightweightProperty<Thickness>(null, null)..setAffectsMeasure(true)
   static constant LightweightProperty<Thickness>      paddingProperty       = new LightweightProperty<Thickness>(null, null)..setAffectsMeasure(true)
-  static constant LightweightProperty<player>         playerProperty        = new LightweightProperty<player>(null, null)
 
   private framehandle m_frameHandle
   private Frame m_parent
@@ -44,6 +43,7 @@ public class Frame
   private int m_flags = 0x30 // neverMeasured | neverArranged
   private Frame m_rootFrame = null
   private int m_treeLevel = 0
+  private player m_player = null
 
   protected LayoutRequest m_measureRequest = null
   protected LayoutRequest m_arrangeRequest = null
@@ -337,11 +337,13 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function getPlayer() returns player
-    return playerProperty.getValue(this)
+    return m_player
 
   // --------------------------------------------------------------------------
   function setPlayer(player value)
-    playerProperty.setValue(this, value)
+    if (m_player != value)
+      m_player = value
+      onPlayerChanged()
 
   // --------------------------------------------------------------------------
   protected function onPlayerChanged()
