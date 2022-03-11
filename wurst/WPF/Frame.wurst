@@ -44,6 +44,7 @@ public class Frame
   private Frame m_rootFrame = null
   private int m_treeLevel = 0
   private player m_player = null
+  private int m_playerVisibility = INT_MAX
 
   protected LayoutRequest m_measureRequest = null
   protected LayoutRequest m_arrangeRequest = null
@@ -88,6 +89,10 @@ public class Frame
 
     for prop in g_allLightweightProperties
       prop.clearValue(this)
+
+    if (m_sizeChangedInfo != null)
+      m_sizeChangedInfo.frame = null
+      m_sizeChangedInfo = null
   //}
 
   // --------------------------------------------------------------------------
@@ -351,45 +356,57 @@ public class Frame
 
   // --------------------------------------------------------------------------
   function isVisible() returns bool
-    return m_frameHandle.isVisible()
+    return m_playerVisibility != 0
+
+  // --------------------------------------------------------------------------
+  function isVisible(player p) returns bool
+    return m_playerVisibility.isBitSet(p.getId())
 
   // --------------------------------------------------------------------------
   function show()
-    let wasVisible = m_frameHandle.isVisible()
     m_frameHandle.show()
-    if (wasVisible == false)
+    let wasVisible = m_playerVisibility
+    m_playerVisibility = INT_MAX
+    if (wasVisible != m_playerVisibility)
       signalDesiredSizeChanged()
       invalidateMeasure()
   
   // --------------------------------------------------------------------------
   function show(player _player)
-    let wasVisible = m_frameHandle.isVisible()
     m_frameHandle.show(_player)
-    if (wasVisible == false)
+    let wasVisible = m_playerVisibility
+    m_playerVisibility = m_playerVisibility.setBit(_player.getId())
+    if (wasVisible != m_playerVisibility)
       signalDesiredSizeChanged()
       invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function showOnly(player _player)
-    let wasVisible = m_frameHandle.isVisible()
     m_frameHandle.hide()
     m_frameHandle.show(_player)
-    if (wasVisible == false)
+    let wasVisible = m_playerVisibility
+    m_playerVisibility = 0
+    m_playerVisibility = m_playerVisibility.setBit(_player.getId())
+    if (wasVisible != m_playerVisibility)
       signalDesiredSizeChanged()
       invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function hide()
     m_frameHandle.hide()
+    m_playerVisibility = 0
 
   // --------------------------------------------------------------------------
   function hide(player _player)
     m_frameHandle.hide(_player)
+    m_playerVisibility = m_playerVisibility.clearBit(_player.getId())
 
   // --------------------------------------------------------------------------
   function hideOnly(player _player)
-    show()
+    m_frameHandle.show()
     m_frameHandle.hide(_player)
+    m_playerVisibility = INT_MAX
+    m_playerVisibility = m_playerVisibility.clearBit(_player.getId())
 
   // --------------------------------------------------------------------------
   function clearFocus()
@@ -1259,11 +1276,11 @@ class ArrangeQueue extends LayoutQueue
 
 // ============================================================================
 public class SizeChangedInfo
-  Frame frame
+  Frame frame = null
   vec2 oldSize
   bool widthChanged
   bool heightChanged
-  SizeChangedInfo next
+  SizeChangedInfo next = null
 
 // ============================================================================
 public class LayoutManager
@@ -1374,8 +1391,9 @@ public class LayoutManager
     while (s_sizeChangedChain != null)
       let info = s_sizeChangedChain
       s_sizeChangedChain = info.next
-      info.frame.m_sizeChangedInfo = null
-      info.frame.onRenderSizeChanged(info)
+      if (info.frame != null)
+        info.frame.m_sizeChangedInfo = null
+        info.frame.onRenderSizeChanged(info)
       destroy info
       if (getHasDirtiness())
         break
