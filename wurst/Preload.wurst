@@ -156,7 +156,7 @@ class PreloadTaskContext
     steps++
     progress.report(steps / totalSteps.toReal())
     recyclerUnitIndex++
-    if (recyclerUnitIndex == recyclerData.count)
+    if (recyclerUnitIndex >= recyclerData.count)
       recyclerIndex++
       recyclerUnitIndex = 0
       for u from recycledUnitGroup
