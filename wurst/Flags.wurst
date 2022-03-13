@@ -6,6 +6,17 @@ constant int array FLAG_BIT_MASKS     = [0x00000001, 0x00000002, 0x00000004, 0x0
 constant int array FLAG_BIT_INV_MASKS = [0xFFFFFFFE, 0xFFFFFFFD, 0xFFFFFFFB, 0xFFFFFFF7, 0xFFFFFFEF, 0xFFFFFFDF, 0xFFFFFFBF, 0xFFFFFF7F, 0xFFFFFEFF, 0xFFFFFDFF, 0xFFFFFBFF, 0xFFFFF7FF, 0xFFFFEFFF, 0xFFFFDFFF, 0xFFFFBFFF, 0xFFFF7FFF, 0xFFFEFFFF, 0xFFFDFFFF, 0xFFFBFFFF, 0xFFF7FFFF, 0xFFEFFFFF, 0xFFDFFFFF, 0xFFBFFFFF, 0xFF7FFFFF, 0xFEFFFFFF, 0xFDFFFFFF, 0xFBFFFFFF, 0xF7FFFFFF, 0xEFFFFFFF, 0xDFFFFFFF, 0xBFFFFFFF, 0x7FFFFFFF]
 
 // ============================================================================
+public abstract class Flags
+
+  // --------------------------------------------------------------------------
+  static function getBitMask(int bitIndex) returns int
+    return FLAG_BIT_MASKS[bitIndex]
+
+  // --------------------------------------------------------------------------
+  static function getInvBitMask(int bitIndex) returns int
+    return FLAG_BIT_INV_MASKS[bitIndex]
+
+// ============================================================================
 @inline
 public function int.readFlag8(int flag) returns bool
   return this.and8(flag) != 0

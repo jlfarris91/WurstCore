@@ -1,0 +1,113 @@
+package Visibility
+import Flags
+
+public tuple visibility(int value)
+
+public constant visibility VISIBLE = visibility(0xFFFFFF)
+public constant visibility HIDDEN = visibility(0)
+
+// ============================================================================
+public function visibility.show() returns visibility
+  return VISIBLE
+
+// ============================================================================
+public function visibility.hide() returns visibility
+  return HIDDEN
+
+// ============================================================================
+public function visibility.isVisible() returns bool
+  return this != HIDDEN
+
+// ============================================================================
+public function visibility.isVisibleFor(player p) returns bool
+  return this != HIDDEN and this.value.isBitSet(p.getId())
+
+// ============================================================================
+public function visibility.showFor(player p) returns visibility
+  return visibility(this.value.setBit(p.getId()))
+
+// ============================================================================
+public function visibility.showOnlyFor(player p) returns visibility
+  return visibility(Flags.getBitMask(p.getId()))
+
+// ============================================================================
+public function visibility.hideFor(player p) returns visibility
+  return visibility(this.value.clearBit(p.getId()))
+
+// ============================================================================
+public function visibility.hideOnlyFor(player p) returns visibility
+  return visibility(Flags.getInvBitMask(p.getId()))
+
+// ============================================================================
+public module VisibilityModule
+  private visibility m_visibility = HIDDEN
+
+  // --------------------------------------------------------------------------
+  function getVisibility() returns visibility
+    return m_visibility
+
+  // --------------------------------------------------------------------------
+  function isVisible() returns bool
+    return isVisibleForAnyPlayers()
+
+  // --------------------------------------------------------------------------
+  function isHidden() returns bool
+    return m_visibility == HIDDEN
+
+  // --------------------------------------------------------------------------
+  function isVisibleFor(player p) returns bool
+    return m_visibility.isVisibleFor(p)
+
+  // --------------------------------------------------------------------------
+  function isVisibleForAnyPlayers() returns bool
+    return m_visibility != HIDDEN
+
+  // --------------------------------------------------------------------------
+  function isVisibleForAllPlayers() returns bool
+    return m_visibility == VISIBLE
+
+  // --------------------------------------------------------------------------
+  function show()
+    let prevVis = m_visibility
+    m_visibility = VISIBLE
+    if (prevVis != m_visibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  function hide()
+    let prevVis = m_visibility
+    m_visibility = HIDDEN
+    if (prevVis != m_visibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  function showFor(player p)
+    let prevVis = m_visibility
+    m_visibility = m_visibility.showFor(p)
+    if (prevVis != m_visibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  function showOnlyFor(player p)
+    let prevVis = m_visibility
+    m_visibility = m_visibility.showOnlyFor(p)
+    if (prevVis != m_visibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  function hideFor(player p)
+    let prevVis = m_visibility
+    m_visibility = m_visibility.hideFor(p)
+    if (prevVis != m_visibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  function hideOnlyFor(player p)
+    let prevVis = m_visibility
+    m_visibility = m_visibility.hideOnlyFor(p)
+    if (prevVis != m_visibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  protected function onVisibilityChanged()
+    skip
