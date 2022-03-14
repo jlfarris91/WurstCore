@@ -216,7 +216,9 @@ function lazyInitPackage()
   
   doPeriodically(ANIMATION_PERIOD) (cb) ->
     let iter = g_playerSelections.staticItr()
+    iter.reset()
     while (iter.hasNext())
       iter.next().checkForVisibilityChanged()
+    iter.close()
 
   g_initialized = true

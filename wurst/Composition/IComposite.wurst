@@ -1,10 +1,13 @@
 package IComposite
 import IComponent
 import Meta
+import Events
 
 // ============================================================================
 public constant int typeId_IComposite = Meta.reserveInterface("IComposite.IComposite")
 public interface IComposite
+  function onComponentAdded() returns IEvent2<IComposite, IComponent>
+  function onComponentRemoved() returns IEvent2<IComposite, IComponent>
   function getComponent(int componentTypeId) returns IComponent
   function addComponent(IComponent component) returns IComponent
   function addComponent(IComponent component, bool startEnabled) returns IComponent

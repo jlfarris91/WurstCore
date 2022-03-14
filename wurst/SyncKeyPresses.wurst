@@ -70,7 +70,7 @@ function onSyncedKeyEvent()
   if (parts.size() != 4)
     error("Data format mismatch")
 
-  let triggerPlayer = Player(parts.get(0).toInt())
+  let triggerPlayer = players[parts.get(0).toInt()]
   let triggerKeyInt = parts.get(1).toInt()
   let triggerMeta = parts.get(2).toInt()
   let triggerKeyDown = parts.get(3).toBool()

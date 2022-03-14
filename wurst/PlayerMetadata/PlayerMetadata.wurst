@@ -4,6 +4,7 @@ import Composition
 import public initlater PlayerMetadataExtensions
 import ColorUtility
 import Meta
+import Events
 
 HashMap<player, IPlayerMetadata> g_PlayerMetadata
 
@@ -102,6 +103,14 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
       m_lostGame = value
       if (m_lostGame)
         raisePlayerLostEvent(m_player)
+
+  // --------------------------------------------------------------------------
+  override function onComponentAdded() returns IEvent2<IComposite, IComponent>
+    return super.onComponentAdded()
+
+  // --------------------------------------------------------------------------
+  override function onComponentRemoved() returns IEvent2<IComposite, IComponent>
+    return super.onComponentRemoved()
 
   // --------------------------------------------------------------------------
   override function addComponent(IComponent component) returns IComponent

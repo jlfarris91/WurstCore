@@ -8,6 +8,7 @@ import UnitExtensions
 import UnitIndexer
 import Meta
 import Preload
+import Events
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
@@ -88,10 +89,9 @@ public class UnitMetadata extends Composable implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   function onKilled()
-    if (m_compositionManager != null)
-      for comp in m_compositionManager
-        let unitComp = comp castTo UnitComponent
-        unitComp.onOwnerKilled()
+    for comp in getComponents()
+      let unitComp = comp castTo UnitComponent
+      unitComp.onOwnerKilled()
 
   // --------------------------------------------------------------------------
   private function setUnit(unit u)
@@ -105,24 +105,20 @@ public class UnitMetadata extends Composable implements IUnitMetadata
 
     // Disable and then re-enable any components that were enabled and operated
     // under the context of the old unit
-    LinkedList<IComponent> enabledComponents = null
-    if (m_compositionManager != null)
-    //{
-      enabledComponents = new LinkedList<IComponent>()
-      for comp in m_compositionManager
-        if (comp.getEnabled())
-          enabledComponents.add(comp)
-          comp.setEnabled(false)
-    //}
+    let enabledComponents = new LinkedList<IComponent>()
+
+    for comp in getComponents()
+      if (comp.getEnabled())
+        enabledComponents.add(comp)
+        comp.setEnabled(false)
 
     m_unit = newUnit
     logDebug("oldUnit: " + unitToIndex(oldUnit).toString() + " newUnit: " + unitToIndex(newUnit).toString())
-    
-    if (m_compositionManager != null)
-      for comp in m_compositionManager
-        let unitComp = comp castTo UnitComponent
-        if (unitComp != null)
-          unitComp.onUnitChanged(oldUnit, newUnit)
+
+    for comp in getComponents()
+      let unitComp = comp castTo UnitComponent
+      if (unitComp != null)
+        unitComp.onUnitChanged(oldUnit, newUnit)
 
     // Now that the backing field for getUnit() has changed, re-enable any
     // components that were enabled with the old unit, also alert them
@@ -133,6 +129,14 @@ public class UnitMetadata extends Composable implements IUnitMetadata
           comp.setEnabled(true)
       destroy enabledComponents
     //}
+
+  // --------------------------------------------------------------------------
+  override function onComponentAdded() returns IEvent2<IComposite, IComponent>
+    return super.onComponentAdded()
+
+  // --------------------------------------------------------------------------
+  override function onComponentRemoved() returns IEvent2<IComposite, IComponent>
+    return super.onComponentRemoved()
 
   // --------------------------------------------------------------------------
   override function addComponent(IComponent component) returns IComponent
@@ -149,10 +153,6 @@ public class UnitMetadata extends Composable implements IUnitMetadata
   // --------------------------------------------------------------------------
   override function getComponent(int componentTypeId) returns IComponent
     return super.getComponent(componentTypeId)
-
-  // --------------------------------------------------------------------------
-  function getComponents() returns LLIterator<IComponent>
-    return m_compositionManager != null ? m_compositionManager.iterator() : null
 
 // ============================================================================
 public function unit.hasMetadata() returns bool

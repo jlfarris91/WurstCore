@@ -2,5 +2,4 @@ package Composition
 import public IComponent
 import public IComposite
 import public Component
-import public CompositionManager
 import public Composable

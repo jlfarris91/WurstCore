@@ -593,11 +593,11 @@ function test_iterator()
   
   // fill to capacity
   for i = 0 to 23
-    vector.add(Player(i))
+    vector.add(players[i])
 
   var index = 0
   for _item in vector
-    let p = Player(index)
+    let p = players[index]
     _item.getHandleId().assertEquals(p.getHandleId())
     index++
 

@@ -1,22 +1,61 @@
 package Composable
 import IComposite
-import CompositionManager
 import IComponent
 import Meta
+import LinkedList
+import HashMap
+import ClosureTimers
+import ErrorHandling
+import Events
 
 // ============================================================================
 public class Composable implements IComposite
-  protected CompositionManager m_compositionManager
+  protected LinkedList<IComponent> _components = null
+  protected HashMap<int, IComponent> _typeToComponentMap = null
+  protected Event2<IComposite, IComponent> m_onComponentAdded = null
+  protected Event2<IComposite, IComponent> m_onComponentRemoved = null
+
+  // --------------------------------------------------------------------------
+  construct()
+    _components = new LinkedList<IComponent>()
+    _typeToComponentMap = new HashMap<int, IComponent>()
 
   // --------------------------------------------------------------------------
   ondestroy
-    if (m_compositionManager != null)
-      destroy m_compositionManager
-      m_compositionManager = null
+
+    if (m_onComponentAdded != null)
+      destroy m_onComponentAdded
+      m_onComponentAdded = null
+
+    if (m_onComponentRemoved != null)
+      destroy m_onComponentRemoved
+      m_onComponentRemoved = null
+
+    for component in _components
+      component.setEnabled(false)
+
+    for component in _components
+      let compTypeId = component.typeId
+      destroy component
+      _typeToComponentMap.remove(compTypeId)
+      
+    destroy _components
+    _components = null
+
+    destroy _typeToComponentMap
+    _typeToComponentMap = null
 
   // --------------------------------------------------------------------------
-  function getCompositionManager() returns CompositionManager
-    return m_compositionManager
+  override function onComponentAdded() returns IEvent2<IComposite, IComponent>
+    if (m_onComponentAdded == null)
+      m_onComponentAdded = new Event2<IComposite, IComponent>()
+    return m_onComponentAdded
+
+  // --------------------------------------------------------------------------
+  override function onComponentRemoved() returns IEvent2<IComposite, IComponent>
+    if (m_onComponentRemoved == null)
+      m_onComponentRemoved = new Event2<IComposite, IComponent>()
+    return m_onComponentRemoved
 
   // --------------------------------------------------------------------------
   override function addComponent(IComponent component) returns IComponent
@@ -24,19 +63,45 @@ public class Composable implements IComposite
 
   // --------------------------------------------------------------------------
   override function addComponent(IComponent component, bool startEnabled) returns IComponent
-    if (m_compositionManager == null)
-      m_compositionManager = new CompositionManager()
-    return m_compositionManager.addComponent(component, startEnabled)
-   
+    if (component == null)
+      argumentNullError("component")
+
+    _components.add(component)
+    _typeToComponentMap.put(component.typeId, component)
+    component.setEnabled(startEnabled)
+
+    if (m_onComponentAdded != null)
+      m_onComponentAdded.call(this, component)
+
+    return component
+
   // --------------------------------------------------------------------------
   override function removeComponent(IComponent component) returns bool
-    if (m_compositionManager == null)
+    if (component == null)
+      argumentNullError("component")
+
+    if (not _components.remove(component))
       return false
-    return m_compositionManager.removeComponent(component)
+
+    component.setEnabled(false)
+
+    if (m_onComponentRemoved != null)
+      m_onComponentRemoved.call(this, component)
+
+    _typeToComponentMap.remove(component.typeId)
+
+    // Destroy next frame
+    nullTimer(() -> destroy component)
+
+    return true
 
   // --------------------------------------------------------------------------
   override function getComponent(int componentTypeId) returns IComponent
-    return m_compositionManager != null ? m_compositionManager.getComponent(componentTypeId) : null
+    return _typeToComponentMap.get(componentTypeId)
+
+  // --------------------------------------------------------------------------
+  function getComponents() returns LinkedList<IComponent>
+    return _components
 
 // ============================================================================
 init

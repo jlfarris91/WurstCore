@@ -382,14 +382,9 @@ public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
   // --------------------------------------------------------------------------
   override function serialize(SerializationContext context, BinaryWriter writer, UnitMetadata unitMetadata) returns bool
     context.debug("UnitMetadataSerializer", "serialize", "", "start")
-    
-    let compositionManager = unitMetadata.getCompositionManager()
-    if (compositionManager == null)
-      writer.writeInt(0)
-      return true
 
     var numSerializableComponents = 0
-    for comp in compositionManager
+    for comp in unitMetadata.getComponents()
       if (Meta.is(comp.typeId, typeId_ISerializable))
         numSerializableComponents++
 
@@ -397,7 +392,7 @@ public class UnitMetadataSerializer implements ISerializerTyped<UnitMetadata>
 
     if (numSerializableComponents > 0)
     //{
-      for comp in compositionManager
+      for comp in unitMetadata.getComponents()
         if (Meta.is(comp.typeId, typeId_ISerializable))
           context.debug("UnitMetadataSerializer", "serialize", "", "comp {0} ({1})".format(comp.typeId.toString(), Meta.getTypeName(comp.typeId)))
           if (context.writeObject(writer, toObject(comp, comp.typeId)) == false)
@@ -463,14 +458,9 @@ public class PlayerMetadataSerializer implements ISerializerTyped<PlayerMetadata
   // --------------------------------------------------------------------------
   override function serialize(SerializationContext context, BinaryWriter writer, PlayerMetadata playerMetadata) returns bool
     context.debug("PlayerMetadataSerializer", "serialize", "", "start")
-    
-    let compositionManager = playerMetadata.getCompositionManager()
-    if (compositionManager == null)
-      writer.writeInt(0)
-      return true
 
     var numSerializableComponents = 0
-    for comp in compositionManager
+    for comp in playerMetadata.getComponents()
       if (Meta.is(comp.typeId, typeId_ISerializable))
         numSerializableComponents++
 
@@ -478,7 +468,7 @@ public class PlayerMetadataSerializer implements ISerializerTyped<PlayerMetadata
 
     if (numSerializableComponents > 0)
     //{
-      for comp in compositionManager
+      for comp in playerMetadata.getComponents()
         if (Meta.is(comp.typeId, typeId_ISerializable))
           if (context.writeObject(writer, toObject(comp, comp.typeId)) == false)
             return false
