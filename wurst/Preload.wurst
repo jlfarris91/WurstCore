@@ -146,7 +146,7 @@ class PreloadTaskContext
     try() () ->
       var recycler = getUnitRecycler(recyclerData.unitTypeId)
       if (recycler == null)
-        recycler = createUnitRecycler(recyclerData.unitTypeId, recyclerData.count)
+        recycler = createUnitRecycler(recyclerData.unitTypeId)
       let recycledUnit = recycler.getUnit(DUMMY_PLAYER, ZERO2, angle(0))
       if (recycledUnit == null or not recycledUnit.isAlive())
         error("Unable to stock recycled unit")
