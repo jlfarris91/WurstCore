@@ -105,10 +105,17 @@ public class WeightedSet<T>
   // --------------------------------------------------------------------------
   /** Returns N random elements from the set */
   function getRandom(int count) returns Vector<T>
-    let clone = new WeightedSet<T>(this)
-    let output = clone.popRandom(count)
-    destroy clone
+    let output = new Vector<T>(min(size(), count))
+    getRandom(count, output)
     return output
+
+  // --------------------------------------------------------------------------
+  /** Returns N random elements from the set */
+  function getRandom(int count, Vector<T> output) returns int
+    let clone = new WeightedSet<T>(this)
+    let added = clone.popRandom(count, output)
+    destroy clone
+    return added
 
   // --------------------------------------------------------------------------
   function pop(real weight) returns T
@@ -131,12 +138,20 @@ public class WeightedSet<T>
   // --------------------------------------------------------------------------
   /** Removes and returns N random elements from the set */
   function popRandom(int count) returns Vector<T>
-    let output = new Vector<T>(count)
+    let output = new Vector<T>(min(size(), count))
+    popRandom(count, output)
+    return output
+
+  // --------------------------------------------------------------------------
+  /** Removes and returns N random elements from the set */
+  function popRandom(int count, Vector<T> output) returns int
+    var added = 0
     for i = 0 to count - 1
       if (isEmpty())
         break  
       output.add(popRandom())
-    return output
+      added++
+    return added
 
   // --------------------------------------------------------------------------
   /** Get the chance [0.0 - 1.0] that an element in the set will be randomly selected */
