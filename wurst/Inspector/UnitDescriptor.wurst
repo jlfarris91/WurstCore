@@ -191,9 +191,7 @@ public class UnitObjectDescriptor implements IObjectDescriptor
 
     let metadata = contextUnit.getMetadata() castTo UnitMetadata
     if (metadata != null)
-      let iter = metadata.getComponents()
-      while iter != null and iter.hasNext()
-        let comp = iter.next()
+      for comp in metadata.getComponents()
         let objectDescriptor = Meta.as<IComponent, IObjectDescriptor>(comp, comp.typeId, typeId_IObjectDescriptor)
         if (objectDescriptor != null)
           objectDescriptor.getPropertyDescriptors(context, propertyDescriptors)
