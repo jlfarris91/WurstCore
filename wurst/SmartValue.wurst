@@ -12,16 +12,17 @@ public enum AffectorType
   ABSOLUTE
 
 // ============================================================================
-class SmartValueAffector
+public class SmartValueAffector
   AffectorType m_type
   real m_value
   CallbackSingle m_callback = null
+  real m_duration = 0.0
 
   // --------------------------------------------------------------------------
   construct (SmartValue owner, AffectorType _type, real value, real duration)
     m_type = _type
     m_value = value
-
+    m_duration = duration
     if (duration > 0.0)
       m_callback = doAfter(duration) () ->
         m_callback = null // destroyed by internal timer cleanup
@@ -31,6 +32,22 @@ class SmartValueAffector
   ondestroy
     if (m_callback != null)
       destroy m_callback
+
+  // --------------------------------------------------------------------------
+  function getValue() returns real
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function getType() returns AffectorType
+    return m_type
+  
+  // --------------------------------------------------------------------------
+  function getDurationSeconds() returns real
+    return m_duration
+
+  // --------------------------------------------------------------------------
+  function getRemainingSeconds() returns real
+    return m_callback.getRemainingSeconds()
 
 // ============================================================================
 public abstract class SmartValueBase
@@ -60,6 +77,10 @@ public class SmartValue
     if (m_valueChangedEvent != null)
       destroy m_valueChangedEvent
       m_valueChangedEvent = null
+
+  // --------------------------------------------------------------------------
+  function getSource() returns SmartValue
+    return m_source
 
   // --------------------------------------------------------------------------
   function getValue() returns real
@@ -93,6 +114,10 @@ public class SmartValue
   // --------------------------------------------------------------------------
   function getIntBase() returns int
     return getBase().toInt()
+
+  // --------------------------------------------------------------------------
+  function getAffectors() returns LinkedList<SmartValueAffector>
+    return m_affectors
 
   // --------------------------------------------------------------------------
   function setBase(real value)

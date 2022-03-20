@@ -29,7 +29,7 @@ public abstract class UnitComponent extends Component implements IDispatcher
     return m_owner.getUnit()
 
   // --------------------------------------------------------------------------
-  function getOwningPlayer() returns player
+  function getOwnerPlayer() returns player
     return getOwnerUnit().getOwner()
 
   // --------------------------------------------------------------------------
