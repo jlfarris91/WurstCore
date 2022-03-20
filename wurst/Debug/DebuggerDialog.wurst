@@ -6,6 +6,7 @@ import Window
 import Icons
 import SyncKeyPresses
 import LinkedList
+import Host
 
 public DebuggerWindow g_debuggerDialogFrame
 LinkedList<FrameFactoryRegistration> g_frameRegistrations = new LinkedList<FrameFactoryRegistration>()
@@ -133,12 +134,10 @@ class DebuggerWindow extends Window
 // ============================================================================
 init
 
-  if (DEV_ENVIRONMENT)
+  onSyncedKeyRelease(OSKEY_APPS) (p) ->
+    if (p == g_HostPlayer)
+      DebuggerDialog.toggleVisibility()
 
-    onSyncedKeyRelease(OSKEY_APPS) (p) ->
-      if (p == g_HostPlayer)
-        DebuggerDialog.toggleVisibility()
-
-    onSyncedKeyRelease(OSKEY_ESCAPE) (p) ->
-      if (p == g_HostPlayer)
-        DebuggerDialog.hide()
+  onSyncedKeyRelease(OSKEY_ESCAPE) (p) ->
+    if (p == g_HostPlayer)
+      DebuggerDialog.hide()
