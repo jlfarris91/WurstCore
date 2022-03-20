@@ -8,6 +8,8 @@ import SyncKeyPresses
 import LinkedList
 import Host
 
+@configurable public constant bool ENABLE_DEBUGGER_DIALOG = false
+
 public DebuggerWindow g_debuggerDialogFrame
 LinkedList<FrameFactoryRegistration> g_frameRegistrations = new LinkedList<FrameFactoryRegistration>()
 
