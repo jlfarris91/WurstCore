@@ -1,7 +1,6 @@
 package UnitRecyclerDebugger
 import Frame
 import ClosureTimers
-import ProjectConstants
 import DebuggerDialog
 import UnitRecycler
 import ObjectIds
@@ -34,5 +33,4 @@ class UnitRecyclerDebugger extends Frame
 
 // ============================================================================
 init
-  if (DEV_ENVIRONMENT)
-    DebuggerDialog.registerFrame("RECYCLER", () -> new UnitRecyclerDebugger())
+  DebuggerDialog.registerFrame("RECYCLER", () -> new UnitRecyclerDebugger())

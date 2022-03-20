@@ -5,8 +5,6 @@ import TabPanel
 import Window
 import Icons
 import SyncKeyPresses
-import Host
-import ProjectConstants
 import LinkedList
 
 public DebuggerWindow g_debuggerDialogFrame
