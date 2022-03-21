@@ -175,11 +175,11 @@ public class UnitRecycler
       return false
 
     if (_unit.isType(UNIT_TYPE_HERO) or not isUnitRecyclable(_unit))
-      logError("stock", "Unit type {0} is not recyclable".format(UnitId2String(_unit.getTypeId())))
+      error("Unit type {0} is not recyclable".format(UnitId2String(_unit.getTypeId())))
       return false
 
     if (not _unit.isAlive() and not reviveUnit(_unit))
-      logError("stock", "Unable to revive dead unit " + UnitId2String(_unit.getTypeId()))
+      error("Unable to revive dead unit " + UnitId2String(_unit.getTypeId()))
       return false
 
     _unit.setOwner(m_owner, true)
@@ -190,14 +190,14 @@ public class UnitRecycler
   // --------------------------------------------------------------------------
   function unstock(unit _unit)
     if (not doesUnitBelongToRecycler(_unit))
-      logError("unstock", "Trying to unstock a unit that does not belong to this recycler's stock")
+      error("Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
     // This unit was active so update the number of active count
     setUnitIsActive(_unit, false)
 
     if (not m_active.contains(_unit))
-      logError("unstock", "Trying to unstock a unit that does not belong to this recycler's stock")
+      error("Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
     m_active.removeUnit(_unit)
@@ -241,7 +241,7 @@ public class UnitRecycler
   private function stockUnit(unit _unit)
 
     if (isUnitStocked(_unit))
-      logError("stockUnit", "unit is already stocked and inactive! : {0}/{1}".format(m_active.size().toString(), m_active.size().toString()))
+      error("unit is already stocked and inactive! : {0}/{1}".format(m_active.size().toString(), m_active.size().toString()))
       return
 
     // let isNewUnit = not doesUnitBelongToRecycler(_unit)
@@ -260,11 +260,11 @@ public class UnitRecycler
   private function activateUnit(unit _unit)
 
     if (not doesUnitBelongToRecycler(_unit))
-      logError("activateUnit", "unit is not stocked! : {0}/{1}".format(getActiveCount().toString(), m_active.size().toString()))
+      error("unit is not stocked! : {0}/{1}".format(getActiveCount().toString(), m_active.size().toString()))
       return
 
     if (isUnitActive(_unit))
-      logError("activateUnit", "unit is already active! : {0}/{1}".format(getActiveCount().toString(), m_active.size().toString()))
+      error("unit is already active! : {0}/{1}".format(getActiveCount().toString(), m_active.size().toString()))
       return
 
     setUnitIsActive(_unit, true)
@@ -303,7 +303,7 @@ public class UnitRecycler
   // --------------------------------------------------------------------------
   private function createUnitInternal(player owner, vec2 pos, angle facingAngle) returns unit
     if (m_active.size() + m_stocked.size() == MAX_CAPACITY)
-      logError("createUnitInternal", "exceeded capacity!")
+      error("exceeded capacity!")
       return null
 
     let u = CreateUnit(owner, m_unitId, pos.x, pos.y, facingAngle.radians)
@@ -323,11 +323,6 @@ public class UnitRecycler
   // private function log(string methodName, string message)
   //   if (g_enableLogging)
   //     Log.debug("UnitRecycler", methodName, UnitId2StringBJ(m_unitId), message)
-
-  // --------------------------------------------------------------------------
-  private function logError(string methodName, string message)
-    if (g_enableLogging)
-      Log.error("UnitRecycler", methodName, UnitId2StringBJ(m_unitId), message)
 
   // --------------------------------------------------------------------------
   private function fireUnitRecycledTrigger(unit _unit)
