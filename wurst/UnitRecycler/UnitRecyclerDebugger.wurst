@@ -29,7 +29,7 @@ class UnitRecyclerDebugger extends Frame
       let recycler = g_unitIdToUnitRecyclerMap.get(unitId)
       if (recycler != null)
         let unitName = UnitId2String(unitId)
-        BlzFrameAddText(frameHandle, "{0} ({1}) : {2} active {3} inactive".format(unitName, unitId.toRawCode(), recycler.getActiveCount().toString(), recycler.getInactiveCount().toString()))
+        BlzFrameAddText(frameHandle, "{0} ({1}) : {2} active {3} inactive".format(unitName, unitId.toRawCode(), recycler.getActiveCount().toString(), recycler.getStockedCount().toString()))
 
 // ============================================================================
 init

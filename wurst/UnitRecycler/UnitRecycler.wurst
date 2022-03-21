@@ -61,13 +61,14 @@ public function getTriggerUnitRecycler() returns UnitRecycler
 public class UnitRecycler
   private player m_owner
   private group m_active
-  private group m_inactive
+  private group m_stocked
   private HashMap<unit, int> m_generationMap
   private int m_unitId
   private bool m_autoRecycleDead = true
   private real m_deathTime = INITIAL_AUTO_RECYCLE_TIME
   private unit m_lastStockedUnit = null
   private unit m_lastRecycledUnit = null
+  protected bool m_isDestroying = false
 
   // --------------------------------------------------------------------------
   construct(player owner, int unitId)
@@ -82,11 +83,13 @@ public class UnitRecycler
     m_unitId = unitId
     g_unitIdToUnitRecyclerMap.put(unitId, this)
     m_active = CreateGroup()
-    m_inactive = CreateGroup()
+    m_stocked = CreateGroup()
     m_generationMap = new HashMap<unit, int>()
 
   // --------------------------------------------------------------------------
   ondestroy
+
+    m_isDestroying = true
     
     for u in m_active
       u.remove()
@@ -94,11 +97,13 @@ public class UnitRecycler
     m_active.destr()
     m_active = null
     
-    for u in m_inactive
+    for u in m_stocked
       u.remove()
 
-    m_inactive.destr()
-    m_inactive = null
+    m_stocked.destr()
+    m_stocked = null
+
+    m_isDestroying = false
 
     g_unitIdToUnitRecyclerMap.remove(m_unitId)
 
@@ -111,8 +116,8 @@ public class UnitRecycler
     return m_active.size()
 
   // --------------------------------------------------------------------------
-  function getInactiveCount() returns int
-    return m_inactive.size()
+  function getStockedCount() returns int
+    return m_stocked.size()
 
   // --------------------------------------------------------------------------
   function getAutoRecycleDead() returns bool
@@ -140,7 +145,7 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   function doesUnitBelongToRecycler(unit _unit) returns bool
-    return m_active.contains(_unit) or m_inactive.contains(_unit)
+    return m_active.contains(_unit) or m_stocked.contains(_unit)
 
   // --------------------------------------------------------------------------
   function getGeneration(unit _unit) returns int
@@ -151,21 +156,16 @@ public class UnitRecycler
     return m_active.contains(_unit)
 
   // --------------------------------------------------------------------------
-  function isUnitInactive(unit _unit) returns bool
-    return m_inactive.contains(_unit)
-
-  // --------------------------------------------------------------------------
-  function preload(int count)
-    while (getInactiveCount() + getActiveCount() < count)
-      stockUnit(createUnitInternal(m_owner, ZERO2, angle(0)))
+  function isUnitStocked(unit _unit) returns bool
+    return m_stocked.contains(_unit)
 
   // --------------------------------------------------------------------------
   private function setUnitIsActive(unit _unit, bool active)
     if (active)
       m_active.addUnit(_unit)
-      m_inactive.removeUnit(_unit)
+      m_stocked.removeUnit(_unit)
     else
-      m_inactive.addUnit(_unit)
+      m_stocked.addUnit(_unit)
       m_active.removeUnit(_unit)
 
   // --------------------------------------------------------------------------
@@ -203,7 +203,7 @@ public class UnitRecycler
     m_active.removeUnit(_unit)
 
     g_unitToRecyclerMap.remove(_unit)
-    m_inactive.removeUnit(_unit)
+    m_stocked.removeUnit(_unit)
     m_generationMap.remove(_unit)
     
     if (bj_lastCreatedUnit == _unit)
@@ -222,7 +222,6 @@ public class UnitRecycler
 
     if (_unit == null)
       _unit = createUnitInternal(owner, pos, angle)
-      stockUnit(_unit)
     
     bj_lastCreatedUnit = _unit
     m_lastRecycledUnit = _unit
@@ -241,7 +240,7 @@ public class UnitRecycler
   // --------------------------------------------------------------------------
   private function stockUnit(unit _unit)
 
-    if (isUnitInactive(_unit))
+    if (isUnitStocked(_unit))
       logError("stockUnit", "unit is already stocked and inactive! : {0}/{1}".format(m_active.size().toString(), m_active.size().toString()))
       return
 
@@ -297,23 +296,28 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   private function getNextAvailableUnit() returns unit
-    if (m_inactive.isEmpty())
+    if (m_stocked.isEmpty())
       return null
-    return m_inactive.getFirst()
+    return m_stocked.getFirst()
 
   // --------------------------------------------------------------------------
   private function createUnitInternal(player owner, vec2 pos, angle facingAngle) returns unit
-    if (m_active.size() == MAX_CAPACITY)
+    if (m_active.size() + m_stocked.size() == MAX_CAPACITY)
       logError("createUnitInternal", "exceeded capacity!")
       return null
 
     let u = CreateUnit(owner, m_unitId, pos.x, pos.y, facingAngle.radians)
     g_unitToRecyclerMap.put(u, this)
 
-    m_active.addUnit(u)
+    setUnitIsActive(u, false)
     // log("createUnitInternal", "add : {0} {1}".format(u.getUserData().toString(), m_active.size().toString()))
 
     return u
+
+  // --------------------------------------------------------------------------
+  protected function onUnitDeindexed(unit deindexingUnit)
+    if (not m_isDestroying)
+      error("Unit {0} owned by recycler cannot be removed. Use stock() instead.".format(deindexingUnit.getName()))
 
   // --------------------------------------------------------------------------
   // private function log(string methodName, string message)
@@ -340,14 +344,12 @@ public class UnitRecycler
 // ============================================================================
 public function createUnitRecycled(player owner, int unitId, vec2 pos, angle facing) returns unit
   let recycler = getOrCreateUnitRecycler(unitId)
-  let u = recycler.getUnit(owner, pos, facing)
-  g_unitToRecyclerMap.put(u, recycler)
-  return u
+  return recycler.getUnit(owner, pos, facing)
 
 // ============================================================================
 public function unit.isStocked() returns bool
   let recycler = this.getRecycler()
-  return recycler != null and recycler.doesUnitBelongToRecycler(this)
+  return recycler != null and recycler.isUnitStocked(this)
 
 // ============================================================================
 public function unit.getRecycler() returns UnitRecycler
@@ -404,7 +406,7 @@ function onUnitDeindexed()
   let recycler = deindexingUnit.getRecycler()
   if (recycler == null)
     return
-  recycler.unstock(deindexingUnit)
+  recycler.onUnitDeindexed(deindexingUnit)
 
 // ============================================================================
 init
