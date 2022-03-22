@@ -7,6 +7,10 @@ HashMap<unit, int> g_heroCountAtIndex = new HashMap<unit, int>()
 conditionfunc g_enumUnitIsHero = Condition(function enumUnitIsHero)
 
 // ============================================================================
+@configurable public function shouldCountHeroForHeroAge(unit _hero) returns bool
+  return IsHeroUnitId(_hero.getTypeId())
+
+// ============================================================================
 public function unit.getHeroAge() returns int
   return IsHeroUnitId(this.getTypeId()) ? g_heroCountAtIndex.get(this) : 0
 
@@ -20,16 +24,16 @@ function player.countNumberOfHeroes() returns int
 
 // ============================================================================
 function enumUnitIsHero() returns bool
-  return IsHeroUnitId(GetEnumUnit().getTypeId())
+  return shouldCountHeroForHeroAge(GetFilterUnit())
 
 // ============================================================================
 init
   onUnitIndex() () ->
     let indexingUnit = getIndexingUnit()
-    if (IsHeroUnitId(indexingUnit.getTypeId()))
+    if (shouldCountHeroForHeroAge(indexingUnit))
       g_heroCountAtIndex.put(indexingUnit, indexingUnit.getOwner().countNumberOfHeroes())
 
   onUnitDeindex() () ->
     let indexingUnit = getIndexingUnit()
-    if (IsHeroUnitId(indexingUnit.getTypeId()))
+    if (shouldCountHeroForHeroAge(indexingUnit))
       g_heroCountAtIndex.remove(indexingUnit)
