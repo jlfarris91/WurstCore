@@ -1,8 +1,9 @@
 package PlayerExtensions
-import GroupUtils
 import Func
 import Action
 import LinkedList
+
+group g_tempGroup = CreateGroup()
 
 // ============================================================================
 public function player.isPlaying() returns bool
@@ -27,21 +28,17 @@ public function player.isControlledByComputer() returns bool
 // ============================================================================
 public function player.getSelectedUnits() returns LinkedList<unit>
   let selectedUnits = new LinkedList<unit>()
-  let tempGroup = getGroup()
-  tempGroup.enumUnitsSelected(this, null)
-  for u in tempGroup
+  g_tempGroup.enumUnitsSelected(this, null)
+  for u in g_tempGroup
     selectedUnits.add(u)
-  tempGroup.release()
   return selectedUnits
 
 // ============================================================================
 public function player.forEachSelectedUnit(Action1<unit> callback)
   callback.acquire()
-  let tempGroup = getGroup()
-  tempGroup.enumUnitsSelected(this, null)
-  if (tempGroup.hasNext())
-    callback.call(tempGroup.next())    
-  tempGroup.release()
+  g_tempGroup.enumUnitsSelected(this, null)
+  for u in g_tempGroup
+    callback.call(u)
   callback.release()
 
 // ============================================================================
@@ -54,13 +51,11 @@ public function player.getFirstSelectedUnitMatching(Func1<unit, bool> predicate)
     predicate.acquire()
 
   unit selectedUnit = null
-  let tempGroup = getGroup()
-  tempGroup.enumUnitsSelected(this, null)
-  if (tempGroup.hasNext())
-    let nextUnit = tempGroup.next()
+  g_tempGroup.enumUnitsSelected(this, null)
+  if (g_tempGroup.hasNext())
+    let nextUnit = g_tempGroup.next()
     if (predicate == null or predicate.call(nextUnit))
       selectedUnit = nextUnit
-  tempGroup.release()
 
   if (predicate != null)
     predicate.release()
@@ -77,13 +72,10 @@ public function player.foreachSelectedUnitWhere(Action1<unit> callback, Func1<un
   if (predicate != null)
     predicate.acquire()
 
-  let tempGroup = getGroup()
-  tempGroup.enumUnitsSelected(this, null)
-  if (tempGroup.hasNext())
-    let nextUnit = tempGroup.next()
-    if (predicate == null or predicate.call(nextUnit))
-      callback.call(nextUnit)
-  tempGroup.release()
+  g_tempGroup.enumUnitsSelected(this, null)
+  for u in g_tempGroup
+    if (predicate == null or predicate.call(u))
+      callback.call(u)
 
   if (predicate != null)
     predicate.release()
