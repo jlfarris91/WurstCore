@@ -276,7 +276,6 @@ public class UnitRecycler
   private function onStocked(unit _unit)
     _unit.setHP(_unit.getMaxHP())
     _unit.setMana(_unit.getMaxMana())
-    _unit.setScale(1.0)
     _unit.setVertexColor(Colors.white)
     _unit.setFlyHeight(_unit.getDefaultFlyHeight(), 0)
     _unit.suspend()
