@@ -68,7 +68,6 @@ public class UnitRecycler
   private real m_deathTime = INITIAL_AUTO_RECYCLE_TIME
   private unit m_lastStockedUnit = null
   private unit m_lastRecycledUnit = null
-  protected bool m_isDestroying = false
 
   // --------------------------------------------------------------------------
   construct(player owner, int unitId)
@@ -88,8 +87,6 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   ondestroy
-
-    m_isDestroying = true
     
     for u in m_active
       u.remove()
@@ -102,8 +99,6 @@ public class UnitRecycler
 
     m_stocked.destr()
     m_stocked = null
-
-    m_isDestroying = false
 
     g_unitIdToUnitRecyclerMap.remove(m_unitId)
 
@@ -193,17 +188,16 @@ public class UnitRecycler
       error("Trying to unstock a unit that does not belong to this recycler's stock")
       return
 
-    // This unit was active so update the number of active count
+    unstockNoChecks(_unit)
+
+  // --------------------------------------------------------------------------
+  private function unstockNoChecks(unit _unit)
+
     setUnitIsActive(_unit, false)
 
-    if (not m_active.contains(_unit))
-      error("Trying to unstock a unit that does not belong to this recycler's stock")
-      return
-
     m_active.removeUnit(_unit)
-
-    g_unitToRecyclerMap.remove(_unit)
     m_stocked.removeUnit(_unit)
+    g_unitToRecyclerMap.remove(_unit)
     m_generationMap.remove(_unit)
     
     if (bj_lastCreatedUnit == _unit)
@@ -269,6 +263,7 @@ public class UnitRecycler
 
     setUnitIsActive(_unit, true)
     onActivated(_unit)
+    increaseGeneration(_unit)
     
     // log("activateUnit", "activated inactive unit : {0}/{1}".format(getActiveCount().toString(), m_active.size().toString()))
 
@@ -287,11 +282,6 @@ public class UnitRecycler
     _unit.unsuspend()
     _unit.show()
     RemoveGuardPosition(_unit)
-
-    var generation = 0
-    if (m_generationMap.has(_unit))
-      generation = m_generationMap.get(_unit)
-    m_generationMap.put(_unit, generation + 1)
 
   // --------------------------------------------------------------------------
   private function getNextAvailableUnit() returns unit
@@ -314,9 +304,15 @@ public class UnitRecycler
     return u
 
   // --------------------------------------------------------------------------
+  private function increaseGeneration(unit _unit)
+    var generation = 0
+    if (m_generationMap.has(_unit))
+      generation = m_generationMap.get(_unit)
+    m_generationMap.put(_unit, generation + 1)
+
+  // --------------------------------------------------------------------------
   protected function onUnitDeindexed(unit deindexingUnit)
-    if (not m_isDestroying)
-      error("Unit {0} owned by recycler cannot be removed. Use stock() instead.".format(deindexingUnit.getName()))
+    unstockNoChecks(deindexingUnit)
 
   // --------------------------------------------------------------------------
   // private function log(string methodName, string message)
