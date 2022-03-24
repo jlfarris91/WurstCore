@@ -1,12 +1,11 @@
 package UnitRecyclerDebugger
 import Frame
 import ClosureTimers
-import DebuggerDialog
 import UnitRecycler
 import ObjectIds
 
 // ============================================================================
-class UnitRecyclerDebugger extends Frame
+public class UnitRecyclerDebugger extends Frame
 
   // --------------------------------------------------------------------------
   construct()
@@ -30,7 +29,3 @@ class UnitRecyclerDebugger extends Frame
       if (recycler != null)
         let unitName = UnitId2String(unitId)
         BlzFrameAddText(frameHandle, "{0} ({1}) : {2} active {3} inactive".format(unitName, unitId.toRawCode(), recycler.getActiveCount().toString(), recycler.getStockedCount().toString()))
-
-// ============================================================================
-init
-  DebuggerDialog.registerFrame("RECYCLER", () -> new UnitRecyclerDebugger())
