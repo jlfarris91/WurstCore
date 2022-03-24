@@ -137,6 +137,7 @@ public class TooltipItem
 public class TooltipBuilder
   private presetGetter m_description
   private LinkedList<TooltipItem> m_items
+  private bool m_showBullets = true
 
   // --------------------------------------------------------------------------
   construct()
@@ -192,6 +193,10 @@ public class TooltipBuilder
     return getTooltipExtended(1)
 
   // --------------------------------------------------------------------------  
+  function setShowItemBullets(bool value)
+    m_showBullets = value
+
+  // --------------------------------------------------------------------------  
   function getTooltipExtended(int level) returns string
     let sb = new StringBuilder()
 
@@ -211,7 +216,9 @@ public class TooltipBuilder
       else
         for j = 0 to itemValueCount - 1
           sb.appendLine()
-          sb.append("- " + itm.getValue(j, level).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
+          if (m_showBullets)
+            sb.append("- ")
+          sb.append(itm.getValue(j, level).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
 
       index++
     //}
