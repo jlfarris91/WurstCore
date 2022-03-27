@@ -8,10 +8,6 @@ public function framehandle.clearFocus()
   this.setEnabled(enabled)
 
 // ============================================================================
-public function framehandle.addText(string text)
-  BlzFrameAddText(this, text)
-
-// ============================================================================
 public function framehandle.getSize() returns vec2
   return vec2(this.getWidth(), this.getHeight())
 

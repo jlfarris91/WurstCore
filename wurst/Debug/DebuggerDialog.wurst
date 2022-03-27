@@ -7,6 +7,7 @@ import Icons
 import SyncKeyPresses
 import LinkedList
 import Host
+import RealtimeUpdate
 
 @configurable public constant bool ENABLE_DEBUGGER_DIALOG = false
 
@@ -132,6 +133,21 @@ class DebuggerWindow extends Window
   // --------------------------------------------------------------------------
   function getSelectedFrame() returns string
     return m_tabPanel.getSelectedContentId()
+
+// ============================================================================
+public abstract class DebuggerRealtimeUpdateFrame extends Frame implements IRealtimeListener
+
+  // --------------------------------------------------------------------------
+  construct (framehandle frame)
+    super(frame)
+
+  // --------------------------------------------------------------------------
+  override function onVisibilityChanged()
+    super.onVisibilityChanged()
+
+    this.unregisterForRealtimeUpdate()
+    if (isVisible())
+      this.registerForRealtimeUpdate(RealtimeUpdatePriority.Background)
 
 // ============================================================================
 init

@@ -1,31 +1,24 @@
 package UnitRecyclerDebugger
 import Frame
-import ClosureTimers
 import UnitRecycler
 import ObjectIds
+import DebuggerDialog
 
 // ============================================================================
-public class UnitRecyclerDebugger extends Frame
+public class UnitRecyclerDebugger extends DebuggerRealtimeUpdateFrame
 
   // --------------------------------------------------------------------------
   construct()
     super(createFrame("TEXTAREA", "RecyclerDebugger", GAME_UI, "", 0))
 
-    doPeriodically(0.1) (CallbackPeriodic cb) ->
-      update()
-
   // --------------------------------------------------------------------------
-  function update()
+  override function realtimeUpdate(real _)
 
     let frameHandle = getFrameHandle()
-
-    if (frameHandle.isVisible() == false)
-      return
 
     BlzFrameSetText(frameHandle, "")
 
     for unitId in g_unitIdToUnitRecyclerMap
       let recycler = g_unitIdToUnitRecyclerMap.get(unitId)
       if (recycler != null)
-        let unitName = UnitId2String(unitId)
-        BlzFrameAddText(frameHandle, "{0} ({1}) : {2} active {3} inactive".format(unitName, unitId.toRawCode(), recycler.getActiveCount().toString(), recycler.getStockedCount().toString()))
+        frameHandle.setOrAddText("{0} ({1}) : {2} active {3} inactive".format(recycler.getName(), unitId.toRawCode(), recycler.getActiveCount().toString(), recycler.getStockedCount().toString()))
