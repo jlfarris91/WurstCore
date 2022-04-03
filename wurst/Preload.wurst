@@ -115,7 +115,7 @@ class PreloadTaskContext
   // --------------------------------------------------------------------------
   function preloadNextUnit() returns bool
     if (unitIndex == 0)
-      progress.report("Preloading " + g_unitIdCount.toString() + " units...")
+      progress.report("Preloading units...")
     try() () ->
       Preload.preloadUnit(g_unitIds[unitIndex])
     if (lastError != "")
@@ -128,7 +128,7 @@ class PreloadTaskContext
   // --------------------------------------------------------------------------
   function preloadNextAbility() returns bool
     if (abilityIndex == 0)
-      progress.report(0.0, "Preloading " + g_abilityIdCount.toString() + " abilities...")
+      progress.report(0.0, "Preloading abilities...")
     try() () ->
       Preload.preloadAbility(g_abilityIds[abilityIndex])
     if (lastError != "")
@@ -141,7 +141,7 @@ class PreloadTaskContext
   // --------------------------------------------------------------------------
   function preloadNextUnitRecycler() returns bool
     if (recyclerIndex == 0 and recyclerUnitIndex == 0)
-      progress.report("Preloading " + g_unitRecyclerPreloadCount.toString() + " recyclers...")
+      progress.report("Preloading recyclers...")
     let recyclerData = g_unitRecyclerPreloads[recyclerIndex]
     try() () ->
       var recycler = getUnitRecycler(recyclerData.unitTypeId)
