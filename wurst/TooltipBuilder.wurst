@@ -9,6 +9,8 @@ import Func
 constant int MAX_TOOLTIP_ITEM_COUNT = 32
 constant colorA ITEM_NAME_COLOR = fromHexString("FF3B97D3")
 constant colorA ITEM_VALUE_COLOR = COLOR_GOLD
+constant string ITEM_BULLET_STRING = "·"
+constant string PAD_STR = " "
 
 tuple presetGetter(string value, Func1<int, string> getter)
 
@@ -45,6 +47,8 @@ public class TooltipItem
   private presetGetter m_name
   private presetGetter array[MAX_TOOLTIP_ITEM_COUNT] m_values
   private int m_valueCount
+  private bool m_showBullets = true
+  private bool m_alwaysPutSubItemsOnNewLine = false
 
   // --------------------------------------------------------------------------
   construct(string name)
@@ -119,12 +123,35 @@ public class TooltipItem
   function addValue(Func1<int, string> getter)
     addValue(presetGetter(null, getter.acquire()))
 
+  // --------------------------------------------------------------------------  
+  function setShowItemBullets(bool value)
+    m_showBullets = value
+
+  // --------------------------------------------------------------------------
+  function setAlwaysPutSubItemsOnNewLine(bool value)
+    m_alwaysPutSubItemsOnNewLine = value
+
   // --------------------------------------------------------------------------
   function clone() returns TooltipItem
     let clone = new TooltipItem(m_name)
     for i = 0 to m_valueCount - 1
       clone.addValue(m_values[i])
     return clone
+
+  // --------------------------------------------------------------------------
+  function write(int level, StringBuilder sb)
+
+    sb.append(getName(level).colorize(ITEM_NAME_COLOR))
+
+    let itemValueCount = getValueCount()
+    if (itemValueCount == 1 and not m_alwaysPutSubItemsOnNewLine)
+      sb.append(getValue(0, level).colorize(ITEM_VALUE_COLOR))
+    else
+      for j = 0 to itemValueCount - 1
+        sb.appendLine()
+        if (m_showBullets)
+          sb.append(ITEM_BULLET_STRING)
+        sb.append(getValue(j, level).colorize(ITEM_VALUE_COLOR).padLeft(10, PAD_STR))
 
   // --------------------------------------------------------------------------
   private function addValue(presetGetter value)
@@ -137,7 +164,6 @@ public class TooltipItem
 public class TooltipBuilder
   private presetGetter m_description
   private LinkedList<TooltipItem> m_items
-  private bool m_showBullets = true
 
   // --------------------------------------------------------------------------
   construct()
@@ -193,34 +219,14 @@ public class TooltipBuilder
     return getTooltipExtended(1)
 
   // --------------------------------------------------------------------------  
-  function setShowItemBullets(bool value)
-    m_showBullets = value
-
-  // --------------------------------------------------------------------------  
   function getTooltipExtended(int level) returns string
     let sb = new StringBuilder()
 
-    let padStr = " "
     var index = 0
     for itm in m_items
-    //{
-
       if (index > 0)
         sb.appendLine()
-
-      sb.append(itm.getName(level).colorize(ITEM_NAME_COLOR))
-
-      let itemValueCount = itm.getValueCount()
-      if (itemValueCount == 1)
-        sb.append(itm.getValue(0, level).colorize(ITEM_VALUE_COLOR))
-      else
-        for j = 0 to itemValueCount - 1
-          sb.appendLine()
-          if (m_showBullets)
-            sb.append("- ")
-          sb.append(itm.getValue(j, level).colorize(ITEM_VALUE_COLOR).padLeft(10, padStr))
-
+      itm.write(level, sb)
       index++
-    //}
 
     return sb.toStringAndDestroy()
