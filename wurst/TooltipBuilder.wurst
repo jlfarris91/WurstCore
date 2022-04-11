@@ -9,7 +9,7 @@ import Func
 constant int MAX_TOOLTIP_ITEM_COUNT = 32
 constant colorA ITEM_NAME_COLOR = fromHexString("FF3B97D3")
 constant colorA ITEM_VALUE_COLOR = COLOR_GOLD
-constant string ITEM_BULLET_STRING = "·"
+constant string ITEM_BULLET_STRING = " · "
 constant string PAD_STR = " "
 
 tuple presetGetter(string value, Func1<int, string> getter)
@@ -49,6 +49,7 @@ public class TooltipItem
   private int m_valueCount
   private bool m_showBullets = true
   private bool m_alwaysPutSubItemsOnNewLine = false
+  private bool m_appendSpacerLine = false
 
   // --------------------------------------------------------------------------
   construct(string name)
@@ -132,6 +133,10 @@ public class TooltipItem
     m_alwaysPutSubItemsOnNewLine = value
 
   // --------------------------------------------------------------------------
+  function setAppendSpacerLine(bool value)
+    m_appendSpacerLine = value
+
+  // --------------------------------------------------------------------------
   function clone() returns TooltipItem
     let clone = new TooltipItem(m_name)
     for i = 0 to m_valueCount - 1
@@ -140,6 +145,9 @@ public class TooltipItem
 
   // --------------------------------------------------------------------------
   function write(int level, StringBuilder sb)
+
+    if (m_appendSpacerLine)
+      sb.appendLine()
 
     sb.append(getName(level).colorize(ITEM_NAME_COLOR))
 
