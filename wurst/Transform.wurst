@@ -1,0 +1,173 @@
+package Transform
+import Quaternion
+import LinkedList
+import ErrorHandling
+
+public tuple transform(vec3 pos, vec3 pivot, quat rot, real scale)
+
+public constant transform IDENTITYT = transform(ZERO3, ZERO3, IDENTITYQ, 1.0)
+
+// ============================================================================
+public function transform.op_mult(transform localSpace) returns transform
+  return this.concat(localSpace)
+
+// ============================================================================
+public function transform.concat(transform localSpace) returns transform
+  let r = this.rot * localSpace.rot
+  var v = (localSpace.pivot + localSpace.pos - this.pivot) * this.scale
+  v = v.rotate(r)
+  let p = v + this.pivot + this.pos - localSpace.pivot
+  let s = this.scale * localSpace.scale
+  return transform(p, localSpace.pivot, r, s)
+
+// ============================================================================
+public function transform.separate(transform worldSpace) returns transform
+  let s = worldSpace.scale / this.scale
+  let r = this.rot.conj() * worldSpace.rot.norm()
+  var v = worldSpace.pos + worldSpace.pivot - this.pos - this.pivot
+  v = v.rotate(r.inv()) / this.scale
+  let p = v + this.pivot - worldSpace.pivot
+  return transform(p, worldSpace.pivot, r, s)
+
+// ============================================================================
+public class Transform
+  private Transform m_parent = null
+  private LinkedList<Transform> m_children = new LinkedList<Transform>()
+  private transform m_localTransform = IDENTITYT
+  private transform m_worldTransform = IDENTITYT
+  private bool m_dirtyWorld = true
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_children
+    m_children = null
+
+  // --------------------------------------------------------------------------
+  function getParent() returns Transform
+    return m_parent
+
+  // --------------------------------------------------------------------------
+  function setParent(Transform parent)
+    if (m_parent == parent)
+      return
+
+    if (parent == this)
+      error("Cannot set parent to self")
+
+    if (m_parent != null)
+      m_parent.m_children.remove(this)
+
+    m_parent = parent
+
+    if (m_parent != null)
+      m_parent.m_children.add(this)
+
+    dirtyHierarchy()
+
+  // --------------------------------------------------------------------------
+  function getLocalTransform() returns transform
+    return m_localTransform
+
+  // --------------------------------------------------------------------------
+  function setLocalTransform(transform value)
+    if (m_localTransform != value)
+      m_localTransform = value
+      dirtyHierarchy()
+
+  // --------------------------------------------------------------------------
+  function getLocalPosition() returns vec3
+    return m_localTransform.pos
+
+  // --------------------------------------------------------------------------
+  function setLocalPosition(vec3 value)
+    m_localTransform.pos = value
+
+  // --------------------------------------------------------------------------
+  function getLocalRotation() returns quat
+    return m_localTransform.rot
+
+  // --------------------------------------------------------------------------
+  function setLocalRotation(quat value)
+    if (m_localTransform.rot != value)
+      m_localTransform.rot = value
+      dirtyHierarchy()
+
+  // --------------------------------------------------------------------------
+  function getLocalScale() returns real
+    return m_localTransform.scale
+
+  // --------------------------------------------------------------------------
+  function setLocalScale(real value)
+    if (m_localTransform.scale != value)
+      m_localTransform.scale = value
+      dirtyHierarchy()
+
+  // --------------------------------------------------------------------------
+  function getWorldTransform() returns transform
+    if (m_dirtyWorld)
+      m_worldTransform = m_parent != null ? m_parent.getWorldTransform() * m_localTransform : m_localTransform
+      m_dirtyWorld = false
+    return m_worldTransform
+
+  // --------------------------------------------------------------------------
+  function setWorldTransform(transform value)
+    var localSpace = value
+    if (m_parent != null)
+      localSpace = m_parent.getWorldTransform().separate(value)
+    m_localTransform = localSpace
+
+  // --------------------------------------------------------------------------
+  function getWorldPosition() returns vec3
+    return getWorldTransform().pos
+
+  // --------------------------------------------------------------------------
+  function setWorldPosition(vec3 value)
+    var worldSpace = getWorldTransform()
+    worldSpace.pos = value
+    setWorldTransform(worldSpace)
+
+  // --------------------------------------------------------------------------
+  function getWorldRotation() returns quat
+    return getWorldTransform().rot
+
+  // --------------------------------------------------------------------------
+  function setWorldRotation(quat value)
+    var worldSpace = getWorldTransform()
+    worldSpace.rot = value
+    setWorldTransform(worldSpace)
+
+  // --------------------------------------------------------------------------
+  function getWorldScale() returns real
+    return getWorldTransform().scale
+
+  // --------------------------------------------------------------------------
+  function setWorldScale(real value)
+    var worldSpace = getWorldTransform()
+    worldSpace.scale = value
+    setWorldTransform(worldSpace)
+
+  // --------------------------------------------------------------------------
+  function apply(effect fx)
+    let worldSpace = getWorldTransform()
+    fx.setPos(worldSpace.pos)
+    fx.setScale(worldSpace.scale)
+    fx.setOrientation(worldSpace.rot)
+
+  // --------------------------------------------------------------------------
+  function apply(unit u)
+    let worldSpace = getWorldTransform()
+    let eulers = worldSpace.rot.toEuler()
+    u.setPosFly(worldSpace.pos)
+    u.setScale(worldSpace.scale)
+    u.setFacing(eulers.z.asAngleRadians())
+
+  // --------------------------------------------------------------------------
+  function apply(item i)
+    let worldSpace = getWorldTransform()
+    i.setPos(worldSpace.pos.toVec2())
+
+  // --------------------------------------------------------------------------
+  private function dirtyHierarchy()
+    m_dirtyWorld = true
+    for child in m_children
+      child.dirtyHierarchy()
