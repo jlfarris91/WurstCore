@@ -12,7 +12,7 @@ public class CircularBuffer<T>
 
   // --------------------------------------------------------------------------
   construct(int capacity)
-    m_items = new Vector<T>(capacity)..setSize(capacity)
+    m_items = new Vector<T>(capacity)..fill(null)
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -37,12 +37,14 @@ public class CircularBuffer<T>
     return getCount() == getCapacity()
 
   // --------------------------------------------------------------------------
+  function get(int index) returns T
+    return m_items.get(wrap(m_readIndex + index, 0, getCapacity() - 1))
+
+  // --------------------------------------------------------------------------
   function enqueue(T _item)
-    if (isFull())
-      error("Cannot enqueue to a full CircularBuffer")
     m_items.set(m_writeIndex, _item)
     incrementWriteIndex()
-    m_count++
+    m_count = min(m_count + 1, getCapacity())
 
   // --------------------------------------------------------------------------
   function dequeue() returns T
@@ -62,7 +64,7 @@ public class CircularBuffer<T>
     m_count = 0
 
   // --------------------------------------------------------------------------
-  function iterate() returns VectorIterator<T>
+  function iterator() returns VectorIterator<T>
     return m_items.iterator()
 
   // --------------------------------------------------------------------------
@@ -91,7 +93,7 @@ public class CBIterator<T>
 
   // --------------------------------------------------------------------------
   function reset()
-    m_index = m_readIndex - 1
+    m_index = wrapIndex(m_readIndex - 1)
 
   // --------------------------------------------------------------------------
   function hasNext() returns bool
@@ -99,14 +101,14 @@ public class CBIterator<T>
 
   // --------------------------------------------------------------------------
   function next() returns T
-    m_index = incrementIndex(m_index)
+    m_index = wrapIndex(m_index + 1)
     return m_vector.get(m_index)
 
   // --------------------------------------------------------------------------
   function lookahead() returns T
     T nextItem = null
     if (hasNext())
-      nextItem = m_vector.get(incrementIndex(m_index))
+      nextItem = m_vector.get(wrapIndex(m_index + 1))
     return nextItem
 
   // --------------------------------------------------------------------------
@@ -115,8 +117,8 @@ public class CBIterator<T>
       destroy this
   
   // --------------------------------------------------------------------------
-  private function incrementIndex(int index) returns int
-    return wrap(index + 1, 0, m_vector.capacity() - 1)
+  private function wrapIndex(int index) returns int
+    return wrap(index, 0, m_vector.capacity() - 1)
 
 // ============================================================================
 @test function test_enqueueOne_countIncreasesByOne()
@@ -224,3 +226,24 @@ public class CBIterator<T>
   // Assert
   cb.getCount().assertEquals(0)
   cb.isEmpty().assertTrue()
+
+// ============================================================================
+@test function add_more_than_capacity()
+
+  // Arrange
+  let cb = new CircularBuffer<int>(8)
+
+  // Act
+  for i = 0 to 15
+    cb.enqueue(i)
+    // let icb = ModuloInteger(i, 8)
+    // Log.info("i: " + i.toString() + " cb[" + icb.toString() + "]: " + cb.get(icb).toString())
+
+  // Assert
+  var idx = 0
+  for v in cb
+    // Log.info(v.toString())
+    v.assertEquals(8 + idx)
+    idx++
+
+  cb.isFull().assertTrue()
