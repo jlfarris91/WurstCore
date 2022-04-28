@@ -133,6 +133,12 @@ public function unit.setDamageRange(int weaponIndex, rangeInt range)
   this.setDiceSides(dice.sidesPerDie, weaponIndex)
 
 // ============================================================================
+public function unit.setDamageDice(int weaponIndex, dice dice)
+  this.setBaseDamage(dice.base, weaponIndex)
+  this.setDiceNumber(dice.numberOfDice, weaponIndex)
+  this.setDiceSides(dice.sidesPerDie, weaponIndex)
+
+// ============================================================================
 public function unit.fadeOut()
   this.fadeOut(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, color(255,255,255))
 

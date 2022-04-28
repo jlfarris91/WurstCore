@@ -1,5 +1,67 @@
 package RealExtensions
 
+constant real array powerTens = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 10000000]
+
+// ============================================================================
+public function real.truncate(int decimalPlace) returns real
+  if (decimalPlace >= 8)
+    return this
+  let r = this.floor().toReal()
+  if (decimalPlace <= 0)
+    return r
+  let p = powerTens[decimalPlace-1]
+  return r + ((this - r) * p).floor() / p
+
 // ============================================================================
 public function real.toPercentageString01() returns string
-  return (this * 100.0).toInt().toString() + "%"
+  return this.toPercentageString01(1)
+
+// ============================================================================
+public function real.toPercentageString01(int decimalPlace) returns string
+  var s = this * 100
+  if (s - s.floor() == 0.0)
+    return s.toInt().toString() + "%"
+  s = s.truncate(decimalPlace)
+  if (s - s.floor() == 0.0)
+    return s.toInt().toString() + "%"
+  return s.toString() + "%"
+
+// ============================================================================
+@test function truncate()
+
+  1.23456789.truncate(-1).assertEquals(1.0)
+  1.23456789.truncate(0).assertEquals(1.0)
+  1.23456789.truncate(1).assertEquals(1.2)
+  1.23456789.truncate(2).assertEquals(1.23)
+  1.23456789.truncate(3).assertEquals(1.234)
+  1.23456789.truncate(4).assertEquals(1.2345)
+  1.23456789.truncate(5).assertEquals(1.23456)
+  1.23456789.truncate(6).assertEquals(1.234567)
+  1.23456789.truncate(7).assertEquals(1.2345678)
+  1.23456789.truncate(8).assertEquals(1.23456789)
+  1.23456789.truncate(9).assertEquals(1.23456789)
+
+  123.456.truncate(0).assertEquals(123.0)
+  123.456.truncate(1).assertEquals(123.4)
+  123.456.truncate(2).assertEquals(123.45)
+  123.456.truncate(3).assertEquals(123.456)
+
+// ============================================================================
+@test function toPercentageString01()
+
+  0.25.toPercentageString01().assertEquals("25%")
+  1.0.toPercentageString01().assertEquals("100%")
+
+  0.123.toPercentageString01().assertEquals("12.3%")
+  0.0123.toPercentageString01().assertEquals("1.2%")
+  0.00123.toPercentageString01().assertEquals("0.1%")
+
+  0.0123.toPercentageString01(0).assertEquals("1%")
+  0.0123.toPercentageString01(1).assertEquals("1.2%")
+  0.0123.toPercentageString01(2).assertEquals("1.23%")
+  0.0123.toPercentageString01(4).assertEquals("1.23%")
+
+  0.00123.toPercentageString01(0).assertEquals("0%")
+  0.00123.toPercentageString01(1).assertEquals("0.1%")
+  0.00123.toPercentageString01(2).assertEquals("0.12%")
+  0.00123.toPercentageString01(3).assertEquals("0.123%")

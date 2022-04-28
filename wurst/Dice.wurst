@@ -25,8 +25,12 @@ public function rangeInt.toDice() returns dice
   let base = this.min == this.max ? this.min : this.min - 1
   let numberOfDice = this.min == this.max ? 0 : 1
   let sidesPerDie = this.min == this.max ? this.max - this.min : (this.max - this.min) + 1
-  return dice(base, numberOfDice, sidesPerDie)  
+  return dice(base, numberOfDice, sidesPerDie)
 
 // ============================================================================
 public function int.toDice() returns dice
   return dice(this, 0, 0)
+
+// ============================================================================
+public function dice.toString() returns string
+  return this.base.toString() + "+" + this.numberOfDice.toString() + "*" + this.sidesPerDie.toString()

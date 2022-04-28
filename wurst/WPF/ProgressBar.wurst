@@ -50,9 +50,9 @@ public class ProgressBar extends Frame
     if (m_progress != null)
       let message = m_progress.getMessage()
       if (message == "")
-        text = progress.toPercentageString01()
+        text = progress.toPercentageString01(0)
       else
-        text = "{0} {1}".format(message, progress.toPercentageString01())
+        text = "{0} {1}".format(message, progress.toPercentageString01(0))
 
     getFrameHandle().setValue(progress)
     m_textFrame.setText(text)

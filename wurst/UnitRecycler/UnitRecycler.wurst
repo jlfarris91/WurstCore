@@ -60,6 +60,7 @@ public function getTriggerUnitRecycler() returns UnitRecycler
 // ============================================================================
 public class UnitRecycler
   private player m_owner
+  private string m_name
   private group m_active
   private group m_stocked
   private HashMap<unit, int> m_generationMap
@@ -79,6 +80,7 @@ public class UnitRecycler
       error("UnitRecycler does not support hero units")
 
     m_owner = owner
+    m_name = UnitId2String(m_unitId)
     m_unitId = unitId
     g_unitIdToUnitRecyclerMap.put(unitId, this)
     m_active = CreateGroup()
@@ -101,6 +103,10 @@ public class UnitRecycler
     m_stocked = null
 
     g_unitIdToUnitRecyclerMap.remove(m_unitId)
+
+  // --------------------------------------------------------------------------
+  function getName() returns string
+    return m_name
 
   // --------------------------------------------------------------------------
   function getUnitId() returns int
@@ -235,7 +241,6 @@ public class UnitRecycler
   private function stockUnit(unit _unit)
 
     if (isUnitStocked(_unit))
-      error("unit is already stocked and inactive! : {0}/{1}".format(m_active.size().toString(), m_active.size().toString()))
       return
 
     // let isNewUnit = not doesUnitBelongToRecycler(_unit)
@@ -297,6 +302,8 @@ public class UnitRecycler
 
     let u = CreateUnit(owner, m_unitId, pos.x, pos.y, facingAngle.radians)
     g_unitToRecyclerMap.put(u, this)
+
+    m_name = u.getName()
 
     setUnitIsActive(u, false)
     // log("createUnitInternal", "add : {0} {1}".format(u.getUserData().toString(), m_active.size().toString()))

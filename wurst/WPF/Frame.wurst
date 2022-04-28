@@ -368,6 +368,7 @@ public class Frame
     let wasVisible = m_playerVisibility
     m_playerVisibility = INT_MAX
     if (wasVisible != m_playerVisibility)
+      onVisibilityChanged()
       signalDesiredSizeChanged()
       invalidateMeasure()
   
@@ -377,6 +378,7 @@ public class Frame
     let wasVisible = m_playerVisibility
     m_playerVisibility = m_playerVisibility.setBit(_player.getId())
     if (wasVisible != m_playerVisibility)
+      onVisibilityChanged()
       signalDesiredSizeChanged()
       invalidateMeasure()
 
@@ -388,25 +390,39 @@ public class Frame
     m_playerVisibility = 0
     m_playerVisibility = m_playerVisibility.setBit(_player.getId())
     if (wasVisible != m_playerVisibility)
+      onVisibilityChanged()
       signalDesiredSizeChanged()
       invalidateMeasure()
 
   // --------------------------------------------------------------------------
   function hide()
     m_frameHandle.hide()
+    let wasVisible = m_playerVisibility
     m_playerVisibility = 0
+    if (wasVisible != m_playerVisibility)
+      onVisibilityChanged()
 
   // --------------------------------------------------------------------------
   function hide(player _player)
     m_frameHandle.hide(_player)
+    let wasVisible = m_playerVisibility
     m_playerVisibility = m_playerVisibility.clearBit(_player.getId())
+    if (wasVisible != m_playerVisibility)
+      onVisibilityChanged()
 
   // --------------------------------------------------------------------------
   function hideOnly(player _player)
     m_frameHandle.show()
     m_frameHandle.hide(_player)
+    let wasVisible = m_playerVisibility
     m_playerVisibility = INT_MAX
     m_playerVisibility = m_playerVisibility.clearBit(_player.getId())
+    if (wasVisible != m_playerVisibility)
+      onVisibilityChanged()
+
+  // --------------------------------------------------------------------------
+  protected function onVisibilityChanged()
+    skip
 
   // --------------------------------------------------------------------------
   function clearFocus()
