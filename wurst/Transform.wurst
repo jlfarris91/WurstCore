@@ -30,6 +30,10 @@ public function transform.separate(transform worldSpace) returns transform
   return transform(p, worldSpace.pivot, r, s)
 
 // ============================================================================
+public function unit.getTransform() returns transform
+  return transform(this.getPos3Fly(), ZERO3, eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
+
+// ============================================================================
 public class Transform
   private Transform m_parent = null
   private Vector<Transform> m_children
