@@ -1,7 +1,7 @@
 package Transform
 import Quaternion
-import LinkedList
 import ErrorHandling
+import Vector
 
 public tuple transform(vec3 pos, vec3 pivot, quat rot, real scale)
 
@@ -32,15 +32,16 @@ public function transform.separate(transform worldSpace) returns transform
 // ============================================================================
 public class Transform
   private Transform m_parent = null
-  private LinkedList<Transform> m_children = new LinkedList<Transform>()
+  private Vector<Transform> m_children
   private transform m_localTransform = IDENTITYT
   private transform m_worldTransform = IDENTITYT
   private bool m_dirtyWorld = true
 
   // --------------------------------------------------------------------------
   ondestroy
-    destroy m_children
-    m_children = null
+    if (m_children != null)
+      destroy m_children
+      m_children = null
 
   // --------------------------------------------------------------------------
   function getParent() returns Transform
@@ -54,15 +55,25 @@ public class Transform
     if (parent == this)
       error("Cannot set parent to self")
 
-    if (m_parent != null)
+    if (m_parent != null and m_parent.m_children != null)
       m_parent.m_children.remove(this)
 
     m_parent = parent
 
     if (m_parent != null)
+      if (m_parent.m_children == null)
+        m_parent.m_children = new Vector<Transform>()
       m_parent.m_children.add(this)
 
     dirtyHierarchy()
+
+  // --------------------------------------------------------------------------
+  function getChildCount() returns int
+    return m_children != null ? m_children.size() : 0
+
+  // --------------------------------------------------------------------------
+  function getChild(int index) returns Transform
+    return m_children != null ? m_children.get(index) : null
 
   // --------------------------------------------------------------------------
   function getLocalTransform() returns transform
@@ -169,5 +180,6 @@ public class Transform
   // --------------------------------------------------------------------------
   private function dirtyHierarchy()
     m_dirtyWorld = true
-    for child in m_children
-      child.dirtyHierarchy()
+    if (m_children != null)
+      for child in m_children
+        child.dirtyHierarchy()
