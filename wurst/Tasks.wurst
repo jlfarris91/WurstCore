@@ -919,6 +919,7 @@ class ExecuteWhileTask extends Task
   private int m_iterations
   private real m_time
   private Func1<Task, bool> m_action
+  private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
   construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real time, int iterations, Func1<Task, bool> action)
@@ -926,10 +927,15 @@ class ExecuteWhileTask extends Task
     m_time = time
     m_iterations = iterations
     m_action = action.acquire()
+    m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   ondestroy
     m_action.release()
+
+    if (m_executeOnceCallback != null)
+      destroy m_executeOnceCallback
+      m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   override protected function run()
@@ -956,7 +962,9 @@ class ExecuteWhileTask extends Task
       return
 
     if (continue)
-      doAfter(m_time, () -> executeOnce())
+      m_executeOnceCallback = doAfter(m_time) () ->
+        m_executeOnceCallback = null /* destroyed automatically */
+        executeOnce()
     else
       succeed()
 
@@ -987,6 +995,7 @@ class ExecuteWhileTask2<TUserData> extends Task
   private int m_iterations
   private real m_time
   private Func2<Task, TUserData, bool> m_action
+  private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
   construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct,
@@ -995,10 +1004,15 @@ class ExecuteWhileTask2<TUserData> extends Task
     m_time = time
     m_iterations = iterations
     m_action = action.acquire()
+    m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   ondestroy
     m_action.release()
+
+    if (m_executeOnceCallback != null)
+      destroy m_executeOnceCallback
+      m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   override protected function run()
@@ -1025,7 +1039,9 @@ class ExecuteWhileTask2<TUserData> extends Task
       return
 
     if (continue)
-      doAfter(m_time, () -> executeOnce())
+      m_executeOnceCallback = doAfter(m_time) () ->
+        m_executeOnceCallback = null /* destroyed automatically */
+        executeOnce()
     else
       succeed()
 
@@ -1061,6 +1077,7 @@ class ForEachWhileTask<T> extends Task
   private Func1<Task, LinkedList<T>> m_listGetter
   private Action2<Task, T> m_action
   private LLIterator<T> m_iterator
+  private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
   construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct,
@@ -1070,6 +1087,7 @@ class ForEachWhileTask<T> extends Task
     m_time = time
     m_iterations = iterations
     m_action = action.acquire()
+    m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -1078,6 +1096,10 @@ class ForEachWhileTask<T> extends Task
 
     if (m_iterator != null)
       m_iterator.close()
+
+    if (m_executeOnceCallback != null)
+      destroy m_executeOnceCallback
+      m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   override protected function run()
@@ -1110,7 +1132,9 @@ class ForEachWhileTask<T> extends Task
       return
 
     if (m_iterator.hasNext())
-      doAfter(m_time, () -> executeOnce())
+      m_executeOnceCallback = doAfter(m_time) () ->
+        m_executeOnceCallback = null /* destroyed automatically */
+        executeOnce()
     else
       succeed()
 
@@ -1146,6 +1170,7 @@ class ForEachWhileTask2<TUserData, T> extends Task
   private Func2<Task, TUserData, LinkedList<T>> m_listGetter
   private Action3<Task, TUserData, T> m_action
   private LLIterator<T> m_iterator
+  private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
   construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct,
@@ -1155,6 +1180,7 @@ class ForEachWhileTask2<TUserData, T> extends Task
     m_time = time
     m_iterations = iterations
     m_action = action.acquire()
+    m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -1163,6 +1189,10 @@ class ForEachWhileTask2<TUserData, T> extends Task
 
     if (m_iterator != null)
       m_iterator.close()
+
+    if (m_executeOnceCallback != null)
+      destroy m_executeOnceCallback
+      m_executeOnceCallback = null
 
   // --------------------------------------------------------------------------
   override protected function run()
@@ -1195,7 +1225,9 @@ class ForEachWhileTask2<TUserData, T> extends Task
       return
 
     if (m_iterator.hasNext())
-      doAfter(m_time, () -> executeOnce())
+      m_executeOnceCallback = doAfter(m_time) () ->
+        m_executeOnceCallback = null /* destroyed automatically */
+        executeOnce()
     else
       succeed()
 
