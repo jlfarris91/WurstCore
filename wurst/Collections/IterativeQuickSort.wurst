@@ -62,6 +62,10 @@ public class IterativeQuickSort<T>
     return m_totalIterations
 
   // --------------------------------------------------------------------------
+  function getStackSize() returns int
+    return m_stack.size()
+
+  // --------------------------------------------------------------------------
   function next() returns bool
 
     let succeeded = try() () ->
