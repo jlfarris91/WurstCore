@@ -27,9 +27,17 @@ public function bounds.contains(vec2 pos) returns bool
          pos.y >= this.min.y and pos.y <= this.max.y
 
 // ============================================================================
-public function bounds.grow(real scale) returns bounds
+public function bounds.scale(real scale) returns bounds
   let center = this.center()
   let size = this.size() * scale
+  let min = center - size / 2
+  let max = center + size / 2
+  return bounds(min, max)
+
+// ============================================================================
+public function bounds.grow(real radius) returns bounds
+  let center = this.center()
+  let size = this.size() + vec2(radius, radius)
   let min = center - size / 2
   let max = center + size / 2
   return bounds(min, max)
