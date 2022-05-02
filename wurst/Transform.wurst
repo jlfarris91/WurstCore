@@ -15,7 +15,7 @@ public function transform.op_mult(transform localSpace) returns transform
 public function transform.concat(transform localSpace) returns transform
   let r = this.rot * localSpace.rot
   var v = (localSpace.pivot + localSpace.pos - this.pivot) * this.scale
-  v = v.rotate(r)
+  v = v.rotate(this.rot)
   let p = v + this.pivot + this.pos - localSpace.pivot
   let s = this.scale * localSpace.scale
   return transform(p, localSpace.pivot, r, s)
@@ -25,7 +25,7 @@ public function transform.separate(transform worldSpace) returns transform
   let s = worldSpace.scale / this.scale
   let r = this.rot.conj() * worldSpace.rot.norm()
   var v = worldSpace.pos + worldSpace.pivot - this.pos - this.pivot
-  v = v.rotate(r.inv()) / this.scale
+  v = v.rotate(this.rot.inv()) / this.scale
   let p = v + this.pivot - worldSpace.pivot
   return transform(p, worldSpace.pivot, r, s)
 
