@@ -3,7 +3,6 @@ import HashMap
 import LinkedList
 import ClosureTimers
 import Meta
-import Trace
 
 constant real BACKGROUND_UPDATE_INTERVAL = 1.0
 constant real SLOW_UPDATE_INTERVAL = 0.4
@@ -73,7 +72,6 @@ function updateListeners(LinkedList<IRealtimeListener> activeComponents, real dt
   while (iter.hasNext())
     let comp = iter.next()
     if (comp != null)
-      Trace.trace("RT:" + typeIdToTypeName(comp.typeId), 1)
       comp.realtimeUpdate(dt)
   iter.close()
 
