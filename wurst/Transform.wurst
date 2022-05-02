@@ -30,6 +30,23 @@ public function transform.separate(transform worldSpace) returns transform
   return transform(p, worldSpace.pivot, r, s)
 
 // ============================================================================
+public function transform.apply(effect fx)
+  fx.setPos(this.pos)
+  fx.setScale(this.scale)
+  fx.setOrientation(this.rot)
+
+// ============================================================================
+public function transform.apply(unit u)
+  let eulers = this.rot.toEuler()
+  u.setPosFly(this.pos)
+  u.setScale(this.scale)
+  u.setFacing(eulers.z.asAngleRadians())
+
+// ============================================================================
+public function transform.apply(item i)
+  i.setPos(this.pos.toVec2())
+
+// ============================================================================
 public function unit.getTransform() returns transform
   return transform(this.getPos3Fly(), ZERO3, eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
 
@@ -163,23 +180,15 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function apply(effect fx)
-    let worldSpace = getWorldTransform()
-    fx.setPos(worldSpace.pos)
-    fx.setScale(worldSpace.scale)
-    fx.setOrientation(worldSpace.rot)
+    getWorldTransform().apply(fx)
 
   // --------------------------------------------------------------------------
   function apply(unit u)
-    let worldSpace = getWorldTransform()
-    let eulers = worldSpace.rot.toEuler()
-    u.setPosFly(worldSpace.pos)
-    u.setScale(worldSpace.scale)
-    u.setFacing(eulers.z.asAngleRadians())
+    getWorldTransform().apply(u)
 
   // --------------------------------------------------------------------------
   function apply(item i)
-    let worldSpace = getWorldTransform()
-    i.setPos(worldSpace.pos.toVec2())
+    getWorldTransform().apply(i)
 
   // --------------------------------------------------------------------------
   private function dirtyHierarchy()
