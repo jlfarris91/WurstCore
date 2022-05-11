@@ -49,7 +49,7 @@ public class TooltipItem
   private int m_valueCount
   private bool m_showBullets = true
   private bool m_alwaysPutSubItemsOnNewLine = false
-  private bool m_appendSpacerLine = false
+  private bool m_prependSpacerLine = false
 
   // --------------------------------------------------------------------------
   construct(string name)
@@ -133,8 +133,8 @@ public class TooltipItem
     m_alwaysPutSubItemsOnNewLine = value
 
   // --------------------------------------------------------------------------
-  function setAppendSpacerLine(bool value)
-    m_appendSpacerLine = value
+  function setPrependSpacerLine(bool value)
+    m_prependSpacerLine = value
 
   // --------------------------------------------------------------------------
   function clone() returns TooltipItem
@@ -146,7 +146,7 @@ public class TooltipItem
   // --------------------------------------------------------------------------
   function write(int level, StringBuilder sb)
 
-    if (m_appendSpacerLine)
+    if (m_prependSpacerLine)
       sb.appendLine()
 
     sb.append(getName(level).colorize(ITEM_NAME_COLOR))
@@ -192,19 +192,19 @@ public class TooltipBuilder
     m_items.clear()
 
   // --------------------------------------------------------------------------
-  function addItem(string name) returns TooltipBuilder
+  function addItem(string name) returns TooltipItem
     return addItem(new TooltipItem(name))
 
   // --------------------------------------------------------------------------
-  function addItem(string name, string value) returns TooltipBuilder
+  function addItem(string name, string value) returns TooltipItem
     return addItem(new TooltipItem(name, value))
 
   // --------------------------------------------------------------------------
-  function addItem(TooltipItem itm) returns TooltipBuilder
+  function addItem(TooltipItem itm) returns TooltipItem
     if (m_items.size() == MAX_TOOLTIP_ITEM_COUNT)
       error("Reached limit of tooltip items " + I2S(MAX_TOOLTIP_ITEM_COUNT))
     m_items.add(itm)
-    return this
+    return itm
 
   // --------------------------------------------------------------------------
   function getDescription() returns string
