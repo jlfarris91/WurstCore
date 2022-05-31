@@ -13,6 +13,7 @@ import ClosureTimers
 import CancellableClosureTimers
 import Observable
 
+@configurable public constant bool ENABLE_TASK_LOGGING = false
 TaskDefinitionBuilder g_taskDefinitionBuilder = new TaskDefinitionBuilder()
 
 // ============================================================================
@@ -184,7 +185,8 @@ public class Task
 
   // --------------------------------------------------------------------------
   protected function log(string message)
-    Log.info(m_definition.getLabel() + ": " + message)
+    if (ENABLE_TASK_LOGGING)
+      Log.info(m_definition.getLabel() + ": " + message)
 
   // --------------------------------------------------------------------------
   protected function run()
