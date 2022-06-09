@@ -35,6 +35,15 @@ public class WeightedSet<T>
     return totalWeight
 
   // --------------------------------------------------------------------------
+  function has(T elem) returns bool
+    var current = head
+    while (current != null)
+      if (current.elem == elem)
+        return true
+      current = current.next
+    return false
+
+  // --------------------------------------------------------------------------
   /** Adds an element to the set */
   function add(T elem, real weight)
     this.addEntry(new WeightedSetEntry<T>(elem, weight))
