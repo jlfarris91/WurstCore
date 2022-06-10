@@ -12,6 +12,7 @@ import Events
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
+LinkedList<IUnitComponentGenerator> g_unitComponentGenerators
 int array g_ignoreIndexingCounter
 
 @configurable public bool g_enableLogging = false
@@ -26,19 +27,33 @@ public constant int typeId_IUnitMetadata = Meta.reserveInterface("UnitMetadata.I
 public interface IUnitMetadata extends IComposite
   function getUnit() returns unit
   function attach(unit u)
+  function shouldDestroyWithOwner() returns bool
 
 // ============================================================================
 public interface IUnitMetadataFactory
-  function createUnit(IUnitMetadata metadata) returns bool
+  function createMetadata(unit u) returns UnitMetadata
+
+// ============================================================================
+public interface IUnitComponentGenerator
+  function generateComponents(IUnitMetadata metadata) returns bool
 
 // ============================================================================
 public class UnitMetadata extends Composable implements IUnitMetadata
   protected unit m_unit
+  private bool m_shouldDestroyWithOwner = true
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_unit != null)
       detachAndNullifyUnit()
+
+  // --------------------------------------------------------------------------
+  override function shouldDestroyWithOwner() returns bool
+    return m_shouldDestroyWithOwner
+
+  // --------------------------------------------------------------------------
+  function setShouldDestroyWithOwner(bool value)
+    m_shouldDestroyWithOwner = value
 
   // --------------------------------------------------------------------------
   @inline
@@ -192,15 +207,36 @@ public function unregisterUnitMetadataFactory(IUnitMetadataFactory factory)
   g_unitMetadataFactories.remove(factory)
 
 // ============================================================================
+public function registerUnitComponentGenerator(IUnitComponentGenerator generator)
+  if (generator == null)
+    argumentNullError("generator")
+  g_unitComponentGenerators.addAt(generator, 0)
+
+// ============================================================================
+public function unregisterUnitComponentGenerator(IUnitComponentGenerator generator)
+  if (generator == null)
+    argumentNullError("generator")
+  g_unitComponentGenerators.remove(generator)
+
+// ============================================================================
 public function constructUnitMetadata(unit u) returns IUnitMetadata
   if (u == null)
     argumentNullError("u")
 
-  let metadata = new UnitMetadata()
-  metadata.attach(u)
+  UnitMetadata metadata = null
 
   for factory in g_unitMetadataFactories
-    if (factory.createUnit(metadata))
+    metadata = factory.createMetadata(u)
+    if (metadata != null)
+      break
+
+  if (metadata == null)
+    metadata = new UnitMetadata()
+
+  metadata.attach(u)
+
+  for generator in g_unitComponentGenerators
+    if (generator.generateComponents(metadata))
       break
 
   return metadata
@@ -281,7 +317,8 @@ public function createMetadataForUnit(unit _unit)
 // ============================================================================
 public function destroyMetadataForUnit(unit _unit)
   let metadata = _unit.getMetadata()
-  if (metadata != null)
+  
+  if (metadata != null and metadata.shouldDestroyWithOwner())
     destroy metadata
     logDebug("[destroyMetadata] Destroyed metadata for unit {0}".format(_unit.getName()))
 
@@ -340,6 +377,7 @@ init
   Meta.register("UnitMetadata", (registrar) -> registerMetadata(registrar))
 
   g_unitMetadataFactories = new LinkedList<IUnitMetadataFactory>()
+  g_unitComponentGenerators = new LinkedList<IUnitComponentGenerator>()
 
   for i = 0 to 24
     g_ignoreIndexingCounter[i] = 0
