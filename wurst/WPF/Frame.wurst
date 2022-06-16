@@ -79,10 +79,11 @@ public class Frame
       m_parent.m_children.remove(this)
       m_parent = null
 
-    while m_children.isEmpty() == false
-      destroy m_children.pop()
-    destroy m_children
-    m_children = null
+    if (m_children != null)
+      while m_children.isEmpty() == false
+        destroy m_children.pop()
+      destroy m_children
+      m_children = null
   
     m_frameHandle.remove()
     m_frameHandle = null
