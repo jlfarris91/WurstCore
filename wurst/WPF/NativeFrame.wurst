@@ -1,0 +1,109 @@
+package NativeFrame
+import HashMap
+import Action
+
+// ============================================================================
+public class NativeFrameDefinition
+  private string m_name = null
+  private string m_typeName = null
+  private framehandle m_owner = null
+  private int m_priority = -1
+  private string m_inherits = null
+  private int m_createContext = -1
+
+  // --------------------------------------------------------------------------
+  construct (string name)
+    m_name = name
+
+  // --------------------------------------------------------------------------
+  construct (string name, framehandle owner, int priority, int createContext)
+    m_name = name
+    m_owner = owner
+    m_priority = priority
+    m_createContext = createContext
+
+  // --------------------------------------------------------------------------
+  construct (string typeName, string name, framehandle owner, string inherits, int createContext)
+    m_typeName = typeName
+    m_name = name
+    m_owner = owner
+    m_inherits = inherits
+    m_createContext = createContext
+
+  // --------------------------------------------------------------------------
+  function buildFrame() returns framehandle
+    if (m_typeName != null)
+      return createFrame(m_typeName, m_name, m_owner, m_inherits, m_createContext)
+    if (m_owner != null)
+      return createFrame(m_name, m_owner, m_priority, m_createContext)
+    return createFrame(m_name)
+
+// ============================================================================
+public interface INativeFrameTemplate
+  function createFrame() returns framehandle
+
+// ============================================================================
+public class NativeFrameTemplate implements INativeFrameTemplate
+  private NativeFrameDefinition m_frameDef
+  private Action1<framehandle> m_initializer
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_frameDef = null
+    if (m_initializer != null)
+      m_initializer.release()
+      m_initializer = null
+
+  // --------------------------------------------------------------------------
+  function getFrameDefinition() returns NativeFrameDefinition
+    return m_frameDef
+  
+  // --------------------------------------------------------------------------
+  function setFrameDefinition(NativeFrameDefinition value)
+    m_frameDef = value
+
+  // --------------------------------------------------------------------------
+  function getInitializer() returns Action1<framehandle>
+    return m_initializer
+  
+  // --------------------------------------------------------------------------
+  function setInitializer(Action1<framehandle> value)
+    m_initializer = value.acquire()
+
+  // --------------------------------------------------------------------------
+  override function createFrame() returns framehandle
+    if (m_frameDef == null)
+      return null
+    let frame = m_frameDef.buildFrame()
+    if (m_initializer != null)
+      m_initializer.call(frame)
+    return frame
+
+// ============================================================================
+public interface INativeFrameTemplateSelector
+  function getFrameTemplate(int typeid) returns INativeFrameTemplate
+
+// ============================================================================
+public class NativeFrameTemplateSelector implements INativeFrameTemplateSelector
+  private IterableMap<int, INativeFrameTemplate> m_typeIdToTemplateMap = new IterableMap<int, INativeFrameTemplate>()
+  private INativeFrameTemplate m_defaultFrameTemplate
+
+  // --------------------------------------------------------------------------
+  function getDefaultFrameTemplate() returns INativeFrameTemplate
+    return m_defaultFrameTemplate
+
+  // --------------------------------------------------------------------------
+  function setDefaultFrameTemplate(INativeFrameTemplate value)
+    m_defaultFrameTemplate = value
+
+  // --------------------------------------------------------------------------
+  function registerFrameTemplate(int typeid, INativeFrameTemplate template)
+    m_typeIdToTemplateMap.put(typeid, template)
+  
+  // --------------------------------------------------------------------------
+  function unregisterFrameTemplate(int typeid)
+    m_typeIdToTemplateMap.remove(typeid)
+
+  // --------------------------------------------------------------------------
+  override function getFrameTemplate(int typeid) returns INativeFrameTemplate
+    return m_typeIdToTemplateMap.get(typeid)

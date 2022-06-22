@@ -152,6 +152,29 @@ public function real.toRadians() returns real
   return this * bj_DEGTORAD
 
 // ============================================================================
+/** Taken from Unity */
+tuple smoothDampResult(real value, real vel)
+public function smoothDamp(real current, real target, real currentVelocity, real smoothTime, real maxSpeed, real deltaTime) returns smoothDampResult
+  var targetMutable = target
+  var vel = currentVelocity
+  let smoothTimeClamped = max(0.0001, smoothTime)
+  let num = 2.0 / smoothTimeClamped
+  let num2 = num * deltaTime
+  let num3 = 1.0 / (1 + num2 + 0.48 * num2 * num2 + 0.235 * num2 * num2 * num2)
+  var num4 = current - targetMutable
+  let num5 = targetMutable
+  let num6 = maxSpeed * smoothTimeClamped
+  num4 = clamp(num4, -num6, num6)
+  targetMutable = current - num4
+  let num7 = (vel + num * num4) * deltaTime
+  vel = (vel - num * num7) * num3
+  var num8 = targetMutable + (num4 + num7) * num3
+  if (num5 - current > 0.0 == num8 > num5)
+    num8 = num5
+    vel = (num8 - num5) / deltaTime
+  return smoothDampResult(num8, vel)
+
+// ============================================================================
 init
   g_WorldBounds = GetPlayableMapRect()
 

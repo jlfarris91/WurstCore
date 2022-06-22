@@ -88,3 +88,16 @@ class DispatchedEventCallback extends EventCallback
   // --------------------------------------------------------------------------
   override function call()
     dispatch_Internal(m_context, m_work)
+
+// ============================================================================
+public class InGamePlayerDispatcher extends DispatcherContext
+  private player m_ownerPlayer
+
+  // --------------------------------------------------------------------------
+  construct(player ownerPlayer)
+    m_ownerPlayer = ownerPlayer
+
+  // --------------------------------------------------------------------------
+  override function dispatch(Action work)
+    if (m_ownerPlayer != null and m_ownerPlayer.isIngame())
+      work.call()

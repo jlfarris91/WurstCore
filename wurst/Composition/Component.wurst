@@ -60,5 +60,5 @@ init
 
 ///////////////////////////////////////////////////////////////////////////////
 function registerMetadata(MetaRegistrar registrar)
-  registrar.registerAbstractClass(typeId_Component, "Component.Component")..registerInterface(typeId_IComponent).getTypeId()
+  registrar.registerAbstractClass(typeId_Component, "Component.Component")..registerInterface(typeId_IComponent)
 ///////////////////////////////////////////////////////////////////////////////

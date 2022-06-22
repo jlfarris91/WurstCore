@@ -1,14 +1,16 @@
 package Frame
+import public NativeFrame
+import public FramehandleExtensions
 import HashMap
 import LinkedList
 import Layout
 import Action
-import public FramehandleExtensions
 import Object
 import Flags
 import ClosureTimers
 import ErrorHandling
 import Execute
+import RefObject
 
 @configurable public constant bool FRAME_SECURITY_CHECKS_ENABLED = false
 @configurable public string FRAME_LOG_FILTER_STRING = null
@@ -83,9 +85,6 @@ public class Frame
       destroy m_children.pop()
     destroy m_children
     m_children = null
-  
-    m_frameHandle.remove()
-    m_frameHandle = null
 
     for prop in g_allLightweightProperties
       prop.clearValue(this)
@@ -93,6 +92,9 @@ public class Frame
     if (m_sizeChangedInfo != null)
       m_sizeChangedInfo.frame = null
       m_sizeChangedInfo = null
+  
+    m_frameHandle.remove()
+    m_frameHandle = null
   //}
 
   // --------------------------------------------------------------------------
@@ -281,6 +283,10 @@ public class Frame
   // --------------------------------------------------------------------------
   function getDataContext() returns object
     return dataContextProperty.getValue(this)
+
+  // --------------------------------------------------------------------------
+  function getDataContext<T>(int typeId) returns T
+    return getDataContext().as<T>(typeId)
 
   // --------------------------------------------------------------------------
   function setDataContext(object value)
@@ -849,48 +855,12 @@ public interface IFrameLayout
   function arrange(Frame frame, vec2 size) returns vec2
 
 // ============================================================================
-public class FrameDefinition
-  private string m_name = null
-  private string m_typeName = null
-  private framehandle m_owner = null
-  private int m_priority = -1
-  private string m_inherits = null
-  private int m_createContext = -1
-
-  // --------------------------------------------------------------------------
-  construct (string name)
-    m_name = name
-
-  // --------------------------------------------------------------------------
-  construct (string name, framehandle owner, int priority, int createContext)
-    m_name = name
-    m_owner = owner
-    m_priority = priority
-    m_createContext = createContext
-
-  // --------------------------------------------------------------------------
-  construct (string typeName, string name, framehandle owner, string inherits, int createContext)
-    m_typeName = typeName
-    m_name = name
-    m_owner = owner
-    m_inherits = inherits
-    m_createContext = createContext
-
-  // --------------------------------------------------------------------------
-  function buildFrame() returns framehandle
-    if (m_typeName != null)
-      return createFrame(m_typeName, m_name, m_owner, m_inherits, m_createContext)
-    if (m_owner != null)
-      return createFrame(m_name, m_owner, m_priority, m_createContext)
-    return createFrame(m_name)
-
-// ============================================================================
 public interface IFrameTemplate
   function createFrame() returns Frame
 
 // ============================================================================
 public class FrameTemplate implements IFrameTemplate
-  private FrameDefinition m_frameDef
+  private NativeFrameDefinition m_frameDef
   private IFrameFactory m_frameFactory
   private Action1<Frame> m_initializer
 
@@ -903,11 +873,11 @@ public class FrameTemplate implements IFrameTemplate
       m_initializer = null
 
   // --------------------------------------------------------------------------
-  function getFrameDefinition() returns FrameDefinition
+  function getFrameDefinition() returns NativeFrameDefinition
     return m_frameDef
   
   // --------------------------------------------------------------------------
-  function setFrameDefinition(FrameDefinition value)
+  function setFrameDefinition(NativeFrameDefinition value)
     m_frameDef = value
 
   // --------------------------------------------------------------------------

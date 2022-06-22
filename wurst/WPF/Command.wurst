@@ -1,0 +1,98 @@
+package Command
+import RefObject
+
+// ============================================================================
+public interface ICommand
+  function canExecute() returns bool
+  function execute()
+
+// ============================================================================
+public abstract class CommandExecuteAction
+  use RefObject
+  abstract function call()
+
+// ============================================================================
+public abstract class CommandCanExecuteFunc
+  use RefObject
+  abstract function call() returns bool
+
+// ============================================================================
+public class RoutedCommand implements ICommand
+  private CommandExecuteAction m_execute = null
+  private CommandCanExecuteFunc m_canExecute = null
+  
+  // --------------------------------------------------------------------------
+  construct(CommandExecuteAction execute)
+    m_execute = execute.acquire()
+  
+  // --------------------------------------------------------------------------
+  construct(CommandExecuteAction execute, CommandCanExecuteFunc canExecute)
+    m_execute = execute.acquire()
+
+    if (canExecute != null)
+      m_canExecute = canExecute.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    m_execute.release()
+
+    if (m_canExecute != null)
+      m_canExecute.release()
+      m_canExecute = null
+
+  // --------------------------------------------------------------------------
+  override function canExecute() returns bool
+    return m_canExecute == null or m_canExecute.call()
+  
+  // --------------------------------------------------------------------------
+  override function execute()
+    m_execute.call()
+
+// ============================================================================
+public interface ICommand1<TArg1>
+  function canExecute(TArg1 value) returns bool
+  function execute(TArg1 value)
+
+// ============================================================================
+public abstract class Command1ExecuteAction<TArg1>
+  use RefObject
+  abstract function call(TArg1 obj)
+
+// ============================================================================
+public abstract class Command1CanExecuteFunc<TArg1>
+  use RefObject
+  abstract function call(TArg1 obj) returns bool
+
+// ============================================================================
+public class RoutedCommand1<TArg1> implements ICommand1<TArg1>
+  private Command1ExecuteAction<TArg1> m_execute = null
+  private Command1CanExecuteFunc<TArg1> m_canExecute = null
+  
+  // --------------------------------------------------------------------------
+  construct(Command1ExecuteAction<TArg1> execute)
+    m_execute = execute.acquire()
+  
+  // --------------------------------------------------------------------------
+  construct(Command1ExecuteAction<TArg1> execute, Command1CanExecuteFunc<TArg1> canExecute)
+    m_execute = execute.acquire()
+
+    if (canExecute != null)
+      m_canExecute = canExecute.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    m_execute.release()
+
+    if (m_canExecute != null)
+      m_canExecute.release()
+      m_canExecute = null
+
+  // --------------------------------------------------------------------------
+  override function canExecute(TArg1 value) returns bool
+    return m_canExecute == null or m_canExecute.call(value)
+  
+  // --------------------------------------------------------------------------
+  override function execute(TArg1 value)
+    m_execute.call(value)
