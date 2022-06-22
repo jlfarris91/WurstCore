@@ -17,6 +17,10 @@ public class ProgressBar extends Frame
     getFrameHandle().setMinMax(0.0, 1.0)
 
   // --------------------------------------------------------------------------
+  ondestroy
+    unregisterEventHandlers()
+
+  // --------------------------------------------------------------------------
   function setProgress(IProgress progress)
     if (m_progress != progress)
       unregisterEventHandlers()
