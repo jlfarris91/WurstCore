@@ -73,13 +73,9 @@ public class Frame
   // --------------------------------------------------------------------------
   ondestroy
   //{
-    if (m_frameHandle != null)
-      m_frameHandle.remove()
-      m_frameHandle = null
-
-    if (m_parent != null)
+    if (m_parent != null and m_parent.m_children != null)
       m_parent.m_children.remove(this)
-      m_parent = null
+    m_parent = null
 
     if (m_children != null)
       while m_children.isEmpty() == false
@@ -94,6 +90,7 @@ public class Frame
       m_sizeChangedInfo.frame = null
       m_sizeChangedInfo = null
   
+    m_frameHandle.hide()
     m_frameHandle.remove()
     m_frameHandle = null
   //}
