@@ -20,7 +20,7 @@ Frame "BACKDROP" "NotificationBackdropTemplate" {
 Frame "TEXT" "NotificationTextTemplate" {
   DecorateFileNames,
   FontFlags "FIXEDSIZE",
-  FrameFont "MasterFont", 0.01, "",
+  FrameFont "MasterFont", 0.008, "",
   FontColor 1.0 1.0 1.0 1.0, //Red Green Blue Alpha 0.0 to 1.0
   FontShadowColor 0.0 0.0 0.0 0.9,
   FontShadowOffset 0.001 -0.001,

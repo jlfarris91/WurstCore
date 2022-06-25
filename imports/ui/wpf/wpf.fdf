@@ -18,6 +18,12 @@ Frame "BACKDROP" "TestBackdrop" {
 }
 
 // ============================================================================
+Frame "FRAME" "IGNORETRACKEVENTS" {
+  UseActiveContext,
+  LayerStyle "IGNORETRACKEVENTS", 
+}
+
+// ============================================================================
 Frame "BACKDROP" "DebugOutlineWhite" {
   SetAllPoints,
   BackdropTileBackground, //Tile mode enabled

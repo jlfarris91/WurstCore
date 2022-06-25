@@ -109,6 +109,10 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
   // --------------------------------------------------------------------------
   function add(Notification notification)
 
+    for n in m_notifications
+      if (n == notification)
+        return
+
     let frame = m_frameFactory.createFrame(notification.typeId)
 
     if (frame == null)
@@ -136,6 +140,8 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
 
     m_notificationSlots.push(notificationFrame)
     m_notifications.enqueue(notification)
+
+    notification.onShow()
 
     onVisualsInvalidate()
 
@@ -390,6 +396,10 @@ public class Notification
     return m_onCloseEvent
 
   // --------------------------------------------------------------------------
+  protected function onShow()
+    skip
+
+  // --------------------------------------------------------------------------
   function close()
 
     if (m_closed)
@@ -399,6 +409,12 @@ public class Notification
     
     if (m_onCloseEvent != null)
       m_onCloseEvent.call()
+
+  // --------------------------------------------------------------------------
+  function show(player forPlayer)
+    let nm = getNotificationManager(forPlayer)
+    if (nm != null)
+      nm.add(this)
 
 // ============================================================================
 public interface NotificationFrame
