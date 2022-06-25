@@ -1,0 +1,15 @@
+package FullscreenFrame
+import ClosureTimers
+
+public framehandle FULLSCREEN_FRAME
+public framehandle CONSOLE_UI_BACKDROP
+
+// ============================================================================
+init
+  CONSOLE_UI_BACKDROP = getFrame("ConsoleUIBackdrop")
+  FULLSCREEN_FRAME = createFrame("FRAME", "FULLSCREEN", CONSOLE_UI_BACKDROP, "", 0)..hide()
+
+  doPeriodically(1.0) (cb) ->
+    let width = BlzGetLocalClientWidth() / max(1, BlzGetLocalClientHeight()) * 0.6
+    FULLSCREEN_FRAME.setAbsPoint(FRAMEPOINT_BOTTOM, 0.4, 0)
+    FULLSCREEN_FRAME.setSize(width, 0.6)

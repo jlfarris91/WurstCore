@@ -158,20 +158,21 @@ public function smoothDamp(real current, real target, real currentVelocity, real
   var targetMutable = target
   var vel = currentVelocity
   let smoothTimeClamped = max(0.0001, smoothTime)
+  let deltaTimeClamped = max(0.0001, deltaTime)
   let num = 2.0 / smoothTimeClamped
-  let num2 = num * deltaTime
+  let num2 = num * deltaTimeClamped
   let num3 = 1.0 / (1 + num2 + 0.48 * num2 * num2 + 0.235 * num2 * num2 * num2)
   var num4 = current - targetMutable
   let num5 = targetMutable
   let num6 = maxSpeed * smoothTimeClamped
   num4 = clamp(num4, -num6, num6)
   targetMutable = current - num4
-  let num7 = (vel + num * num4) * deltaTime
+  let num7 = (vel + num * num4) * deltaTimeClamped
   vel = (vel - num * num7) * num3
   var num8 = targetMutable + (num4 + num7) * num3
   if (num5 - current > 0.0 == num8 > num5)
     num8 = num5
-    vel = (num8 - num5) / deltaTime
+    vel = (num8 - num5) / deltaTimeClamped
   return smoothDampResult(num8, vel)
 
 // ============================================================================

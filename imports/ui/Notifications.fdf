@@ -1,0 +1,263 @@
+IncludeFile "UI\FrameDef\UI\EscMenuTemplates.fdf",
+IncludeFile "UI\FrameDef\Glue\StandardTemplates.fdf",
+IncludeFile "UI\FrameDef\Glue\battlenettemplates.fdf",
+IncludeFile "UI\FrameDef\UI\QuestDialog.fdf",
+
+// ============================================================================
+Frame "BACKDROP" "NotificationBackdropTemplate" {
+  SetAllPoints,
+  DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
+  BackdropTileBackground, //Tile mode enabled
+  BackdropBackground  "ToolTipBackground", //BackgroundFile
+  BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+  BackdropCornerSize  0.003, //higher numbers make the corners bigger.
+  BackdropBackgroundInsets 0.0 0.0 0.0 0.0, //makes the background smaller, from the outside.
+  BackdropEdgeFile  "ToolTipBorder", //the border File
+  BackdropBlendAll,
+}
+
+// ============================================================================
+Frame "TEXT" "NotificationTextTemplate" {
+  DecorateFileNames,
+  FontFlags "FIXEDSIZE",
+  FrameFont "MasterFont", 0.01, "",
+  FontColor 1.0 1.0 1.0 1.0, //Red Green Blue Alpha 0.0 to 1.0
+  FontShadowColor 0.0 0.0 0.0 0.9,
+  FontShadowOffset 0.001 -0.001,
+  FontJustificationH JUSTIFYLEFT,
+  FontJustificationV JUSTIFYMIDDLE,
+  LayerStyle "IGNORETRACKEVENTS", 
+}
+
+// ============================================================================
+Frame "GLUEBUTTON" "NotificationCloseButtonTemplate" {
+    Width 0.01,
+    Height 0.01,
+    ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
+
+    ControlBackdrop "ButtonIcon",
+    Frame "BACKDROP" "ButtonIcon" {
+      BackdropBackground "ui\wpf\close-button",
+      BackdropBlendAll,
+    }
+
+    ControlDisabledBackdrop "ButtonIconDisabled",
+    Frame "BACKDROP" "ButtonIconDisabled" {
+      BackdropBackground "ui\wpf\close-button-pushed",
+      BackdropBlendAll,
+    }
+
+    ControlMouseOverHighlight "ButtonHighlight",
+    Frame "HIGHLIGHT" "ButtonHighlight" {
+        HighlightType "FILETEXTURE",
+        HighlightAlphaFile "ui\wpf\close-button-highlight",
+        HighlightAlphaMode "ADD",
+    }
+}
+
+// ============================================================================
+Frame "GLUEBUTTON" "NotificationActivateButtonTemplate" {
+    Width 0.02,
+    Height 0.02,
+    ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
+
+    ControlBackdrop "ButtonIcon",
+    Frame "BACKDROP" "ButtonIcon" {
+      BackdropBackground "ui\wpf\maximize-button",
+      BackdropBlendAll,
+    }
+
+    ControlDisabledBackdrop "ButtonIconDisabled",
+    Frame "BACKDROP" "ButtonIconDisabled" {
+      BackdropBackground "ui\wpf\maximize-button-pushed",
+      BackdropBlendAll,
+    }
+
+    ControlMouseOverHighlight "ButtonHighlight",
+    Frame "HIGHLIGHT" "ButtonHighlight" {
+        HighlightType "FILETEXTURE",
+        HighlightAlphaFile "ui\wpf\maximize-button-highlight",
+        HighlightAlphaMode "ADD",
+    }
+}
+
+// ============================================================================
+Frame "GLUEBUTTON" "SimpleNotification" {
+  Height 0.03,
+  ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
+
+  ControlBackdrop "PanelButtonBackdrop",
+  Frame "BACKDROP" "PanelButtonBackdrop" {
+    BackdropBackground "textures\transparent",
+    BackdropBlendAll,
+  }
+    
+  ControlPushedBackdrop "PanelButtonPushedBackdrop",
+  Frame "BACKDROP" "PanelButtonPushedBackdrop" {
+    BackdropBackground "textures\transparent",
+    BackdropBlendAll,
+  }
+
+  ControlMouseOverHighlight "PanelButtonMouseOverHighlight",
+  Frame "HIGHLIGHT" "PanelButtonMouseOverHighlight" {
+    HighlightType "FILETEXTURE",
+    HighlightAlphaFile "UI\Widgets\BattleNet\bnet-button01-highlight-mouse.blp", 
+    HighlightAlphaMode "ADD",
+  }
+
+  Frame "BACKDROP" "Backdrop" INHERITS "NotificationBackdropTemplate" {
+    SetAllPoints,
+  }
+
+  Frame "BACKDROP" "ProgressBar" {
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.003, -0.003,
+    SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.003, 0.003,
+    BackdropBackground "replaceabletextures\\teamcolor\\teamcolor00",
+    BackdropBlendAll,
+  }
+  
+  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButtonTemplate" {
+    SetPoint CENTER, "SimpleNotification", LEFT, 0.01, 0.0,
+  }
+
+  Frame "BACKDROP" "IconFrame" {
+    Width 0.02,
+    Height 0.02,
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.02, -0.005,
+    BackdropBlendAll,
+  }
+
+  Frame "FRAME" "BodyFrame" {
+    LayerStyle "IGNORETRACKEVENTS", 
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.045, -0.005,
+    SetPoint BOTTOMRIGHT, "SimpleNotification", BOTTOMRIGHT, -0.005, 0.005,
+  }
+
+  Frame "TEXT" "TimeRemaining" INHERITS "NotificationTextTemplate" {
+    SetPoint TOPLEFT, "SimpleNotification", TOPRIGHT, 0.005, -0.005,
+  }
+}
+
+// ============================================================================
+Frame "GLUEBUTTON" "ActionNotification" {
+  Height 0.03,
+  ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
+
+  ControlBackdrop "PanelButtonBackdrop",
+  Frame "BACKDROP" "PanelButtonBackdrop" {
+    BackdropBackground "textures\transparent",
+    BackdropBlendAll,
+  }
+    
+  ControlPushedBackdrop "PanelButtonPushedBackdrop",
+  Frame "BACKDROP" "PanelButtonPushedBackdrop" {
+    BackdropBackground "textures\transparent",
+    BackdropBlendAll,
+  }
+
+  ControlMouseOverHighlight "PanelButtonMouseOverHighlight",
+  Frame "HIGHLIGHT" "PanelButtonMouseOverHighlight" {
+    HighlightType "FILETEXTURE",
+    HighlightAlphaFile "UI\Widgets\BattleNet\bnet-button01-highlight-mouse.blp", 
+    HighlightAlphaMode "ADD",
+  }
+
+  Frame "BACKDROP" "Backdrop" INHERITS "NotificationBackdropTemplate" {
+    SetAllPoints,
+  }
+
+  Frame "BACKDROP" "ProgressBar" {
+    SetAllPoints,
+    BackdropBackground "ui\feedback\xpbar\human-bigbar-fill",
+    BackdropBlendAll,
+  }
+  
+  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButtonTemplate" {
+    SetPoint CENTER, "ActionNotification", LEFT, 0.01, 0.0,
+  }
+
+  Frame "BACKDROP" "IconFrame" {
+    Width 0.02,
+    Height 0.02,
+    SetPoint TOPLEFT, "ActionNotification", TOPLEFT, 0.02, -0.005,
+    BackdropBlendAll,
+  }
+
+  Frame "FRAME" "BodyFrame" {
+    LayerStyle "IGNORETRACKEVENTS", 
+    SetPoint TOPLEFT, "ActionNotification", TOPLEFT, 0.045, -0.005,
+    SetPoint BOTTOMRIGHT, "ActionNotification", BOTTOMRIGHT, -0.03, 0.005,
+  }
+
+  Frame "GLUEBUTTON" "ActivateButton" INHERITS WITHCHILDREN "NotificationActivateButtonTemplate" {
+    SetPoint CENTER, "ActionNotification", RIGHT, -0.015, 0.0,
+  }
+
+  Frame "TEXT" "TimeRemaining" INHERITS "NotificationTextTemplate" {
+    SetPoint TOPLEFT, "ActionNotification", TOPRIGHT, 0.005, -0.005,
+  }
+}
+
+// ============================================================================
+Frame "GLUEBUTTON" "ChoiceNotification" {
+  Height 0.03,
+  ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
+
+  ControlBackdrop "PanelButtonBackdrop",
+  Frame "BACKDROP" "PanelButtonBackdrop" {
+    BackdropBackground "textures\transparent",
+    BackdropBlendAll,
+  }
+    
+  ControlPushedBackdrop "PanelButtonPushedBackdrop",
+  Frame "BACKDROP" "PanelButtonPushedBackdrop" {
+    BackdropBackground "textures\transparent",
+    BackdropBlendAll,
+  }
+
+  ControlMouseOverHighlight "PanelButtonMouseOverHighlight",
+  Frame "HIGHLIGHT" "PanelButtonMouseOverHighlight" {
+    HighlightType "FILETEXTURE",
+    HighlightAlphaFile "UI\Widgets\BattleNet\bnet-button01-highlight-mouse.blp", 
+    HighlightAlphaMode "ADD",
+  }
+
+  Frame "BACKDROP" "Backdrop" INHERITS "NotificationBackdropTemplate" {
+    SetAllPoints,
+  }
+
+  Frame "BACKDROP" "ProgressBar" {
+    SetAllPoints,
+    BackdropBackground "ui\feedback\xpbar\human-bigbar-fill",
+    BackdropBlendAll,
+  }
+  
+  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButtonTemplate" {
+    SetPoint CENTER, "ChoiceNotification", LEFT, 0.01, 0.0,
+  }
+
+  Frame "BACKDROP" "IconFrame" {
+    Width 0.02,
+    Height 0.02,
+    SetPoint TOPLEFT, "ChoiceNotification", TOPLEFT, 0.02, -0.005,
+    BackdropBlendAll,
+  }
+
+  Frame "FRAME" "BodyFrame" {
+    LayerStyle "IGNORETRACKEVENTS", 
+    SetPoint TOPLEFT, "ChoiceNotification", TOPLEFT, 0.045, -0.005,
+    SetPoint BOTTOMRIGHT, "ChoiceNotification", BOTTOMRIGHT, -0.055, 0.005,
+  }
+
+  Frame "GLUEBUTTON" "YesButton" INHERITS WITHCHILDREN "NotificationActivateButtonTemplate" {
+    SetPoint CENTER, "ChoiceNotification", RIGHT, -0.035, 0.0,
+  }
+
+  Frame "GLUEBUTTON" "NoButton" INHERITS WITHCHILDREN "NotificationActivateButtonTemplate" {
+    SetPoint CENTER, "ChoiceNotification", RIGHT, -0.015, 0.0,
+  }
+
+  Frame "TEXT" "TimeRemaining" INHERITS "NotificationTextTemplate" {
+    SetPoint TOPLEFT, "ChoiceNotification", TOPRIGHT, 0.005, -0.005,
+  }
+}
