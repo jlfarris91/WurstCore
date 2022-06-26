@@ -17,6 +17,8 @@ import IProgress
 import HashMap
 import FramehandleExtensions
 import FullscreenFrame
+import Icons
+import TimerUtils
 
 /*
 
@@ -26,7 +28,7 @@ import FullscreenFrame
   ..registerFactory(ChoiceNotification.typeId, () -> new ChoiceNotificationFrame(createFrame("ChoiceNotification")))
   ..registerFactory(LootingNotification.typeId, () -> new SimpleTextNotificationFrame(createFrame("SimpleNotification")))
 
-  for p in g_PlayingHumanPlayers
+  for p in g_HumanPlayersInGame
     new NotificationManager(p, notificationFrameFactory)
 
   ...
@@ -39,7 +41,10 @@ import FullscreenFrame
 
 */
 
-constant rectr NOTIFICATION_AREA = rectr(0, 0.2, 0.1666, 0.3)
+@configurable public constant real DEFAULT_NOTIFICATION_DURATION = 15.0
+@configurable public constant string DEFAULT_NOTIFICATION_ICON_PATH = Icons.bTNScroll
+
+constant rectr NOTIFICATION_AREA = rectr(0.01, 0.2, 0.1666, 0.3)
 constant real NOTIFICATION_SPACING = 0.0055
 constant real NOTIFICATION_FADE_DURATION = 1.0
 constant real NOTIFICATION_TRAILING_DIST = 0.05
@@ -51,34 +56,64 @@ int g_notificationIdCounter = 0
 
 // ============================================================================
 public function getNotificationManager(player p) returns NotificationManager
+  if (p.isIngame() and g_notificationManagers[p.getId()] == null)
+    g_notificationManagers[p.getId()] = new NotificationManager(p)
   return g_notificationManagers[p.getId()]
 
 // ============================================================================
+public function notifyPlayer(player p, string message)
+  notifyPlayer(p, message, DEFAULT_NOTIFICATION_ICON_PATH)
+
+// ============================================================================
+public function notifyPlayer(player p, string message, string iconPath)
+  notifyPlayer(p, message, iconPath, null)
+
+// ============================================================================
+public function notifyPlayer(player p, string message, string iconPath, CommandExecuteAction onClick)
+  let notification = new Notification()
+  ..setMessage(message)
+  ..setIconPath(iconPath)
+  
+  if (onClick != null)
+    notification.setClickCommand(new RoutedCommand(onClick))
+  
+  notification.show(p)
+
+// ============================================================================
+public function notifyAllPlayers(string message)
+  notifyAllPlayers(message, DEFAULT_NOTIFICATION_ICON_PATH)
+
+// ============================================================================
+public function notifyAllPlayers(string message, string iconPath)
+  for i = 0 to bj_MAX_PLAYER_SLOTS-1
+    if (players[i].isIngame())
+      notifyPlayer(players[i], message, iconPath)
+
+// ============================================================================
 public class NotificationManager implements IRealtimeListener, IDispatcher
+
+  static constant NotificationFrameFactory notificationFrameFactory = new NotificationFrameFactory()
+
   private player m_player
   private LinkedList<NotificationSlot> m_notificationSlots
   private CircularBuffer<Notification> m_notifications
   private framehandle m_notificationArea
   private DispatcherContext m_dispatcherContext
-  private INotificationFrameFactory m_frameFactory
+  private LinkedList<Notification> m_queuedNotifications
 
   // --------------------------------------------------------------------------
-  construct (player p, INotificationFrameFactory frameFactory)
+  construct (player p)
     m_player = p
-    m_frameFactory = frameFactory
 
     g_notificationManagers[p.getId()] = this
 
-    m_dispatcherContext = new InGamePlayerDispatcher(p).acquire()
+    m_dispatcherContext = p.getDispatcherContext().acquire()
 
     m_notificationSlots = new LinkedList<NotificationSlot>()
+    m_queuedNotifications = new LinkedList<Notification>()
     m_notifications = new CircularBuffer<Notification>(50)
 
-    m_notificationArea = createFrame("FRAME", "NA", CONSOLE_UI_BACKDROP, "", 0)
-    ..setPoint(FRAMEPOINT_TOPLEFT, FULLSCREEN_FRAME, FRAMEPOINT_BOTTOMLEFT, NOTIFICATION_AREA.topLeft())
-    ..setSize(NOTIFICATION_AREA.width, NOTIFICATION_AREA.height)
-    
-    this.registerForRealtimeUpdate(NOTIFICATION_UPDATE_PRIORITY)
+    nullTimer(() -> start())
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -92,10 +127,17 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
       destroy notification
     destroy m_notifications
 
-    m_notificationArea.hide()
-    m_notificationArea.remove()
+    if (m_queuedNotifications != null)
+      destroy m_queuedNotifications
+      m_queuedNotifications = null
+
+    if (m_notificationArea != null)
+      m_notificationArea.hide()
+      m_notificationArea.remove()
 
     g_notificationManagers[m_player.getId()] = null
+
+    m_dispatcherContext.release()
 
   // --------------------------------------------------------------------------
   static function nextNotificationId() returns int
@@ -107,13 +149,30 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
     return m_dispatcherContext
 
   // --------------------------------------------------------------------------
+  private function start()
+
+    m_notificationArea = createFrame("NotificationAreaTemplate", CONSOLE_UI_BACKDROP, 0, 0)
+    ..setPoint(FRAMEPOINT_TOPLEFT, FULLSCREEN_FRAME, FRAMEPOINT_BOTTOMLEFT, NOTIFICATION_AREA.topLeft())
+    ..setSize(NOTIFICATION_AREA.width, NOTIFICATION_AREA.height)
+    
+    this.registerForRealtimeUpdate(NOTIFICATION_UPDATE_PRIORITY)
+
+    while not m_queuedNotifications.isEmpty()
+      add(m_queuedNotifications.pop())
+    destroy m_queuedNotifications
+
+  // --------------------------------------------------------------------------
   function add(Notification notification)
+
+    if (m_notificationArea == null)
+      m_queuedNotifications.add(notification)
+      return
 
     for n in m_notifications
       if (n == notification)
         return
 
-    let frame = m_frameFactory.createFrame(notification.typeId)
+    let frame = notificationFrameFactory.createFrame(notification.typeId)
 
     if (frame == null)
       error("Unable to create frame for notification with type id " + notification.typeId.toString())
@@ -286,30 +345,53 @@ public class Notification
   private bool m_closed = false
   private ICommand m_closeCommand
   private ICommand m_clickCommand
+  private ICommand m_doubleClickCommand
   private Event m_onCloseEvent
   private CallbackSingle m_closeTimer
   private string m_iconPath = ""
   private string m_message = ""
   private bool m_showTimeRemaining = false
+  private real m_duration = 0.0
 
   use Observable
 
   // --------------------------------------------------------------------------
-  construct(int id, real duration)
-    m_id = id
+  construct()
+    __construct(NotificationManager.nextNotificationId(), DEFAULT_NOTIFICATION_DURATION)
 
+  // --------------------------------------------------------------------------
+  construct(int id)
+    __construct(id, DEFAULT_NOTIFICATION_DURATION)
+
+  // --------------------------------------------------------------------------
+  construct(real duration)
+    __construct(NotificationManager.nextNotificationId(), duration)
+
+  // --------------------------------------------------------------------------
+  construct(int id, real duration)
+    __construct(id, duration)
+
+  // --------------------------------------------------------------------------
+  private function __construct(int id, real duration)
+    m_id = id
+    m_duration = duration
     m_closeCommand = new RoutedCommand(() -> close(), () -> canClose())
-    
-    if (duration > 0.0)
-      m_showTimeRemaining = true
-      m_closeTimer = doAfter(duration) () ->
-        m_closeTimer = null
-        close()
+    m_showTimeRemaining = duration > 0.0
 
   // --------------------------------------------------------------------------
   ondestroy
 
-    destroy m_closeCommand
+    if (m_closeCommand != null)
+      destroy m_closeCommand
+      m_closeCommand = null
+
+    if (m_clickCommand != null)
+      destroy m_clickCommand
+      m_clickCommand = null
+
+    if (m_doubleClickCommand != null)
+      destroy m_doubleClickCommand
+      m_doubleClickCommand = null
 
     if (m_onCloseEvent != null)
       destroy m_onCloseEvent
@@ -350,6 +432,18 @@ public class Notification
         destroy m_clickCommand
       m_clickCommand = value
       raisePropertyChangedEvent("clickCommand")
+
+  // --------------------------------------------------------------------------
+  function setDoubleClickCommand(ICommand value)
+    if (m_doubleClickCommand != value)
+      if (m_doubleClickCommand != null)
+        destroy m_doubleClickCommand
+      m_doubleClickCommand = value
+      raisePropertyChangedEvent("doubleClickCommand")
+
+  // --------------------------------------------------------------------------
+  function getDoubleClickCommand() returns ICommand
+    return m_doubleClickCommand
 
   // --------------------------------------------------------------------------
   function getProgress() returns IProgress
@@ -397,7 +491,11 @@ public class Notification
 
   // --------------------------------------------------------------------------
   protected function onShow()
-    skip
+    
+    if (m_duration > 0.0)
+      m_closeTimer = doAfter(m_duration) () ->
+        m_closeTimer = null
+        close()
 
   // --------------------------------------------------------------------------
   function close()
@@ -484,6 +582,7 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
   private FrameHandleListener m_frameClickHandler
   private IProgress m_progress
   private _handle m_progressChangedHandler
+  private timer m_doubleClickTimer
 
   // --------------------------------------------------------------------------
   construct (framehandle frame)
@@ -498,6 +597,8 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
     m_closeButtonClickHandler = m_closeButtonFrame.onClick(() -> onCloseButtonClicked())
 
     m_frameClickHandler = frame.onClick(() -> onFrameClicked())
+
+    m_doubleClickTimer = getTimer()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -515,6 +616,8 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
     if (m_frameClickHandler != null)
       destroy m_frameClickHandler
       m_frameClickHandler = null
+
+    m_doubleClickTimer.release()
 
   // --------------------------------------------------------------------------
   override function getFrameHandle() returns framehandle
@@ -556,7 +659,7 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
   // --------------------------------------------------------------------------
   protected function updateFrame()
 
-    let iconPath = m_notification != null ? m_notification.getIconPath() : ""
+    let iconPath = m_notification != null ? m_notification.getIconPath() : DEFAULT_NOTIFICATION_ICON_PATH
     let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
     let clickCommand = m_notification != null ? m_notification.getClickCommand() : null
     let showTimeRemaining = m_notification != null and m_notification.getShowTimeRemaining()
@@ -592,11 +695,20 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
     if (m_notification == null)
       return
 
+    if (m_doubleClickTimer.getRemaining() > 0)
+    //{
+      let doubleClickCommand = m_notification.getDoubleClickCommand()
+      if (doubleClickCommand != null and doubleClickCommand.canExecute())
+        doubleClickCommand.execute()
+        return
+    //}
+
     let clickCommand = m_notification.getClickCommand()
     if (clickCommand == null or not clickCommand.canExecute())
       return
 
     clickCommand.execute()
+    m_doubleClickTimer.start(1.0, null)
 
   // --------------------------------------------------------------------------
   private function updateShowTimeRemainingTimer()
@@ -653,17 +765,28 @@ public class ActionNotification extends Notification
   private Action m_action
 
   // --------------------------------------------------------------------------
+  construct(Action action)
+    super()
+    __construct(action)
+
+  // --------------------------------------------------------------------------
   construct(int id, Action action)
-    super(id, 0)
-    m_action = action.acquire()
-    
-    m_activateCommand = new RoutedCommand() () ->
-      m_action.call()
-      close()
+    super(id)
+    __construct(action)
+
+  // --------------------------------------------------------------------------
+  construct(real duration, Action action)
+    super(duration)
+    __construct(action)
 
   // --------------------------------------------------------------------------
   construct(int id, real duration, Action action)
     super(id, duration)
+    __construct(action)
+
+  // --------------------------------------------------------------------------
+  private function __construct(Action action)
+
     m_action = action.acquire()
     
     m_activateCommand = new RoutedCommand() () ->
@@ -854,3 +977,11 @@ public class TextChoiceNotificationFrame extends ChoiceNotificationFrame
 
     let text = m_notification != null ? m_notification.getMessage() : ""
     m_textFrame.setText(text)
+
+// ============================================================================
+init
+  
+  NotificationManager.notificationFrameFactory
+  ..registerFactory(Notification.typeId, () -> new TextSimpleNotificationFrame(createFrame("SimpleNotification", CONSOLE_UI_BACKDROP, 0, 0)))
+  ..registerFactory(ActionNotification.typeId, () -> new TextActionNotificationFrame(createFrame("ActionNotification", CONSOLE_UI_BACKDROP, 0, 0)))
+  ..registerFactory(ChoiceNotification.typeId, () -> new TextChoiceNotificationFrame(createFrame("ChoiceNotification", CONSOLE_UI_BACKDROP, 0, 0)))

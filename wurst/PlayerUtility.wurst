@@ -1,0 +1,31 @@
+package PlayerUtility
+
+// ============================================================================
+public function getPlayerFromPartialNameColorOrId(string playerPartialNameColorOrId) returns player
+  return getPlayerFromPartialNameColorOrId(playerPartialNameColorOrId, null)
+
+// ============================================================================
+public function getPlayerFromPartialNameColorOrId(string playerPartialNameColorOrId, player ignore) returns player
+  // Check for an ID match first since toInt() will return -1 when parsing an int fails
+  let playerId = playerPartialNameColorOrId.toInt()
+  if (playerId != -1)
+    let p = players[playerId]
+    if (p != ignore and p != null)
+      return p
+  // Then check for exact player name match
+  for i = 0 to bj_MAX_PLAYER_SLOTS - 1
+    let p = players[i]
+    if (p != ignore and p.getName() == playerPartialNameColorOrId)
+      return p
+  // Then, partial player name match
+  for i = 0 to bj_MAX_PLAYER_SLOTS - 1
+    let p = players[i]
+    if (p != ignore and p.getName().startsWith(playerPartialNameColorOrId))
+      return p
+  // Then player color
+  let playerColor = playerPartialNameColorOrId.toPlayerColor()
+  for i = 0 to bj_MAX_PLAYER_SLOTS - 1
+    let p = players[i]
+    if (p != ignore and p.getColor() == playerColor)
+      return p
+  return null

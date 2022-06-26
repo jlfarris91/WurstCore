@@ -30,28 +30,33 @@ Frame "TEXT" "NotificationTextTemplate" {
 }
 
 // ============================================================================
-Frame "GLUEBUTTON" "NotificationCloseButtonTemplate" {
-    Width 0.01,
-    Height 0.01,
+Frame "FRAME" "NotificationAreaTemplate" {
+  LayerStyle "IGNORETRACKEVENTS", 
+}
+
+// ============================================================================
+Frame "GLUEBUTTON" "NotificationCloseButton2x3Template" {
+    Width 0.02,
+    Height 0.03,
     ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
 
-    ControlBackdrop "ButtonIcon",
-    Frame "BACKDROP" "ButtonIcon" {
-      BackdropBackground "ui\wpf\close-button",
+    ControlBackdrop "CloseButtonIcon",
+    Frame "BACKDROP" "CloseButtonIcon" {
+      BackdropBackground "ui\notifications\close-button-2x3",
       BackdropBlendAll,
     }
 
-    ControlDisabledBackdrop "ButtonIconDisabled",
-    Frame "BACKDROP" "ButtonIconDisabled" {
-      BackdropBackground "ui\wpf\close-button-pushed",
+    ControlDisabledBackdrop "CloseButtonIconDisabled",
+    Frame "BACKDROP" "CloseButtonIconDisabled" {
+      BackdropBackground "ui\notifications\close-button-2x3-pushed",
       BackdropBlendAll,
     }
 
-    ControlMouseOverHighlight "ButtonHighlight",
-    Frame "HIGHLIGHT" "ButtonHighlight" {
-        HighlightType "FILETEXTURE",
-        HighlightAlphaFile "ui\wpf\close-button-highlight",
-        HighlightAlphaMode "ADD",
+    ControlMouseOverHighlight "CloseButtonHighlight",
+    Frame "HIGHLIGHT" "CloseButtonHighlight" {
+      HighlightType "FILETEXTURE",
+      HighlightAlphaFile "ui\notifications\close-button-2x3-highlight",
+      HighlightAlphaMode "ADD",
     }
 }
 
@@ -61,20 +66,20 @@ Frame "GLUEBUTTON" "NotificationActivateButtonTemplate" {
     Height 0.02,
     ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
 
-    ControlBackdrop "ButtonIcon",
-    Frame "BACKDROP" "ButtonIcon" {
+    ControlBackdrop "ActivateButtonIcon",
+    Frame "BACKDROP" "ActivateButtonIcon" {
       BackdropBackground "ui\wpf\maximize-button",
       BackdropBlendAll,
     }
 
-    ControlDisabledBackdrop "ButtonIconDisabled",
-    Frame "BACKDROP" "ButtonIconDisabled" {
+    ControlDisabledBackdrop "ActivateButtonIconDisabled",
+    Frame "BACKDROP" "ActivateButtonIconDisabled" {
       BackdropBackground "ui\wpf\maximize-button-pushed",
       BackdropBlendAll,
     }
 
-    ControlMouseOverHighlight "ButtonHighlight",
-    Frame "HIGHLIGHT" "ButtonHighlight" {
+    ControlMouseOverHighlight "ActivateButtonHighlight",
+    Frame "HIGHLIGHT" "ActivateButtonHighlight" {
         HighlightType "FILETEXTURE",
         HighlightAlphaFile "ui\wpf\maximize-button-highlight",
         HighlightAlphaMode "ADD",
@@ -116,8 +121,9 @@ Frame "GLUEBUTTON" "SimpleNotification" {
     BackdropBlendAll,
   }
   
-  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButtonTemplate" {
-    SetPoint CENTER, "SimpleNotification", LEFT, 0.01, 0.0,
+  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButton2x3Template" {
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.0, 0.0,
+    SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.0, 0.0,
   }
 
   Frame "BACKDROP" "IconFrame" {
@@ -172,8 +178,9 @@ Frame "GLUEBUTTON" "ActionNotification" {
     BackdropBlendAll,
   }
   
-  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButtonTemplate" {
-    SetPoint CENTER, "ActionNotification", LEFT, 0.01, 0.0,
+  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButton2x3Template" {
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.0, 0.0,
+    SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.0, 0.0,
   }
 
   Frame "BACKDROP" "IconFrame" {
@@ -232,8 +239,9 @@ Frame "GLUEBUTTON" "ChoiceNotification" {
     BackdropBlendAll,
   }
   
-  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButtonTemplate" {
-    SetPoint CENTER, "ChoiceNotification", LEFT, 0.01, 0.0,
+  Frame "GLUEBUTTON" "CloseButton" INHERITS WITHCHILDREN "NotificationCloseButton2x3Template" {
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.0, 0.0,
+    SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.0, 0.0,
   }
 
   Frame "BACKDROP" "IconFrame" {

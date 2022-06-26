@@ -5,6 +5,8 @@ import RefObject
 import ErrorHandling
 import ClosureTimers
 
+DispatcherContext array g_playerDispatchers
+
 // ============================================================================
 public interface IDispatcher
   function getDispatcherContext(bool requireEnabled) returns DispatcherContext
@@ -101,3 +103,9 @@ public class InGamePlayerDispatcher extends DispatcherContext
   override function dispatch(Action work)
     if (m_ownerPlayer != null and m_ownerPlayer.isIngame())
       work.call()
+
+// ============================================================================
+public function player.getDispatcherContext() returns DispatcherContext
+  if (g_playerDispatchers[this.getId()] == null)
+    g_playerDispatchers[this.getId()] = new InGamePlayerDispatcher(this)
+  return g_playerDispatchers[this.getId()]
