@@ -3,6 +3,7 @@ import HashMap
 import LinkedList
 import ClosureTimers
 import Meta
+import Trace
 
 constant real BACKGROUND_UPDATE_INTERVAL = 1.0
 constant real SLOW_UPDATE_INTERVAL = 0.4
@@ -67,11 +68,12 @@ public function IRealtimeListener.getRealtimeUpdatePriority() returns RealtimeUp
   return RealtimeUpdatePriority.Idle
 
 // ============================================================================
-function updateListeners(LinkedList<IRealtimeListener> activeComponents, real dt)
+function updateListeners(LinkedList<IRealtimeListener> activeComponents, real dt, string trace)
   let iter = activeComponents.staticItr()
   while (iter.hasNext())
     let comp = iter.next()
     if (comp != null)
+      Trace.trace(trace)
       comp.realtimeUpdate(dt)
   iter.close()
 
@@ -88,16 +90,16 @@ init
 
   let backgroundTimer = CreateTimer()
   backgroundTimer.doPeriodically(BACKGROUND_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
-    updateListeners(g_backgroundComponents, BACKGROUND_UPDATE_INTERVAL)
+    updateListeners(g_backgroundComponents, BACKGROUND_UPDATE_INTERVAL, "RTU.background")
 
   let slowTimer = CreateTimer()
   slowTimer.doPeriodically(SLOW_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
-    updateListeners(g_slowComponents, SLOW_UPDATE_INTERVAL)
+    updateListeners(g_slowComponents, SLOW_UPDATE_INTERVAL, "RTU.slow")
 
   let fastTimer = CreateTimer()
   fastTimer.doPeriodically(FAST_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
-    updateListeners(g_fastComponents, FAST_UPDATE_INTERVAL)
+    updateListeners(g_fastComponents, FAST_UPDATE_INTERVAL, "RTU.fast")
 
   let realtimeTimer = CreateTimer()
   realtimeTimer.doPeriodically(REALTIME_UPDATE_INTERVAL) (CallbackPeriodic cb) ->
-    updateListeners(g_realtimeComponents, REALTIME_UPDATE_INTERVAL)
+    updateListeners(g_realtimeComponents, REALTIME_UPDATE_INTERVAL, "RTU.realtime")

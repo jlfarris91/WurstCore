@@ -19,6 +19,7 @@ import FramehandleExtensions
 import FullscreenFrame
 import Icons
 import TimerUtils
+import Trace
 
 /*
 
@@ -48,7 +49,7 @@ constant rectr NOTIFICATION_AREA = rectr(0.01, 0.2, 0.1666, 0.3)
 constant real NOTIFICATION_SPACING = 0.0055
 constant real NOTIFICATION_FADE_DURATION = 1.0
 constant real NOTIFICATION_TRAILING_DIST = 0.05
-constant RealtimeUpdatePriority NOTIFICATION_UPDATE_PRIORITY = RealtimeUpdatePriority.Realtime
+constant RealtimeUpdatePriority NOTIFICATION_UPDATE_PRIORITY = RealtimeUpdatePriority.Fast
 
 NotificationManager array g_notificationManagers
 
@@ -70,6 +71,10 @@ public function notifyPlayer(player p, string message, string iconPath)
 
 // ============================================================================
 public function notifyPlayer(player p, string message, string iconPath, CommandExecuteAction onClick)
+
+  if (not p.isIngame())
+    return
+
   let notification = new Notification()
   ..setMessage(message)
   ..setIconPath(iconPath)
@@ -77,7 +82,8 @@ public function notifyPlayer(player p, string message, string iconPath, CommandE
   if (onClick != null)
     notification.setClickCommand(new RoutedCommand(onClick))
   
-  notification.show(p)
+  if (not notification.show(p))
+    destroy notification
 
 // ============================================================================
 public function notifyAllPlayers(string message)
@@ -100,6 +106,8 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
   private framehandle m_notificationArea
   private DispatcherContext m_dispatcherContext
   private LinkedList<Notification> m_queuedNotifications
+  private int m_needsUpdate
+  private bool m_calculatingSlotPositions
 
   // --------------------------------------------------------------------------
   construct (player p)
@@ -114,6 +122,8 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
     m_notifications = new CircularBuffer<Notification>(50)
 
     nullTimer(() -> start())
+
+    Trace.trace("NotificationManager.construct")
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -154,23 +164,21 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
     m_notificationArea = createFrame("NotificationAreaTemplate", CONSOLE_UI_BACKDROP, 0, 0)
     ..setPoint(FRAMEPOINT_TOPLEFT, FULLSCREEN_FRAME, FRAMEPOINT_BOTTOMLEFT, NOTIFICATION_AREA.topLeft())
     ..setSize(NOTIFICATION_AREA.width, NOTIFICATION_AREA.height)
-    
-    this.registerForRealtimeUpdate(NOTIFICATION_UPDATE_PRIORITY)
 
     while not m_queuedNotifications.isEmpty()
       add(m_queuedNotifications.pop())
     destroy m_queuedNotifications
 
   // --------------------------------------------------------------------------
-  function add(Notification notification)
+  function add(Notification notification) returns bool
 
     if (m_notificationArea == null)
       m_queuedNotifications.add(notification)
-      return
+      return true
 
     for n in m_notifications
       if (n == notification)
-        return
+        return false
 
     let frame = notificationFrameFactory.createFrame(notification.typeId)
 
@@ -203,6 +211,8 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
     notification.onShow()
 
     onVisualsInvalidate()
+    
+    return true
 
   // --------------------------------------------------------------------------
   function remove(Notification notification) returns bool
@@ -225,34 +235,65 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
     return false
 
   // --------------------------------------------------------------------------
+  function clear()
+    var anyRemoved = false
+
+    let iter = m_notificationSlots.iterator()
+    while iter.hasNext()
+      let current = iter.next()
+      if (current.m_notification.canClose())
+        iter.remove()
+        destroy current
+        anyRemoved = true
+
+    if (anyRemoved)
+      onVisualsInvalidate()
+
+  // --------------------------------------------------------------------------
   override protected function realtimeUpdate(real dt)
+
+    Trace.trace("NotificationManager.update")
 
     for notification in m_notificationSlots
       notification.update(dt)
 
   // --------------------------------------------------------------------------
   protected function onVisualsInvalidate()
+    if (not m_calculatingSlotPositions)
+      m_calculatingSlotPositions = true
+      nullTimer() () -> 
+        calculateSlotPositions()
+        m_calculatingSlotPositions = false
 
+  // --------------------------------------------------------------------------
+  private function calculateSlotPositions()
     rectr notificationArea = rectr(0, 0, NOTIFICATION_AREA.width, 0)
-
     for notification in m_notificationSlots
       notificationArea.height = notification.m_notificationFrame.getFrameHandle().getHeight()
-      notification.m_targetArea = notificationArea
+      notification.setTargetArea(notificationArea)
       notificationArea.y += notificationArea.height + NOTIFICATION_SPACING
+
+  // --------------------------------------------------------------------------
+  protected function slotNeedsUpdate(bool value)
+    m_needsUpdate += (value ? 1 : -1)
+    if (m_needsUpdate == 0)
+      this.unregisterForRealtimeUpdate()
+    else if (m_needsUpdate == 1)
+      this.registerForRealtimeUpdate(NOTIFICATION_UPDATE_PRIORITY)      
 
 // ============================================================================
 class NotificationSlot
-  NotificationManager m_manager
-  Notification m_notification  
-  NotificationFrame m_notificationFrame
-  _handle m_onClosedCallback
-  rectr m_currentArea
-  rectr m_targetArea
-  real m_areaXVelocity = 0.0
-  real m_areaYVelocity = 0.0
-  real m_currentAlpha = 0.0
-  real m_targetAlpha = 0.0
-  _handle m_frameInvalidatedCallback
+  private NotificationManager m_manager
+  protected Notification m_notification  
+  protected NotificationFrame m_notificationFrame
+  protected rectr m_currentArea
+  private rectr m_targetArea
+  private real m_areaYVelocity = 0.0
+  protected real m_currentAlpha = 0.0
+  protected real m_targetAlpha = 0.0
+  private _handle m_onClosedCallback
+  private _handle m_frameInvalidatedCallback
+  private bool m_needsUpdate
 
   // --------------------------------------------------------------------------
   construct (NotificationManager manager, Notification notification, NotificationFrame notificationFrame)
@@ -282,13 +323,14 @@ class NotificationSlot
   // --------------------------------------------------------------------------
   function update(real dt)
 
+    if (not m_needsUpdate)
+      return
+
+    Trace.trace("NotificationSlot.update")
+
     let smoothDampResult = smoothDamp(m_currentArea.y, m_targetArea.y, m_areaYVelocity, 0.1, 0.2, dt)
     m_currentArea.y = smoothDampResult.value
     m_areaYVelocity = smoothDampResult.vel
-
-    let smoothDampResult2 = smoothDamp(m_currentArea.x, m_targetArea.x, m_areaXVelocity, 0.2, 0.4, dt)
-    m_currentArea.x = smoothDampResult2.value
-    m_areaXVelocity = smoothDampResult2.vel
 
     let frame = m_notificationFrame.getFrameHandle()
 
@@ -303,6 +345,27 @@ class NotificationSlot
     else
       m_currentAlpha = m_targetAlpha
       frame.setAlpha((m_currentAlpha * 255).floor())
+
+    if (m_currentAlpha.fuzzyEquals(m_targetAlpha) and
+        m_currentArea.y.fuzzyEquals(m_targetArea.y))
+      m_manager.slotNeedsUpdate(false)
+      m_needsUpdate = false
+
+  // --------------------------------------------------------------------------
+  function setTargetArea(rectr value)
+    if (m_targetArea != value)
+      m_targetArea = value
+      if (m_targetArea != m_currentArea and not m_needsUpdate)
+        m_manager.slotNeedsUpdate(true)
+        m_needsUpdate = true
+
+  // --------------------------------------------------------------------------
+  function setTargetAlpha(real value)
+    if (m_targetAlpha != value)
+      m_targetAlpha = value
+      if (m_targetAlpha != m_currentAlpha and not m_needsUpdate)
+        m_manager.slotNeedsUpdate(true)
+        m_needsUpdate = true
 
 // ============================================================================
 public interface INotificationFrameFactory
@@ -378,6 +441,8 @@ public class Notification
     m_closeCommand = new RoutedCommand(() -> close(), () -> canClose())
     m_showTimeRemaining = duration > 0.0
 
+    Trace.trace("Notification.construct")
+
   // --------------------------------------------------------------------------
   ondestroy
 
@@ -407,7 +472,7 @@ public class Notification
 
   // --------------------------------------------------------------------------
   function canClose() returns bool
-    return true
+    return m_closeCommand != null and m_closeCommand.canExecute()
 
   // --------------------------------------------------------------------------
   function getCloseCommand() returns ICommand
@@ -509,10 +574,11 @@ public class Notification
       m_onCloseEvent.call()
 
   // --------------------------------------------------------------------------
-  function show(player forPlayer)
+  function show(player forPlayer) returns bool
     let nm = getNotificationManager(forPlayer)
     if (nm != null)
-      nm.add(this)
+      return nm.add(this)
+    return false
 
 // ============================================================================
 public interface NotificationFrame
@@ -568,6 +634,10 @@ public abstract class BaseNotificationFrame implements NotificationFrame
   // --------------------------------------------------------------------------
   protected function onNotificationChanged(Notification _oldNotification, Notification _newNotification)
     skip
+
+  // --------------------------------------------------------------------------
+  protected function updateFrame()
+    Trace.trace("NotificationFrame.update")
 
 // ============================================================================
 public class SimpleNotificationFrame extends BaseNotificationFrame
@@ -657,7 +727,8 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
       updateShowTimeRemainingTimer()
 
   // --------------------------------------------------------------------------
-  protected function updateFrame()
+  override protected function updateFrame()
+    super.updateFrame()
 
     let iconPath = m_notification != null ? m_notification.getIconPath() : DEFAULT_NOTIFICATION_ICON_PATH
     let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
