@@ -57,7 +57,7 @@ int g_notificationIdCounter = 0
 
 // ============================================================================
 public function getNotificationManager(player p) returns NotificationManager
-  if (p.isIngame() and g_notificationManagers[p.getId()] == null)
+  if (g_notificationManagers[p.getId()] == null and p.isIngame())
     g_notificationManagers[p.getId()] = new NotificationManager(p)
   return g_notificationManagers[p.getId()]
 
@@ -73,6 +73,10 @@ public function notifyPlayer(player p, string message, string iconPath)
 public function notifyPlayer(player p, string message, string iconPath, CommandExecuteAction onClick)
 
   if (not p.isIngame())
+    return
+
+  let nm = getNotificationManager(p)
+  if (nm == null)
     return
 
   let notification = new Notification()
@@ -647,7 +651,7 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
   protected framehandle m_timeRemainingFrame
   protected framehandle m_progressBar
   private _handle m_propertyChangedCallback
-  private CallbackPeriodic m_updateTimeRemaining
+  private CallbackPeriodic m_updateTimeRemainingCallback
   private FrameHandleListener m_closeButtonClickHandler
   private FrameHandleListener m_frameClickHandler
   private IProgress m_progress
@@ -675,9 +679,9 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
 
     unregisterProgressEventHandlers()
 
-    if (m_updateTimeRemaining != null)
-      destroy m_updateTimeRemaining
-      m_updateTimeRemaining = null
+    if (m_updateTimeRemainingCallback != null)
+      destroy m_updateTimeRemainingCallback
+      m_updateTimeRemainingCallback = null
 
     if (m_closeButtonClickHandler != null)
       destroy m_closeButtonClickHandler
@@ -714,6 +718,7 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
 
     registerProgressEventHandlers()
 
+    updateTimeRemainingFrame()
     updateShowTimeRemainingTimer()
 
     updateFrame()
@@ -733,18 +738,20 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
     let iconPath = m_notification != null ? m_notification.getIconPath() : DEFAULT_NOTIFICATION_ICON_PATH
     let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
     let clickCommand = m_notification != null ? m_notification.getClickCommand() : null
-    let showTimeRemaining = m_notification != null and m_notification.getShowTimeRemaining()
 
     m_iconFrame.setTexture(iconPath, 0, true)
     m_closeButtonFrame.setVisible(closeCommand != null and closeCommand.canExecute())
     getFrameHandle().setEnabled(clickCommand != null and clickCommand.canExecute())
-    
-    m_timeRemainingFrame.setVisible(showTimeRemaining)
-    if (showTimeRemaining)
-      m_timeRemainingFrame.setText(m_notification.getTimeRemaining().round().toString() + "s")
 
     m_progressBar.setVisible(m_progress != null)
     updateProgressBar()
+
+  // --------------------------------------------------------------------------
+  private function updateTimeRemainingFrame()
+    let showTimeRemaining = m_notification != null and m_notification.getShowTimeRemaining()    
+    m_timeRemainingFrame.setVisible(showTimeRemaining)
+    if (showTimeRemaining)
+      m_timeRemainingFrame.setText(m_notification.getTimeRemaining().round().toString() + "s")
 
   // --------------------------------------------------------------------------
   private function onCloseButtonClicked()
@@ -784,13 +791,12 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
   // --------------------------------------------------------------------------
   private function updateShowTimeRemainingTimer()
     
-    if (m_updateTimeRemaining != null)
-      destroy m_updateTimeRemaining
-      m_updateTimeRemaining = null
+    if (m_updateTimeRemainingCallback != null)
+      destroy m_updateTimeRemainingCallback
+      m_updateTimeRemainingCallback = null
 
     if (m_notification != null and m_notification.getShowTimeRemaining())
-      m_updateTimeRemaining = doPeriodically(1.0) (CallbackPeriodic cb) ->
-        updateFrame()
+      m_updateTimeRemainingCallback = doPeriodically(1.0, cb -> updateTimeRemainingFrame())    
 
   // --------------------------------------------------------------------------
   private function registerProgressEventHandlers()
