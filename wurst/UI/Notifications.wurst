@@ -49,7 +49,7 @@ constant rectr NOTIFICATION_AREA = rectr(0.01, 0.2, 0.1666, 0.3)
 constant real NOTIFICATION_SPACING = 0.0055
 constant real NOTIFICATION_FADE_DURATION = 1.0
 constant real NOTIFICATION_TRAILING_DIST = 0.05
-constant RealtimeUpdatePriority NOTIFICATION_UPDATE_PRIORITY = RealtimeUpdatePriority.Fast
+constant RealtimeUpdatePriority NOTIFICATION_UPDATE_PRIORITY = RealtimeUpdatePriority.Realtime
 
 NotificationManager array g_notificationManagers
 
@@ -127,8 +127,6 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
 
     nullTimer(() -> start())
 
-    Trace.trace("NotificationManager.construct")
-
   // --------------------------------------------------------------------------
   ondestroy
     this.unregisterForRealtimeUpdate()
@@ -203,19 +201,19 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
 
     let notificationFrame = new NotificationSlot(this, notification, frame)
     notificationFrame.m_currentArea = startArea
-    notificationFrame.m_currentAlpha = 0.0
-    notificationFrame.m_targetAlpha = 1.0
+    notificationFrame.setTargetAlpha(1.0)
 
     frame.getFrameHandle().setParent(m_notificationArea)
+    
     frame.setNotification(notification)
 
-    m_notificationSlots.push(notificationFrame)
+    m_notificationSlots.add(notificationFrame)
     m_notifications.enqueue(notification)
 
     notification.onShow()
 
     onVisualsInvalidate()
-    
+
     return true
 
   // --------------------------------------------------------------------------
@@ -249,15 +247,14 @@ public class NotificationManager implements IRealtimeListener, IDispatcher
         iter.remove()
         destroy current
         anyRemoved = true
+    iter.close()
 
     if (anyRemoved)
       onVisualsInvalidate()
 
   // --------------------------------------------------------------------------
   override protected function realtimeUpdate(real dt)
-
     Trace.trace("NotificationManager.update")
-
     for notification in m_notificationSlots
       notification.update(dt)
 
@@ -294,17 +291,17 @@ class NotificationSlot
   private rectr m_targetArea
   private real m_areaYVelocity = 0.0
   protected real m_currentAlpha = 0.0
-  protected real m_targetAlpha = 0.0
+  private real m_targetAlpha = 0.0
   private _handle m_onClosedCallback
   private _handle m_frameInvalidatedCallback
-  private bool m_needsUpdate
+  private bool m_needsUpdate = false
 
   // --------------------------------------------------------------------------
   construct (NotificationManager manager, Notification notification, NotificationFrame notificationFrame)
     m_manager = manager
     m_notification = notification
     m_notificationFrame = notificationFrame
-    
+
     m_onClosedCallback = notification.onClosed().registerDispatched(manager) ->
       manager.remove(m_notification)
 
@@ -323,6 +320,9 @@ class NotificationSlot
       m_frameInvalidatedCallback = INVALID_HANDLE
 
     destroy m_notificationFrame
+
+    if (m_needsUpdate)
+      m_manager.slotNeedsUpdate(false)
 
   // --------------------------------------------------------------------------
   function update(real dt)
@@ -359,7 +359,7 @@ class NotificationSlot
   function setTargetArea(rectr value)
     if (m_targetArea != value)
       m_targetArea = value
-      if (m_targetArea != m_currentArea and not m_needsUpdate)
+      if (not m_needsUpdate)
         m_manager.slotNeedsUpdate(true)
         m_needsUpdate = true
 
@@ -367,7 +367,7 @@ class NotificationSlot
   function setTargetAlpha(real value)
     if (m_targetAlpha != value)
       m_targetAlpha = value
-      if (m_targetAlpha != m_currentAlpha and not m_needsUpdate)
+      if (not m_needsUpdate)
         m_manager.slotNeedsUpdate(true)
         m_needsUpdate = true
 
@@ -445,8 +445,6 @@ public class Notification
     m_closeCommand = new RoutedCommand(() -> close(), () -> canClose())
     m_showTimeRemaining = duration > 0.0
 
-    Trace.trace("Notification.construct")
-
   // --------------------------------------------------------------------------
   ondestroy
 
@@ -476,7 +474,7 @@ public class Notification
 
   // --------------------------------------------------------------------------
   function canClose() returns bool
-    return m_closeCommand != null and m_closeCommand.canExecute()
+    return true
 
   // --------------------------------------------------------------------------
   function getCloseCommand() returns ICommand
@@ -710,8 +708,8 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
 
     m_notification = newNotification
 
-    m_progress = null
     unregisterProgressEventHandlers()
+    m_progress = null
 
     if (newNotification != null)
       m_progress = newNotification.getProgress()
@@ -719,6 +717,7 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
     registerProgressEventHandlers()
 
     updateTimeRemainingFrame()
+
     updateShowTimeRemainingTimer()
 
     updateFrame()
@@ -734,22 +733,31 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
   // --------------------------------------------------------------------------
   override protected function updateFrame()
     super.updateFrame()
+    if (m_iconFrame != null)
+      let iconPath = m_notification != null ? m_notification.getIconPath() : DEFAULT_NOTIFICATION_ICON_PATH
+      m_iconFrame.setTexture(iconPath, 0, true)
 
-    let iconPath = m_notification != null ? m_notification.getIconPath() : DEFAULT_NOTIFICATION_ICON_PATH
-    let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
+    if (m_closeButtonFrame != null)
+      let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
+      let val = closeCommand != null and closeCommand.canExecute()
+      m_closeButtonFrame.setVisible(val)
+    
     let clickCommand = m_notification != null ? m_notification.getClickCommand() : null
+    m_frame.setEnabled(clickCommand != null and clickCommand.canExecute())
 
-    m_iconFrame.setTexture(iconPath, 0, true)
-    m_closeButtonFrame.setVisible(closeCommand != null and closeCommand.canExecute())
-    getFrameHandle().setEnabled(clickCommand != null and clickCommand.canExecute())
-
-    m_progressBar.setVisible(m_progress != null)
-    updateProgressBar()
+    if (m_progressBar != null)
+      m_progressBar.setVisible(m_progress != null)
+      updateProgressBar()
 
   // --------------------------------------------------------------------------
   private function updateTimeRemainingFrame()
+    if (m_timeRemainingFrame == null)
+      return
+
     let showTimeRemaining = m_notification != null and m_notification.getShowTimeRemaining()    
+    
     m_timeRemainingFrame.setVisible(showTimeRemaining)
+    
     if (showTimeRemaining)
       m_timeRemainingFrame.setText(m_notification.getTimeRemaining().round().toString() + "s")
 
@@ -811,7 +819,7 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
 
   // --------------------------------------------------------------------------
   private function updateProgressBar()
-    if (m_progress != null)
+    if (m_progress != null and m_progressBar != null)
       let progress = clamp01(m_progress.getProgress())
       let totalWidth = getFrameHandle().getWidth() - 0.006
       m_progressBar.setWidth(totalWidth * progress)
