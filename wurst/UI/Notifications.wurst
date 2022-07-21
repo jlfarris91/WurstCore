@@ -20,6 +20,7 @@ import TimerUtils
 import Trace
 import NativeFrame
 import Vector
+import RefObject
 
 /*
 
@@ -304,7 +305,7 @@ class NotificationSlot
   construct (NotificationManager manager, player p, Notification notification, NotificationFrame notificationFrame)
     m_manager = manager
     m_player = p
-    m_notification = notification
+    m_notification = notification.acquire()
     m_notificationFrame = notificationFrame
 
     m_onClosedCallback = notification.onClosed().register() ->
@@ -325,7 +326,7 @@ class NotificationSlot
       m_frameInvalidatedCallback = INVALID_HANDLE
 
     m_notificationFrame.release()
-    destroy m_notification
+    m_notification.release()
 
     if (m_needsUpdate)
       m_manager.slotNeedsUpdate(false)
@@ -420,6 +421,7 @@ public class NotificationFrameFactory implements INotificationFrameFactory
 public class Notification
   private int m_id = -1
   private bool m_closed = false
+  private bool m_canClose = true
   private ICommand m_closeCommand = null
   private ICommand m_clickCommand = null
   private ICommand m_doubleClickCommand = null
@@ -429,8 +431,11 @@ public class Notification
   private string m_message = ""
   private bool m_showTimeRemaining = false
   private real m_duration = 0.0
+  private IProgress m_progress = null
+  private string m_progressBarTexture = ""
 
   use Observable
+  use RefObject
 
   // --------------------------------------------------------------------------
   construct()
@@ -484,7 +489,13 @@ public class Notification
 
   // --------------------------------------------------------------------------
   function canClose() returns bool
-    return true
+    return m_canClose
+
+  // --------------------------------------------------------------------------
+  function setCanClose(bool value)
+    if (m_canClose != value)
+      m_canClose = value
+      raisePropertyChangedEvent("canClose")
 
   // --------------------------------------------------------------------------
   function getCloseCommand() returns ICommand
@@ -524,7 +535,24 @@ public class Notification
 
   // --------------------------------------------------------------------------
   function getProgress() returns IProgress
-    return null
+    return m_progress
+
+  // --------------------------------------------------------------------------
+  /** The Notification does not destroy the IProgress instance */
+  function setProgress(IProgress value)
+    if (m_progress != value)
+      m_progress = value
+      raisePropertyChangedEvent("progress")
+
+  // --------------------------------------------------------------------------
+  function getProgressBarTexture() returns string
+    return m_progressBarTexture
+
+  // --------------------------------------------------------------------------
+  function setProgressBarTexture(string value)
+    if (m_progressBarTexture != value)
+      m_progressBarTexture = value
+      raisePropertyChangedEvent("progressBarTexture")
 
   // --------------------------------------------------------------------------
   function getIconPath() returns string
@@ -743,16 +771,23 @@ public class SimpleNotificationFrame extends BaseNotificationFrame
       m_iconFrame.setTexture(iconPath, 0, true)
 
     if (m_closeButtonFrame != null)
-      let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
-      let val = closeCommand != null and closeCommand.canExecute()
-      m_closeButtonFrame.setVisible(val)
+      var canClose = m_notification != null ? m_notification.canClose() : true
+      if (canClose)
+        let closeCommand = m_notification != null ? m_notification.getCloseCommand() : null
+        canClose = canClose and closeCommand != null and closeCommand.canExecute()
+      m_closeButtonFrame.setVisible(canClose)
     
     let clickCommand = m_notification != null ? m_notification.getClickCommand() : null
     m_frame.setEnabled(clickCommand != null and clickCommand.canExecute())
 
     if (m_progressBar != null)
+      let progressBarIsVisible = m_progress != null
       m_progressBar.setVisible(m_progress != null)
-      updateProgressBar()
+      if (progressBarIsVisible)
+        let progressBarTexture = m_notification != null ? m_notification.getProgressBarTexture() : ""
+        if (progressBarTexture != "")
+          m_progressBar.setTexture(progressBarTexture, 0, true)
+        updateProgressBar()
 
   // --------------------------------------------------------------------------
   private function updateTimeRemainingFrame()

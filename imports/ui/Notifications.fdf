@@ -117,7 +117,7 @@ Frame "GLUEBUTTON" "SimpleNotification" {
   Frame "BACKDROP" "ProgressBar" {
     SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.003, -0.003,
     SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.003, 0.003,
-    BackdropBackground "replaceabletextures\\teamcolor\\teamcolor00",
+    BackdropBackground "ui\notifications\progressbartexture.dds",
     BackdropBlendAll,
   }
   
@@ -173,8 +173,9 @@ Frame "GLUEBUTTON" "ActionNotification" {
   }
 
   Frame "BACKDROP" "ProgressBar" {
-    SetAllPoints,
-    BackdropBackground "ui\feedback\xpbar\human-bigbar-fill",
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.003, -0.003,
+    SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.003, 0.003,
+    BackdropBackground "ui\notifications\progressbartexture.dds",
     BackdropBlendAll,
   }
   
@@ -234,8 +235,9 @@ Frame "GLUEBUTTON" "ChoiceNotification" {
   }
 
   Frame "BACKDROP" "ProgressBar" {
-    SetAllPoints,
-    BackdropBackground "ui\feedback\xpbar\human-bigbar-fill",
+    SetPoint TOPLEFT, "SimpleNotification", TOPLEFT, 0.003, -0.003,
+    SetPoint BOTTOMLEFT, "SimpleNotification", BOTTOMLEFT, 0.003, 0.003,
+    BackdropBackground "ui\notifications\progressbartexture.dds",
     BackdropBlendAll,
   }
   
