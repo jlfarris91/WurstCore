@@ -17,7 +17,9 @@ public @configurable constant player DEFAULT_STUN_UNIT_OWNER = DUMMY_HOSTILE_PLA
 // ============================================================================
 @compiletime function createObjects()
   new AbilityDefinitionWarStompcreep(STUN_ABIL_ID)
-    ..presetAreaofEffect(lvl -> 12.0)
+    ..setLevels(STUN_ABIL_LEVELS)
+    ..presetBuffs(lvl -> "BPSE")
+    ..presetAreaofEffect(lvl -> 8.0)
     ..presetDamage(lvl -> 0.0)
     ..presetTerrainDeformationAmplitude(lvl -> -50.0)
     ..presetTerrainDeformationDurationms(lvl -> 300)
@@ -26,7 +28,6 @@ public @configurable constant player DEFAULT_STUN_UNIT_OWNER = DUMMY_HOSTILE_PLA
     ..presetManaCost(lvl -> 0)
     ..setArtCaster("")
     ..setHeroAbility(false)
-    ..setLevels(STUN_ABIL_LEVELS)
     ..presetDurationHero(lvl -> STUN_ABIL_DURATION_RANGE.lerp((lvl - 1) / STUN_ABIL_LEVELS.toReal()))
     ..presetDurationNormal(lvl -> STUN_ABIL_DURATION_RANGE.lerp((lvl - 1) / STUN_ABIL_LEVELS.toReal()))
     ..presetTargetsAllowed(lvl -> commaList("ground"))
