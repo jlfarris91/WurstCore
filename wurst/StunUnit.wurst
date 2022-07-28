@@ -46,7 +46,7 @@ public function stunUnit(player owner, unit target, real durationSeconds) return
     ..origin(target.getPos())
     ..delay(2)
   if (dummy.castImmediate(STUN_ABIL_ID, level, OrderIds.stomp) == null)
-    Log.error("Failed to cast ability for stunUnit")
+    Log.debug("Failed to cast ability for stunUnit")
   return level * STUN_ABIL_LEVEL_DURATION_INTERVAL
 
 // ============================================================================
