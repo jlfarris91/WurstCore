@@ -14,7 +14,7 @@ public interface IDispatcher
 // ============================================================================
 public abstract class DispatcherContext
   use RefObject
-  abstract function dispatch(Action work)
+  abstract function canDispatch() returns bool
 
 // ============================================================================
 public function IDispatcher.dispatch(Action work)
@@ -41,10 +41,24 @@ public function IEvent.registerDispatched(IDispatcher dispatcher, bool requireEn
   return this.register(new DispatchedEventCallback(dispatcher.getDispatcherContext(requireEnabled), handler))
 
 // ============================================================================
+public function IEvent1<T>.registerDispatched<T>(IDispatcher dispatcher, bool requireEnabled, Action1<T> handler) returns _handle
+  return this.register(new DispatchedEvent1Callback<T>(dispatcher.getDispatcherContext(requireEnabled), handler))
+
+// ============================================================================
 function dispatch_Internal(DispatcherContext context, Action work)
   context.acquire()
   work.acquire()
-  context.dispatch(work)
+  if (context.canDispatch())
+    work.acquire()
+  work.release()
+  context.release()
+
+// ============================================================================
+function dispatch_Internal<T>(DispatcherContext context, Action1<T> work, T arg1)
+  context.acquire()
+  work.acquire()
+  if (context.canDispatch())
+    work.call(arg1)
   work.release()
   context.release()
 
@@ -92,6 +106,37 @@ class DispatchedEventCallback extends EventCallback
     dispatch_Internal(m_context, m_work)
 
 // ============================================================================
+module DispatchedWork1Module<T>
+  protected DispatcherContext m_context
+  protected Action1<T> m_work
+
+  // --------------------------------------------------------------------------
+  protected function _construct(DispatcherContext context, Action1<T> work)
+    if (context == null)
+      argumentNullError("context")
+    if (work == null)
+      argumentNullError("work")
+    m_context = context.acquire()
+    m_work = work.acquire()
+  
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_work.release()
+    m_context.release()
+
+// ============================================================================
+class DispatchedEvent1Callback<T> extends Event1Callback<T>
+  use DispatchedWork1Module<T>
+
+  // --------------------------------------------------------------------------
+  construct(DispatcherContext context, Action1<T> work)
+    _construct(context, work)
+
+  // --------------------------------------------------------------------------
+  override function call(T arg1)
+    dispatch_Internal(m_context, m_work, arg1)
+
+// ============================================================================
 public class InGamePlayerDispatcher extends DispatcherContext
   private player m_ownerPlayer
 
@@ -100,9 +145,8 @@ public class InGamePlayerDispatcher extends DispatcherContext
     m_ownerPlayer = ownerPlayer
 
   // --------------------------------------------------------------------------
-  override function dispatch(Action work)
-    if (m_ownerPlayer != null and m_ownerPlayer.isIngame())
-      work.call()
+  override function canDispatch() returns bool
+    return m_ownerPlayer != null and m_ownerPlayer.isIngame()
 
 // ============================================================================
 public function player.getDispatcherContext() returns DispatcherContext
