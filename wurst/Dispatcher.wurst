@@ -49,7 +49,7 @@ function dispatch_Internal(DispatcherContext context, Action work)
   context.acquire()
   work.acquire()
   if (context.canDispatch())
-    work.acquire()
+    work.call()
   work.release()
   context.release()
 
