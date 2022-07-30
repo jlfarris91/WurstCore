@@ -39,6 +39,7 @@ public function clampToWorldBounds(vec2 pos, real radius) returns vec2
   return vec2(x, y)
 
 // ============================================================================
+/** Min and max are inclusive */
 public function wrap(int value, int min, int max) returns int
   if (min >= max)
     return min
