@@ -232,8 +232,7 @@ public class TooltipBuilder
 
     let desc = m_description.getValue(level)
     if (desc != null)
-      sb.append(desc)
-      sb.appendLine()
+      sb.appendLine(desc)
       sb.appendLine()
 
     var index = 0
