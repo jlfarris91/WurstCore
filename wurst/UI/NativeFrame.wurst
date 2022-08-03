@@ -169,6 +169,8 @@ public class NativeFramePool
 
   // --------------------------------------------------------------------------
   protected function releaseUnsafe(framehandle fh)
+    if (fh == null)
+      return
     m_freeList.push(fh)
     fh.setParent(null)
     fh.hide()

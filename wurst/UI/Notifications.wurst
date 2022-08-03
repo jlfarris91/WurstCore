@@ -164,7 +164,11 @@ public class NotificationManager implements IRealtimeListener
     if (frame == null)
       error("Unable to create frame for notification with type id " + notification.typeId.toString())
 
-    let frameHeight = frame.getFrameHandle().getHeight()
+    let frameHandle = frame.getFrameHandle()
+    if (frameHandle == null)
+      return false
+
+    let frameHeight = frameHandle.getHeight()
     if (frameHeight == 0)
       error("Notification frame must specify a height")
 
@@ -180,7 +184,7 @@ public class NotificationManager implements IRealtimeListener
     notificationSlot.m_currentArea = startArea
     notificationSlot.setTargetAlpha(1.0)
 
-    frame.getFrameHandle()
+    frameHandle
     ..setParent(m_notificationArea)
     ..setAlpha(0)
     ..hide()
