@@ -11,9 +11,6 @@ HashMap<player, IPlayerMetadata> g_PlayerMetadata
 trigger g_onPlayerLostTrigger = CreateTrigger()
 player g_onPlayerLostTriggerPlayer
 
-trigger g_onPlayerLeftTrigger = CreateTrigger()
-player g_onPlayerLeftTriggerPlayer
-
 // ============================================================================
 public function onPlayerLost(code func)
   g_onPlayerLostTrigger.addCondition(Condition(func))
@@ -29,28 +26,12 @@ function raisePlayerLostEvent(player p)
   g_onPlayerLostTriggerPlayer = null
 
 // ============================================================================
-public function onPlayerLeft(code func)
-  g_onPlayerLeftTrigger.addCondition(Condition(func))
-
-// ============================================================================
-public function getLeavingPlayer() returns player
-  return g_onPlayerLeftTriggerPlayer
-
-// ============================================================================
-function raisePlayerLeftEvent(player p)
-  g_onPlayerLeftTriggerPlayer = p
-  g_onPlayerLeftTrigger.evaluate()
-  g_onPlayerLeftTriggerPlayer = null
-
-// ============================================================================
 public constant int typeId_IPlayerMetadata = Meta.reserveInterface("PlayerMetadata.IPlayerMetadata")
 public interface IPlayerMetadata extends IComposite
   function getPlayer() returns player
   function getDisplayName() returns string
   function setDisplayName(string displayName)
   function resetDisplayName()
-  function getHasLeftGame() returns bool
-  function setHasLeftGame(bool value)
   function getHasLostGame() returns bool
   function setHasLostGame(bool value)
 
@@ -58,7 +39,6 @@ public interface IPlayerMetadata extends IComposite
 public class PlayerMetadata extends Composable implements IPlayerMetadata
   private player m_player
   private string m_displayName
-  private bool m_leftGame
   private bool m_lostGame
 
   // --------------------------------------------------------------------------
@@ -81,17 +61,6 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
   // --------------------------------------------------------------------------
   override function resetDisplayName()
     setDisplayName(m_player.getName())
-
-  // --------------------------------------------------------------------------
-  override function getHasLeftGame() returns bool
-    return m_leftGame
-
-  // --------------------------------------------------------------------------
-  override function setHasLeftGame(bool value)
-    if (m_leftGame != value)
-      m_leftGame = value
-      if (m_leftGame)
-        raisePlayerLostEvent(m_player)
 
   // --------------------------------------------------------------------------
   override function getHasLostGame() returns bool
