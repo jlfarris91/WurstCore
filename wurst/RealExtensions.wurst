@@ -18,13 +18,11 @@ public function real.toPercentageString01() returns string
 
 // ============================================================================
 public function real.toPercentageString01(int decimalPlace) returns string
-  var s = this * 100
-  if (s - s.floor() == 0.0)
-    return s.toInt().toString() + "%"
-  s = s.truncate(decimalPlace)
-  if (s - s.floor() == 0.0)
-    return s.toInt().toString() + "%"
-  return s.toString() + "%"
+  let s = this * 100
+  let i = s.toInt()
+  if (s - i == 0 or decimalPlace == 0)
+    return i.toString() + "%"
+  return (this * 100).toString(decimalPlace) + "%"
 
 // ============================================================================
 @test function truncate()
@@ -59,7 +57,7 @@ public function real.toPercentageString01(int decimalPlace) returns string
   0.0123.toPercentageString01(0).assertEquals("1%")
   0.0123.toPercentageString01(1).assertEquals("1.2%")
   0.0123.toPercentageString01(2).assertEquals("1.23%")
-  0.0123.toPercentageString01(4).assertEquals("1.23%")
+  0.0123.toPercentageString01(4).assertEquals("1.2300%")
 
   0.00123.toPercentageString01(0).assertEquals("0%")
   0.00123.toPercentageString01(1).assertEquals("0.1%")
