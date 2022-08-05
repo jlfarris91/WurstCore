@@ -230,6 +230,11 @@ public class TooltipBuilder
   function getTooltipExtended(int level) returns string
     let sb = new StringBuilder()
 
+    let desc = m_description.getValue(level)
+    if (desc != null)
+      sb.appendLine(desc)
+      sb.appendLine()
+
     var index = 0
     for itm in m_items
       if (index > 0)

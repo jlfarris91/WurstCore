@@ -2,7 +2,6 @@ package UnitComponent
 import public UnitMetadata
 import public initlater Component
 import Object
-import Action
 import public Dispatcher
 
 // ============================================================================
@@ -66,12 +65,13 @@ class UnitComponentDispatcher extends DispatcherContext
     m_requireEnabled = requireEnabled
 
   // --------------------------------------------------------------------------
-  override function dispatch(Action work)
+  override function canDispatch() returns bool
     if (m_ownerUnit != null and m_ownerUnit.isAlive())
       let comp = m_ownerUnit.getComponent(m_compTypeId)
       if (comp != null)
         if (not m_requireEnabled or comp.getEnabled())
-          work.call()
+          return true
+    return false
 
 // ============================================================================
 init

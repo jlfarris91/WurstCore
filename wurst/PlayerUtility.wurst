@@ -1,0 +1,55 @@
+package PlayerUtility
+
+// ============================================================================
+public function getPlayerFromPartialNameColorOrId(string playerPartialNameColorOrId) returns player
+  let id = getPlayerIdFromPartialNameColorOrId(playerPartialNameColorOrId)
+  return (id >= 0 and id < bj_MAX_PLAYERS) ? players[id] : null
+
+// ============================================================================
+public function getPlayerFromPartialNameColorOrId(string playerPartialNameColorOrId, player ignore) returns player
+  let id = getPlayerIdFromPartialNameColorOrId(playerPartialNameColorOrId)
+  return (id >= 0 and id < bj_MAX_PLAYERS and id != ignore.getId()) ? players[id] : null
+
+// ============================================================================
+/**
+Input:
+
+  playerPartialNameColorOrId
+  - Player Id (1-24)
+  - Player color (red, blue, green, etc)
+  - Player exact name
+  - Player partial name
+
+  ignore
+  - Player Id (0-23)
+  - Otherwise -1
+
+Output:
+  - Player id (0-23)
+  - Otherwise -1
+ */
+public function getPlayerIdFromPartialNameColorOrId(string playerPartialNameColorOrId) returns int
+  // Check for an ID match first since toInt() will return -1 when parsing an int fails
+  let playerId = playerPartialNameColorOrId.toInt()
+  if (playerId > 0 and playerId <= bj_MAX_PLAYER_SLOTS)
+    return playerId - 1
+  // Then player color
+  let playerPartialNameColorOrIdLowerCase = playerPartialNameColorOrId.toLowerCase()
+  for i = 0 to MAX_PLAYER_COLORS
+    if (playerPartialNameColorOrIdLowerCase == PLAYER_COLOR_NAMES[i])
+      return i
+  // Then check for exact player name match
+  for i = 0 to bj_MAX_PLAYER_SLOTS - 1
+    if (players[i].getName() == playerPartialNameColorOrId)
+      return i
+  // Then, partial player name match
+  for i = 0 to bj_MAX_PLAYER_SLOTS - 1
+    if (players[i].getName().startsWith(playerPartialNameColorOrId))
+      return i
+  return -1
+
+// ============================================================================
+@test function getPlayerFromPartialNameColorOrId_test()
+  for i = 0 to bj_MAX_PLAYERS-1
+    getPlayerIdFromPartialNameColorOrId((i + 1).toString()).assertEquals(i)
+    getPlayerIdFromPartialNameColorOrId(PLAYER_COLOR_NAMES[i]).assertEquals(i)

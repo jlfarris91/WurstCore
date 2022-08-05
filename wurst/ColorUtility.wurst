@@ -40,6 +40,7 @@ public class Colors
   static constant colorA lightBrown     = colorA(165, 145, 115, 255)
   static constant colorA gold           = colorA(255, 204, 0, 255)
   static constant colorA lumber         = colorA(0, 199, 80, 255)
+  static constant colorA xp             = colorA(111, 110, 252, 255)
   static constant colorA cornflowerBlue = colorA(100, 149, 237, 255)
 
 // ============================================================================

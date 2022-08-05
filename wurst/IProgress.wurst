@@ -17,12 +17,13 @@ public interface IProgressReporter
 public class Progress implements IProgress, IProgressReporter
   private real m_progress = 0.0
   private string m_message = ""
-  private Event1<IProgress> m_progressChangedEvent
+  private Event1<IProgress> m_progressChangedEvent = null
 
   // --------------------------------------------------------------------------
   ondestroy
     if (m_progressChangedEvent != null)
       destroy m_progressChangedEvent
+      m_progressChangedEvent = null
 
   // --------------------------------------------------------------------------
   override function getProgress() returns real

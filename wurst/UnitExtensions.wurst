@@ -43,6 +43,10 @@ public function unit.resetLevelAndSetXP(int xp, bool showEyeCandy)
   this.addXp(xp, showEyeCandy)
 
 // ============================================================================
+public function unit.getIconPath() returns string
+  return BlzGetAbilityIcon(this.getTypeId())
+
+// ============================================================================
 public function replaceUnitFixed(unit whichUnit, integer newUnitId, integer unitStateMethod) returns unit
   return replaceUnitFixed(whichUnit, newUnitId, unitStateMethod, true)
 

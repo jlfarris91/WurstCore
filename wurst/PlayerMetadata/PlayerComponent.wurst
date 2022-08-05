@@ -2,7 +2,6 @@ package PlayerComponent
 import PlayerMetadata
 import Composition
 import Object
-import Action
 import Dispatcher
 
 // ============================================================================
@@ -45,12 +44,13 @@ class PlayerComponentDispatcher extends DispatcherContext
     m_requireEnabled = requireEnabled
 
   // --------------------------------------------------------------------------
-  override function dispatch(Action work)
+  override function canDispatch() returns bool
     if (m_ownerPlayer != null and m_ownerPlayer.isIngame())
       let comp = m_ownerPlayer.getComponent(m_compTypeId)
       if (comp != null)
         if (not m_requireEnabled or comp.getEnabled())
-          work.call()
+          return true
+    return false
 
 // ============================================================================
 init

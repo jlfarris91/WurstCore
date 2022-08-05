@@ -1,4 +1,5 @@
 package GroupExtensions
+import Range
 
 group g_workingGroup = CreateGroup()
 
@@ -8,11 +9,20 @@ public function group.getFirst() returns unit
 
 // ============================================================================
 public function group.getClosestUnit(vec2 pos) returns unit
-  var closestDistSq = REAL_MAX
+  return this.getClosestUnit(pos, REAL_MAX)
+
+// ============================================================================
+public function group.getClosestUnit(vec2 pos, real maxDist) returns unit
+  return this.getClosestUnit(pos, rangeReal(0, maxDist))
+
+// ============================================================================
+public function group.getClosestUnit(vec2 pos, rangeReal range) returns unit
+  let minRangeSq = range.min * range.min
+  var closestDistSq = range.max * range.max
   unit closestUnit = null
   for _unit in this
     let distSq = _unit.getPos().distanceToSq(pos)
-    if (distSq < closestDistSq)
+    if (distSq >= minRangeSq and distSq <= closestDistSq)
       closestDistSq = distSq
       closestUnit = _unit
   return closestUnit

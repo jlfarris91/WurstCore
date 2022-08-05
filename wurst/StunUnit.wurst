@@ -17,19 +17,20 @@ public @configurable constant player DEFAULT_STUN_UNIT_OWNER = DUMMY_HOSTILE_PLA
 // ============================================================================
 @compiletime function createObjects()
   new AbilityDefinitionWarStompcreep(STUN_ABIL_ID)
+    ..setLevels(STUN_ABIL_LEVELS)
+    ..presetBuffs(lvl -> "BPSE")
     ..presetAreaofEffect(lvl -> 8.0)
     ..presetDamage(lvl -> 0.0)
     ..presetTerrainDeformationAmplitude(lvl -> -50.0)
     ..presetTerrainDeformationDurationms(lvl -> 300)
     ..presetCooldown(lvl -> 0.0)
-    ..presetDurationHero(lvl -> 0.0)
     ..presetManaCost(lvl -> 0)
+    ..presetCastRange(lvl -> 99999.0)
     ..setArtCaster("")
     ..setHeroAbility(false)
-    ..setLevels(STUN_ABIL_LEVELS)
     ..presetDurationHero(lvl -> STUN_ABIL_DURATION_RANGE.lerp((lvl - 1) / STUN_ABIL_LEVELS.toReal()))
     ..presetDurationNormal(lvl -> STUN_ABIL_DURATION_RANGE.lerp((lvl - 1) / STUN_ABIL_LEVELS.toReal()))
-    ..presetTargetsAllowed(lvl -> commaList("ground"))
+    ..presetTargetsAllowed(lvl -> commaList("ground,invulnerable,vulnerable"))
 
 // ============================================================================
 /** Stun a single unit for a maximum of 10s at 0.1s intervals */
@@ -45,7 +46,7 @@ public function stunUnit(player owner, unit target, real durationSeconds) return
     ..origin(target.getPos())
     ..delay(2)
   if (dummy.castImmediate(STUN_ABIL_ID, level, OrderIds.stomp) == null)
-    Log.error("Failed to cast ability for stunUnit")
+    Log.debug("Failed to cast ability for stunUnit")
   return level * STUN_ABIL_LEVEL_DURATION_INTERVAL
 
 // ============================================================================

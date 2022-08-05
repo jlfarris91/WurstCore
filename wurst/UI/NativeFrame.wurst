@@ -1,6 +1,10 @@
 package NativeFrame
 import HashMap
 import Action
+import Vector
+import ErrorHandling
+
+HashMap<framehandle, NativeFramePool> g_framehandleToPool
 
 // ============================================================================
 public class NativeFrameDefinition
@@ -46,6 +50,14 @@ public interface INativeFrameTemplate
 public class NativeFrameTemplate implements INativeFrameTemplate
   private NativeFrameDefinition m_frameDef
   private Action1<framehandle> m_initializer
+
+  // --------------------------------------------------------------------------
+  construct()
+    skip
+
+  // --------------------------------------------------------------------------
+  construct (NativeFrameDefinition frameDef)
+    m_frameDef = frameDef
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -107,3 +119,70 @@ public class NativeFrameTemplateSelector implements INativeFrameTemplateSelector
   // --------------------------------------------------------------------------
   override function getFrameTemplate(int typeid) returns INativeFrameTemplate
     return m_typeIdToTemplateMap.get(typeid)
+
+// ============================================================================
+public class NativeFramePool
+  private NativeFrameTemplate m_frameTemplate
+  private Action1<framehandle> m_initializer
+  private Vector<framehandle> m_freeList
+
+  // --------------------------------------------------------------------------
+  construct(NativeFrameTemplate frameTemplate, int initialSize)
+    m_frameTemplate = frameTemplate
+    m_freeList = new Vector<framehandle>(initialSize)
+
+    let ini = m_frameTemplate.getInitializer()
+    if (ini != null)
+      m_initializer = ini.acquire()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    for frame in m_freeList
+      frame.hide()
+      frame.remove()
+    m_freeList.clear()
+
+    if (m_initializer != null)
+      m_initializer.release()
+      m_initializer = null
+
+    destroy m_frameTemplate
+
+  // --------------------------------------------------------------------------
+  function getFramehandle() returns framehandle
+    framehandle fh
+    if (m_freeList.isEmpty())
+      fh = m_frameTemplate.createFrame()
+      g_framehandleToPool.put(fh, this)
+    else
+      fh = m_freeList.pop()
+    if (m_initializer != null)
+      m_initializer.call(fh)
+    return fh
+
+  // --------------------------------------------------------------------------
+  function release(framehandle fh)
+    if (g_framehandleToPool.get(fh) != this)
+      error("framehandle does not belong to pool")
+    releaseUnsafe(fh)
+
+  // --------------------------------------------------------------------------
+  protected function releaseUnsafe(framehandle fh)
+    if (fh == null)
+      return
+    m_freeList.push(fh)
+    fh.setParent(null)
+    fh.hide()
+
+// ============================================================================
+public function framehandle.release()
+  let pool = g_framehandleToPool.get(this)
+  if (pool != null)
+    pool.releaseUnsafe(this)
+  else
+    this.remove()
+
+// ============================================================================
+init
+  g_framehandleToPool = new HashMap<framehandle, NativeFramePool>()
