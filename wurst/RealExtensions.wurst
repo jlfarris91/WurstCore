@@ -65,3 +65,6 @@ public function real.toPercentageString01(int decimalPlace) returns string
   0.00123.toPercentageString01(1).assertEquals("0.1%")
   0.00123.toPercentageString01(2).assertEquals("0.12%")
   0.00123.toPercentageString01(3).assertEquals("0.123%")
+
+  (max(2.0 - 1, 0) * 0.1 + 1).toPercentageString01(0).assertEquals("110%")
+  (max(3.0 - 1, 0) * 0.1 + 1).toPercentageString01(0).assertEquals("120%")
