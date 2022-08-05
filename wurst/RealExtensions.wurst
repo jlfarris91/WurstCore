@@ -19,10 +19,10 @@ public function real.toPercentageString01() returns string
 // ============================================================================
 public function real.toPercentageString01(int decimalPlace) returns string
   let s = this * 100
-  let i = s.toInt()
+  let i = s.round()
   if (s - i == 0 or decimalPlace == 0)
     return i.toString() + "%"
-  return (this * 100).toString(decimalPlace) + "%"
+  return s.toString(decimalPlace) + "%"
 
 // ============================================================================
 @test function truncate()
