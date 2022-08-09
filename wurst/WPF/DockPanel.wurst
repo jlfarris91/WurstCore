@@ -27,6 +27,12 @@ public class DockPanel extends Panel
     setFrameLayout(m_layout)
 
   // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    super(frame)
+    m_layout = new DockLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
   ondestroy
     destroy m_layout
     m_layout = null

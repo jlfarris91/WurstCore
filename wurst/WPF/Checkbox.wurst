@@ -1,0 +1,69 @@
+package Checkbox
+import Frame
+import ClosureFrames
+import Events
+
+// ============================================================================
+public class Checkbox extends Frame
+  private bool m_value
+  
+  // private framehandle m_checkBoxBackdrop
+  // private framehandle m_disabledCheckBoxBackdrop
+  // private framehandle m_checkBoxPushedBackdrop
+  private framehandle m_checkHighlightTemplate
+  private framehandle m_disabledCheckHighlightTemplate
+
+  private Event m_valueChangedEvent = null
+
+  // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    super(frame)
+
+    __construct()
+
+  // --------------------------------------------------------------------------
+  private function __construct()
+
+    // m_checkBoxBackdrop = getFrame("CheckBoxBackdrop")
+    // m_disabledCheckBoxBackdrop = getFrame("DisabledCheckBoxBackdrop")
+    // m_checkBoxPushedBackdrop = getFrame("CheckBoxPushedBackdrop")
+    m_checkHighlightTemplate = getFrame("CheckHighlightTemplate")
+    m_disabledCheckHighlightTemplate = getFrame("DisabledCheckHighlightTemplate")
+
+    getFrameHandle()
+    ..onClick() () ->
+      getFrameHandle().clearFocus()
+      setChecked(not isChecked())
+
+    update()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    if (m_valueChangedEvent != null)
+      destroy m_valueChangedEvent
+      m_valueChangedEvent = null
+
+  // --------------------------------------------------------------------------
+  function setChecked(bool value)
+    if (m_value != value)
+      m_value = value
+      update()
+      if (m_valueChangedEvent != null)
+        m_valueChangedEvent.call()
+
+  // --------------------------------------------------------------------------
+  function isChecked() returns bool
+    return m_value
+
+  // --------------------------------------------------------------------------
+  function onValueChanged() returns IEvent
+    if (m_valueChangedEvent == null)
+      m_valueChangedEvent = new Event()
+    return m_valueChangedEvent
+
+  // --------------------------------------------------------------------------
+  private function update()
+    let frame = getFrameHandle()
+    m_checkHighlightTemplate.setVisible(frame.isEnabled() and m_value)
+    m_disabledCheckHighlightTemplate.setVisible(not frame.isEnabled() and m_value)

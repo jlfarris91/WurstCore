@@ -387,3 +387,45 @@ Frame "SIMPLESTATUSBAR" "ProgressBarTemplate" {
     }
   }
 }
+
+// ============================================================================
+Frame "GLUEBUTTON" "CheckboxTemplate" {
+  Width 0.015,
+  Height 0.015,
+  ControlStyle "AUTOTRACK",
+
+  ControlBackdrop "CheckBoxBackdrop",
+  Frame "BACKDROP" "CheckBoxBackdrop" {
+    DecorateFileNames,
+    BackdropBlendAll,
+    BackdropBackground  "EscMenuCheckBoxBackground",
+  }
+
+  ControlDisabledBackdrop "DisabledCheckBoxBackdrop",
+  Frame "BACKDROP" "DisabledCheckBoxBackdrop" {
+    DecorateFileNames,
+    BackdropBlendAll,
+    BackdropBackground  "EscMenuDisabledCheckBoxBackground",
+  }
+
+  ControlPushedBackdrop "CheckBoxPushedBackdrop",
+  Frame "BACKDROP" "CheckBoxPushedBackdrop" {
+    DecorateFileNames,
+    BackdropBlendAll,
+    BackdropBackground  "EscMenuCheckBoxPushedBackground",
+  }
+
+  Frame "BACKDROP" "CheckHighlightTemplate" {
+    SetAllPoints,
+    DecorateFileNames,
+    BackdropBlendAll,
+    BackdropBackground "EscMenuCheckBoxCheckHighlight",
+  }
+
+  Frame "BACKDROP" "DisabledCheckHighlightTemplate" {
+    SetAllPoints,
+    DecorateFileNames,
+    BackdropBlendAll,
+    BackdropBackground "EscMenuCheckBoxCheckHighlight",
+  }
+}

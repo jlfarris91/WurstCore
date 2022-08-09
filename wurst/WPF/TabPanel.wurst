@@ -27,8 +27,8 @@ public class TabPanelButton extends Frame
   private TabPanelButtonState m_state
 
   // --------------------------------------------------------------------------
-  construct()
-    super(createFrame("TabPanelButtonTemplate"))
+  construct(framehandle frame)
+    super(frame)
     m_backdropFrame = getFrame("TabPanelButtonBackdrop")
     m_backdropDisabledFrame = getFrame("TabPanelButtonDisabledBackdrop")
     m_state = EMPTY
@@ -65,17 +65,24 @@ public class TabPanel extends DockPanel
     _construct()
 
   // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    super(frame)
+    _construct()
+
+  // --------------------------------------------------------------------------
   private function _construct()
+
+    let frame = getFrameHandle()
 
     setLastChildFills(true)
 
-    m_buttonPanel = new WrapPanel("BP")
+    m_buttonPanel = new WrapPanel(createFrame("FRAME", "BP", frame, "", 0))
     ..setDock(Dock.TOP)
     ..setOrientation(Orientation.HORIZONTAL)
     ..setStretchItems(true)
     addChild(m_buttonPanel)
 
-    m_fillPanel = new Panel("FP")
+    m_fillPanel = new Panel(createFrame("FRAME", "FP", frame, "", 0))
     ..setDock(Dock.BOTTOM)
     addChild(m_fillPanel)  
 
@@ -85,7 +92,7 @@ public class TabPanel extends DockPanel
 
   // --------------------------------------------------------------------------
   function addContent(string id, string buttonText, Frame contentFrame)
-    let buttonFrame = new TabPanelButton()
+    let buttonFrame = new TabPanelButton(createFrame("TabPanelButtonTemplate", getFrameHandle(), 0, 0))
     ..setText(buttonText)
     ..setWidth(0.05)
     ..setHeight(0.02)

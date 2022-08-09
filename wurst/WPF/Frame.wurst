@@ -191,6 +191,10 @@ public class Frame
     return m_frameHandle.getSize()
   
   // --------------------------------------------------------------------------
+  function setSize(real width, real height)
+    setSize(vec2(width, height))
+  
+  // --------------------------------------------------------------------------
   function setSize(vec2 value)
     if (m_frameHandle.getSize() != value or m_desiredSize != value)
       m_frameHandle.setSize(value)
@@ -522,7 +526,7 @@ public class Frame
     if (measuredSize.y == REAL_MAX)
       error("Measured height cannot be REAL_MAX")
 
-    m_measuredSize = measuredSize
+    m_measuredSize = measuredSize + marginSize
     m_prevConstraint = availableSize
 
     if (m_parent != null and prevMeasuredSize != measuredSize

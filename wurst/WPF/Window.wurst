@@ -37,6 +37,11 @@ public class Window extends Panel
     _construct()
 
   // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    super(frame)
+    _construct()
+
+  // --------------------------------------------------------------------------
   private function _construct()
     m_headerContainer = new Frame(getFrame("WindowHeaderContainer"))
     m_contentContainer = new Frame(getFrame("WindowContentContainer"))

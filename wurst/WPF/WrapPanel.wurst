@@ -21,6 +21,12 @@ public class WrapPanel extends Panel
     setFrameLayout(m_layout)
 
   // --------------------------------------------------------------------------
+  construct(framehandle frame)
+    super(frame)
+    m_layout = new WrapLayout()
+    setFrameLayout(m_layout)
+
+  // --------------------------------------------------------------------------
   function getOrientation() returns Orientation
     return m_layout.getOrientation()
 
