@@ -42,10 +42,16 @@ public class UnitMetadata extends Composable implements IUnitMetadata
   protected unit m_unit
   private bool m_shouldDestroyWithOwner = true
 
+  private LinkedList<UnitComponent> m_componentsToEnableOnRevive = null
+
   // --------------------------------------------------------------------------
   ondestroy
     if (m_unit != null)
       detachAndNullifyUnit()
+
+    if (m_componentsToEnableOnRevive != null)
+      destroy m_componentsToEnableOnRevive
+      m_componentsToEnableOnRevive = null
 
   // --------------------------------------------------------------------------
   override function shouldDestroyWithOwner() returns bool
@@ -104,9 +110,31 @@ public class UnitMetadata extends Composable implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   function onKilled()
+
+    if (m_componentsToEnableOnRevive != null and m_unit.isHero())
+      m_componentsToEnableOnRevive = new LinkedList<UnitComponent>()
+
     for comp in getComponents()
       let unitComp = comp castTo UnitComponent
       unitComp.onOwnerKilled()
+      if (m_componentsToEnableOnRevive != null and unitComp.getEnabled())
+        m_componentsToEnableOnRevive.add(unitComp)
+
+  // --------------------------------------------------------------------------
+  function onRevived()
+
+    for comp in getComponents()
+      let unitComp = comp castTo UnitComponent
+      unitComp.onOwnerRevived()
+
+    if (m_componentsToEnableOnRevive != null)
+    //{
+      for comp in m_componentsToEnableOnRevive
+        comp.enable()
+
+      destroy m_componentsToEnableOnRevive
+      m_componentsToEnableOnRevive = null
+    //}
 
   // --------------------------------------------------------------------------
   private function setUnit(unit u)
@@ -337,6 +365,17 @@ function onUnitKilled()
   logDebug("[onUnitKilled] " + dyingUnit.getName() + " was killed")
 
 // ============================================================================
+function onUnitRevived()
+  let revivingUnit = GetRevivingUnit()
+  
+  let metadata = revivingUnit.getMetadata() castTo UnitMetadata
+  if (metadata == null)
+    return
+
+  metadata.onRevived()
+  logDebug("[onRevived] " + revivingUnit.getName() + " was revived")
+
+// ============================================================================
 function onUnitIndexed(unit indexingUnit)
 
   if (Preload.isPreloading())
@@ -383,6 +422,7 @@ init
     g_ignoreIndexingCounter[i] = 0
 
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitKilled)
+  registerPlayerUnitEvent(EVENT_PLAYER_HERO_REVIVE_FINISH, function onUnitRevived)
 
   onUnitIndex(() -> onUnitIndexed(getIndexingUnit()))
   onUnitDeindex(() -> onUnitDeindexed(getIndexingUnit()))
