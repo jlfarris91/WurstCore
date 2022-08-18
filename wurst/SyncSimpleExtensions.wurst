@@ -11,8 +11,9 @@ public function vec2.sync(player p, Vec2Action callback)
     callback.release()
 
 // ============================================================================
-public function sync(player p, Action action)
-  action.acquire()
-  true.sync(p) _ ->
-    action.call()
-    action.release()
+public function player.sync(Action1<player> callback)
+  callback.acquire()
+  this.getId().sync(this) (pid) -> 
+    callback.call(players[pid])
+    callback.release()
+    
