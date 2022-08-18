@@ -195,7 +195,7 @@ public function timespan.assertEquals(timespan expected)
 
 // ============================================================================
 public function timespan.toRealWorldSeconds() returns real
-  var todScale = GetTimeOfDayScale()
+  let todScale = GetTimeOfDayScale()
   return todScale == 0.0 ? REAL_MAX : this.getTotalDays() * (TIME_SECONDS_PER_DAY / todScale)
 
 // ============================================================================

@@ -1,6 +1,7 @@
 package Range
 import Math
 import RefObject
+import ErrorHandling
 
 // ============================================================================
 public tuple rangeReal(real min, real max)
