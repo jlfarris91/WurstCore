@@ -121,7 +121,7 @@ class PreloadTaskContext
     if (lastError != "")
       error("Error preloading unit " + g_unitIds[unitIndex].toRawCode() + ": " + lastError)
     steps++
-    progress.report(steps / totalSteps.toReal())
+    progress.report(steps / max(totalSteps.toReal(), 1))
     unitIndex++
     return unitIndex < g_unitIdCount
   
@@ -134,7 +134,7 @@ class PreloadTaskContext
     if (lastError != "")
       error("Error preloading ability " + g_abilityIds[abilityIndex].toRawCode() + ": " + lastError)
     steps++
-    progress.report(steps / totalSteps.toReal())
+    progress.report(steps / max(totalSteps.toReal(), 1))
     abilityIndex++
     return abilityIndex < g_abilityIdCount
 
@@ -154,7 +154,7 @@ class PreloadTaskContext
     if (lastError != "")
       error("Error preloading unit recycler " + recyclerData.unitTypeId.toRawCode() + ": " + lastError)
     steps++
-    progress.report(steps / totalSteps.toReal())
+    progress.report(steps / max(totalSteps.toReal(), 1))
     recyclerUnitIndex++
     if (recyclerUnitIndex >= recyclerData.count)
       recyclerIndex++

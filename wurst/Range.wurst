@@ -125,10 +125,14 @@ public function rangeInt.op_mult(real factor) returns rangeInt
 
 // ============================================================================
 public function rangeReal.op_divReal(real factor) returns rangeReal
+  if (factor == 0.0)
+    error("Attempting to divide range by factor of 0")
   return rangeReal(this.min / factor, this.max / factor)
 
 // ============================================================================
 public function rangeInt.op_divReal(real factor) returns rangeInt
+  if (factor == 0.0)
+    error("Attempting to divide range by factor of 0")
   return rangeInt((this.min / factor).floor(), (this.max / factor).floor())
 
 // ============================================================================

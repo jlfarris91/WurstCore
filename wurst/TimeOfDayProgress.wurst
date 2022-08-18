@@ -81,7 +81,7 @@ public class TimeOfDayProgress extends Runnable implements IRealtimeListener
 
   // --------------------------------------------------------------------------
   override function getProgress() returns real
-    return clamp01(getElapsed() / m_duration)
+    return m_duration != 0.0 ? clamp01(getElapsed() / m_duration) : 0.0
 
   // --------------------------------------------------------------------------
   override function realtimeUpdate(real dt)

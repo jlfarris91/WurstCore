@@ -76,13 +76,15 @@ public function replaceUnitFixed(unit whichUnit, integer newUnitId, integer unit
     // If both units have mana, do the same for mana.    
     case bj_UNIT_STATE_METHOD_RELATIVE
       if (GetUnitState(oldUnit, UNIT_STATE_MAX_LIFE) > 0)
-        let oldRatio = GetUnitState(oldUnit, UNIT_STATE_LIFE) / GetUnitState(oldUnit, UNIT_STATE_MAX_LIFE)
+        let oldUnitMaxLife = GetUnitState(oldUnit, UNIT_STATE_MAX_LIFE)
+        let oldRatio = oldUnitMaxLife != 0.0 ? GetUnitState(oldUnit, UNIT_STATE_LIFE) / oldUnitMaxLife : 0.0
         let newAbsLife = GetUnitState(newUnit, UNIT_STATE_MAX_LIFE)
         let newLife = newAbsLife > 0 ? max(oldRatio * newAbsLife, 1) : 0
         SetUnitState(newUnit, UNIT_STATE_LIFE, newLife)
       
       if (GetUnitState(oldUnit, UNIT_STATE_MAX_MANA) > 0)
-        let oldRatio = GetUnitState(oldUnit, UNIT_STATE_MANA) / GetUnitState(oldUnit, UNIT_STATE_MAX_MANA)
+        let oldUnitMaxMana = GetUnitState(oldUnit, UNIT_STATE_MAX_MANA)
+        let oldRatio = oldUnitMaxMana != 0.0 ? GetUnitState(oldUnit, UNIT_STATE_MANA) / oldUnitMaxMana : 0.0
         SetUnitState(newUnit, UNIT_STATE_MANA, oldRatio * GetUnitState(newUnit, UNIT_STATE_MAX_MANA))
 
     // Set the replacement's current life to that of the old unit.

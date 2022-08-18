@@ -92,7 +92,8 @@ public function time.clamp(time min, time max) returns time
 
 // ============================================================================
 public function time.parameterize(time start, time _end) returns real
-  return I2R((this - start).ticks) / I2R((_end - start).ticks)
+  let diffTicks = (_end - start).ticks
+  return diffTicks == 0 ? 0.0 : I2R((this - start).ticks) / I2R(diffTicks)
 
 // ============================================================================
 public function time.isBetween(time start, time _end) returns bool
@@ -171,7 +172,7 @@ public function timespan.op_mult(real value) returns timespan
 
 // ============================================================================
 public function timespan.op_divReal(timespan other) returns real
-  return this.ticks / other.ticks
+  return other.ticks == 0 ? 0 : this.ticks / other.ticks
 
 // ============================================================================
 public function timespan.clamp(timespan min, timespan max) returns timespan
@@ -194,7 +195,8 @@ public function timespan.assertEquals(timespan expected)
 
 // ============================================================================
 public function timespan.toRealWorldSeconds() returns real
-  return this.getTotalDays() * (TIME_SECONDS_PER_DAY / GetTimeOfDayScale())
+  var todScale = GetTimeOfDayScale()
+  return todScale == 0.0 ? REAL_MAX : this.getTotalDays() * (TIME_SECONDS_PER_DAY / todScale)
 
 // ============================================================================
 public function timespan.toRealWorldTimeString() returns string

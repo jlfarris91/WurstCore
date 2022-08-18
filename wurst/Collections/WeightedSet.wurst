@@ -168,7 +168,7 @@ public class WeightedSet<T>
     let entry = findEntry(elem)
     if (entry == null)
       return 0.0
-    return entry.weight / this.totalWeight
+    return this.totalWeight != 0.0 ? entry.weight / this.totalWeight : 0.0
 
   // --------------------------------------------------------------------------
   /** Gets an iterator that can be used to iterate through the elements in the set */

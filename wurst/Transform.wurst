@@ -22,10 +22,11 @@ public function transform.concat(transform localSpace) returns transform
 
 // ============================================================================
 public function transform.separate(transform worldSpace) returns transform
-  let s = worldSpace.scale / this.scale
+  let scaleSafe = this.scale == 0.0 ? 1.0 : this.scale
+  let s = worldSpace.scale / scaleSafe
   let r = this.rot.conj() * worldSpace.rot.norm()
   var v = worldSpace.pos + worldSpace.pivot - this.pos - this.pivot
-  v = v.rotate(this.rot.inv()) / this.scale
+  v = v.rotate(this.rot.inv()) / scaleSafe
   let p = v + this.pivot - worldSpace.pivot
   return transform(p, worldSpace.pivot, r, s)
 

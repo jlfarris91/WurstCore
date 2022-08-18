@@ -281,7 +281,7 @@ public class ListBox extends Panel
 
   // --------------------------------------------------------------------------
   private static function getMaxNumberOfItems(real rowHeight, real totalHeight) returns int
-    return rowHeight == 0 ? 1 : (totalHeight / rowHeight).floor()
+    return rowHeight != 0 ? (totalHeight / rowHeight).floor() : 1
 
   // --------------------------------------------------------------------------
   private static function getSpacing(real rowHeight, real totalHeight) returns real
@@ -289,7 +289,7 @@ public class ListBox extends Panel
       return 0
     let rowsAbs = totalHeight / rowHeight
     let rowsFloor = rowsAbs.floor()
-    if (rowsFloor == 0)
+    if (rowsFloor <= 1)
       return 0
     return ((rowsAbs - rowsFloor) * rowHeight) / (rowsFloor - 1)
 

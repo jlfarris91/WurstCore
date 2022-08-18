@@ -41,11 +41,17 @@ public class Grid implements IGrid
   // --------------------------------------------------------------------------
   construct(bounds bounds, int width, int height)
     m_bounds = bounds
-    m_width = width
-    m_height = height
+    m_width = max(width, 1)
+    m_height = max(height, 1)
 
     let size = m_bounds.size()
-    m_cellSize = vec2(size.x / width, size.y / height)
+    
+    if (size.x == 0.0)
+      error("bounds has width of 0")
+    if (size.y == 0.0)
+      error("bounds has height of 0")
+
+    m_cellSize = vec2(max(size.x / m_width, 1), max(size.y / m_height, 1))
 
   // --------------------------------------------------------------------------
   override function getBounds() returns bounds

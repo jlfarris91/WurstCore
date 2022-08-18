@@ -10,7 +10,7 @@ public function real.truncate(int decimalPlace) returns real
   if (decimalPlace <= 0)
     return r
   let p = powerTens[decimalPlace-1]
-  return r + ((this - r) * p).floor() / p
+  return p == 0 ? p : (r + ((this - r) * p).floor() / p)
 
 // ============================================================================
 public function real.toPercentageString01() returns string
