@@ -44,7 +44,7 @@ public function onSyncedKeyPress(oskeytype key, OSKEY_META metaKey, bool onKeyDo
 // ============================================================================
 function registerListener(SyncedKeyPressListener listener, oskeytype key, OSKEY_META metaKey, bool onKeyDown) returns SyncedKeyPressListener
   listener.key = key
-  listener.metaKey = metaKey.toInt()
+  listener.metaKey = metaKey castTo int
   listener.onKeyDown = onKeyDown
   let id = key.getHandleId()
   let first = KEY_MAP.get(id)
