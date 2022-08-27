@@ -2,6 +2,7 @@ package GroupExtensions
 import Range
 
 group g_workingGroup = CreateGroup()
+unit array g_scratchpad
 
 // ============================================================================
 public function group.getFirst() returns unit
@@ -26,6 +27,24 @@ public function group.getClosestUnit(vec2 pos, rangeReal range) returns unit
       closestDistSq = distSq
       closestUnit = _unit
   return closestUnit
+
+// ============================================================================
+/** Do not call recursively */
+public function group.getRandomUnitInRange(vec2 pos, rangeReal range) returns unit
+  let minRangeSq = range.min * range.min
+  let maxRangeSq = range.max * range.max
+  var scratchpadCount = 0
+  for _unit in this
+    let distSq = _unit.getPos().distanceToSq(pos)
+    if (distSq >= minRangeSq and distSq <= maxRangeSq)
+      g_scratchpad[scratchpadCount] = _unit
+      scratchpadCount++
+  if (scratchpadCount == 0)
+    return null
+  let selectedUnit = g_scratchpad[GetRandomInt(0, scratchpadCount-1)]
+  for i = 0 to scratchpadCount-1
+    g_scratchpad[i] = null
+  return selectedUnit
 
 // ============================================================================
 /** Removes any "ghost" units that have been removed from the game but not from the group

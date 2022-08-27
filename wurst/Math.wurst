@@ -182,6 +182,14 @@ public function smoothDamp(real current, real target, real currentVelocity, real
   return smoothDampResult(num8, vel)
 
 // ============================================================================
+/** Taken from Unity */
+tuple smoothDampResultVec2(vec2 value, vec2 vel)
+public function smoothDamp(vec2 current, vec2 target, vec2 currentVelocity, real smoothTime, real maxSpeed, real deltaTime) returns smoothDampResultVec2
+  let resultX = smoothDamp(current.x, target.x, currentVelocity.x, smoothTime, maxSpeed, deltaTime)
+  let resultY = smoothDamp(current.y, target.y, currentVelocity.y, smoothTime, maxSpeed, deltaTime)
+  return smoothDampResultVec2(vec2(resultX.value, resultY.value), vec2(resultX.vel, resultY.vel))
+
+// ============================================================================
 init
   g_WorldBounds = GetPlayableMapRect()
 
