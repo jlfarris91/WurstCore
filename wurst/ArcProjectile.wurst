@@ -1,11 +1,9 @@
 package ArcProjectile
 import RealtimeUpdate
-import Range
 import Action
 import GroupUtils
 import Math
 import Func
-import Arc
 import Circle
 import ClosureTimers
 
@@ -13,12 +11,13 @@ let tempGroup = CreateGroup()
 
 // ============================================================================
 public class ArcProjectile implements IRealtimeListener
-  static bool SHOW_DEBUG = false
+  static bool SHOW_DEBUG = true
 
   private unit m_owner
   private vec2 m_startPos
   private vec2 m_endPos
-  private arc m_arc
+  private real m_startSize
+  private real m_endSize
   private real m_distance
   private effect m_fx
   private group m_affectedUnits
@@ -30,13 +29,15 @@ public class ArcProjectile implements IRealtimeListener
   private Action2<ArcProjectile, unit> m_callback
 
   // --------------------------------------------------------------------------
-  construct(unit owner, effect fx, vec2 startPos, vec2 endPos, angle angle, real speed,
+  construct(unit owner, effect fx, vec2 startPos, vec2 endPos, real startSize, real endSize, real speed,
             real damageInterval, Func2<ArcProjectile, unit, bool> unitFilter,
             Action2<ArcProjectile, unit> callback)
     m_owner = owner
     m_fx = fx
     m_startPos = startPos
     m_endPos = endPos
+    m_startSize = startSize
+    m_endSize = endSize
     m_affectedUnits = getGroup()
     m_speed = speed
     m_damageTime = damageInterval
@@ -46,10 +47,6 @@ public class ArcProjectile implements IRealtimeListener
     m_distance = startPos.distanceTo(endPos)
     m_time = 0.0
     this.registerForRealtimeUpdate(RealtimeUpdatePriority.Realtime)
-
-    let angleRange = rangeReal(startPos.angleTo(endPos).radians).grow(angle.radians / 2.0)
-    m_arc = arc(startPos, angleRange, REAL_RANGE_ZERO)
-
     affectUnits()
 
   // --------------------------------------------------------------------------
@@ -95,10 +92,8 @@ public class ArcProjectile implements IRealtimeListener
   // --------------------------------------------------------------------------
   private function affectUnits()
 
-    m_arc.distanceRange.min = m_arc.distanceRange.max
-    m_arc.distanceRange.max = getDistance()
-
-    let boundingCircle = m_arc.getBoundingCircle()
+    let t = getProgress01()
+    let boundingCircle = circle(lerp(m_startPos, m_endPos, t), lerp(m_startSize, m_endSize, t))
 
     if (SHOW_DEBUG)
       let fx = addEffect("circle.mdl", boundingCircle.center)..setScale(boundingCircle.radius / 64.0)
