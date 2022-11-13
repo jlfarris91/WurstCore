@@ -106,3 +106,15 @@ public function string.colorize(color color) returns string
 // ============================================================================
 public function string.colorize(colorA color) returns string
   return color.toColorString() + this + "|r"
+
+// ============================================================================
+public function string.red() returns string
+  return this.colorize(Colors.red)
+
+// ============================================================================
+public function string.gold() returns string
+  return this.colorize(Colors.gold)
+
+// ============================================================================
+public function string.green() returns string
+  return this.colorize(Colors.green)
