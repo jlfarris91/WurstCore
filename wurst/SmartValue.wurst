@@ -13,16 +13,18 @@ public enum AffectorType
 
 // ============================================================================
 public class SmartValueAffector
-  AffectorType m_type
-  real m_value
-  CallbackSingle m_callback = null
-  real m_duration = 0.0
+  private AffectorType m_type
+  private real m_value
+  private CallbackSingle m_callback = null
+  private real m_duration = 0.0
+  private int m_userData = 0
 
   // --------------------------------------------------------------------------
-  construct (SmartValue owner, AffectorType _type, real value, real duration)
+  construct (SmartValue owner, AffectorType _type, real value, real duration, int userData)
     m_type = _type
     m_value = value
     m_duration = duration
+    m_userData = userData
     if (duration > 0.0)
       m_callback = doAfter(duration) () ->
         m_callback = null // destroyed by internal timer cleanup
@@ -48,6 +50,10 @@ public class SmartValueAffector
   // --------------------------------------------------------------------------
   function getRemainingSeconds() returns real
     return m_callback.getRemainingSeconds()
+
+  // --------------------------------------------------------------------------
+  function getUserData() returns int
+    return m_userData
 
 // ============================================================================
 public abstract class SmartValueBase
@@ -93,13 +99,13 @@ public class SmartValue
     var absolute = 0.0
 
     for affector in m_affectors
-      switch (affector.m_type)
+      switch (affector.getType())
         case BASE
-          value = affector.m_value
+          value = affector.getValue()
         case SCALE
-          scale *= affector.m_value
+          scale *= affector.getValue()
         case ABSOLUTE
-          absolute += affector.m_value
+          absolute += affector.getValue()
         
     return value * scale + absolute
 
@@ -134,40 +140,80 @@ public class SmartValue
     return affect(AffectorType.BASE, value)
 
   // --------------------------------------------------------------------------
+  function affectBase(real value, int userData) returns _handle
+    return affect(AffectorType.BASE, value, userData)
+
+  // --------------------------------------------------------------------------
   function affectBase(real value, real duration) returns _handle
     return affect(AffectorType.BASE, value, duration)
+
+  // --------------------------------------------------------------------------
+  function affectBase(real value, real duration, int userData) returns _handle
+    return affect(AffectorType.BASE, value, duration, userData)
 
   // --------------------------------------------------------------------------
   function affectScale(real value) returns _handle
     return affect(AffectorType.SCALE, value)
 
   // --------------------------------------------------------------------------
+  function affectScale(real value, int userData) returns _handle
+    return affect(AffectorType.SCALE, value, userData)
+
+  // --------------------------------------------------------------------------
   function affectScale(real value, real duration) returns _handle
     return affect(AffectorType.SCALE, value, duration)
+
+  // --------------------------------------------------------------------------
+  function affectScale(real value, real duration, int userData) returns _handle
+    return affect(AffectorType.SCALE, value, duration, userData)
 
   // --------------------------------------------------------------------------
   function affectAdd(real value) returns _handle
     return affect(AffectorType.ABSOLUTE, value)
 
   // --------------------------------------------------------------------------
+  function affectAdd(real value, int userData) returns _handle
+    return affect(AffectorType.ABSOLUTE, value, userData)
+
+  // --------------------------------------------------------------------------
   function affectAdd(real value, real duration) returns _handle
     return affect(AffectorType.ABSOLUTE, value, duration)
+
+  // --------------------------------------------------------------------------
+  function affectAdd(real value, real duration, int userData) returns _handle
+    return affect(AffectorType.ABSOLUTE, value, duration, userData)
 
   // --------------------------------------------------------------------------
   function affectSub(real value) returns _handle
     return affect(AffectorType.ABSOLUTE, -value)
 
   // --------------------------------------------------------------------------
+  function affectSub(real value, int userData) returns _handle
+    return affect(AffectorType.ABSOLUTE, -value, userData)
+
+  // --------------------------------------------------------------------------
   function affectSub(real value, real duration) returns _handle
     return affect(AffectorType.ABSOLUTE, -value, duration)
 
   // --------------------------------------------------------------------------
+  function affectSub(real value, real duration, int userData) returns _handle
+    return affect(AffectorType.ABSOLUTE, -value, duration, userData)
+
+  // --------------------------------------------------------------------------
   function affect(AffectorType _type, real value) returns _handle
-    return affect(_type, value, 0.0)
+    return affect(_type, value, 0.0, 0)
+
+  // --------------------------------------------------------------------------
+  function affect(AffectorType _type, real value, int userData) returns _handle
+    return affect(_type, value, 0.0, userData)
   
   // --------------------------------------------------------------------------
   function affect(AffectorType _type, real value, real duration) returns _handle
-    let affector = new SmartValueAffector(this, _type, value, duration)
+    return affect(_type, value, duration, 0)
+  
+  // --------------------------------------------------------------------------
+  function affect(AffectorType _type, real value, real duration, int userData) returns _handle
+    let affector = new SmartValueAffector(this, _type, value, duration, userData)
     let h = _handle(affector castTo int)
     if (m_affectors == null)
       m_affectors = new LinkedList<SmartValueAffector>()
