@@ -138,5 +138,9 @@ public function player.getTechResearchLevel(int techId) returns int
   return GetPlayerTechCount(this, techId, true)
 
 // ============================================================================
+public function player.incTechResearchLevel(int techId, int levels)
+  SetPlayerTechResearched(this, techId, GetPlayerTechCount(this, techId, true) + levels)
+
+// ============================================================================
 public function player.setAbilityAvailability(int abilityId, bool available)
   SetPlayerAbilityAvailable(this, abilityId, available)
