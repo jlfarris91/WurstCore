@@ -110,6 +110,7 @@ public class UnitMetadata extends Composable implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   function onKilled()
+    logDebug("[onUnitKilled] " + m_unit.getName() + " was killed")
 
     if (m_componentsToEnableOnRevive != null and m_unit.isHero())
       m_componentsToEnableOnRevive = new LinkedList<UnitComponent>()
@@ -122,6 +123,7 @@ public class UnitMetadata extends Composable implements IUnitMetadata
 
   // --------------------------------------------------------------------------
   function onRevived()
+    logDebug("[onRevived] " + m_unit.getName() + " was revived")
 
     for comp in getComponents()
       let unitComp = comp castTo UnitComponent
@@ -135,6 +137,14 @@ public class UnitMetadata extends Composable implements IUnitMetadata
       destroy m_componentsToEnableOnRevive
       m_componentsToEnableOnRevive = null
     //}
+
+  // --------------------------------------------------------------------------
+  function onUpgraded()
+    logDebug("[onUpgraded] " + m_unit.getName() + " finished upgrading")
+
+    for comp in getComponents()
+      let unitComp = comp castTo UnitComponent
+      unitComp.onOwnerUpgraded()
 
   // --------------------------------------------------------------------------
   private function setUnit(unit u)
@@ -263,11 +273,19 @@ public function constructUnitMetadata(unit u) returns IUnitMetadata
 
   metadata.attach(u)
 
+  generateComponentsForMetadata(metadata)
+
+  return metadata
+
+// ============================================================================
+function generateComponentsForMetadata(IUnitMetadata metadata)
+
+  if (metadata.getUnit() == null)
+    error("Metadata must be attached to a unit before generating components")
+
   for generator in g_unitComponentGenerators
     if (generator.generateComponents(metadata))
       break
-
-  return metadata
 
 // ============================================================================
 public function createUnitTLS(player owner, integer unitId, vec2 pos, angle face) returns unit
@@ -362,7 +380,6 @@ function onUnitKilled()
     return
 
   metadata.onKilled()
-  logDebug("[onUnitKilled] " + dyingUnit.getName() + " was killed")
 
 // ============================================================================
 function onUnitRevived()
@@ -373,7 +390,19 @@ function onUnitRevived()
     return
 
   metadata.onRevived()
-  logDebug("[onRevived] " + revivingUnit.getName() + " was revived")
+
+// ============================================================================
+function onUnitUpgraded()
+  let upgradedUnit = GetTriggerUnit()
+  
+  let metadata = upgradedUnit.getMetadata() castTo UnitMetadata
+  if (metadata == null)
+    return
+
+  // New unit type means new components
+  generateComponentsForMetadata(metadata)
+
+  metadata.onUpgraded()
 
 // ============================================================================
 function onUnitIndexed(unit indexingUnit)
@@ -423,6 +452,7 @@ init
 
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitKilled)
   registerPlayerUnitEvent(EVENT_PLAYER_HERO_REVIVE_FINISH, function onUnitRevived)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_UPGRADE_FINISH, function onUnitUpgraded)
 
   onUnitIndex(() -> onUnitIndexed(getIndexingUnit()))
   onUnitDeindex(() -> onUnitDeindexed(getIndexingUnit()))

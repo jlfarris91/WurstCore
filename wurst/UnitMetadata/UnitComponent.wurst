@@ -49,6 +49,10 @@ public abstract class UnitComponent extends Component implements IDispatcher
     enable()
 
   // --------------------------------------------------------------------------
+  function onOwnerUpgraded()
+    skip
+
+  // --------------------------------------------------------------------------
   function onUnitChanged(unit _oldUnit, unit _newUnit)
     skip
 
