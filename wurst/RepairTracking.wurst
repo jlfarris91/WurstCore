@@ -1,0 +1,187 @@
+package RepairTracking
+import GroupExtensions
+import GroupUtils
+import AbilityIds
+import RegisterEvents
+import ErrorHandling
+
+group array g_targetUnitRepairGroup
+int array g_repairAbilityIds
+
+trigger g_triggerRepairStart
+trigger g_triggerRepairEnd
+trigger g_triggerRepairAdd
+trigger g_triggerRepairRemove
+
+unit array g_repairingUnitStack
+int g_repairingUnitStackIndex
+
+unit array g_targetUnitStack
+int g_targetUnitStackIndex
+
+int array g_repairAbilityIdStack
+int g_repairAbilityIdStackIndex
+
+// ============================================================================
+@configurable public function isRepairAbility(int abilityId) returns bool
+  return abilityId == AbilityIds.repairHuman or
+         abilityId == AbilityIds.repair or
+         abilityId == AbilityIds.restore or
+         abilityId == AbilityIds.renew
+
+// ============================================================================
+@configurable public function trackRepairingUnit(unit _castingUnit) returns boolean
+  return true
+
+// ============================================================================
+@configurable public function trackRepairTargetUnit(unit _targetUnit) returns boolean
+  return true
+
+// ============================================================================
+@configurable public function getRepairUnitIndex(unit _unit) returns int
+  error("getRepairUnitIndex(unit) must be configured before RepairTracking can be used")
+  return 0
+
+// ============================================================================
+public function registerRepairStart(code func)
+  g_triggerRepairStart.addCondition(Condition(func))
+
+// ============================================================================
+public function registerRepairEnd(code func)
+  g_triggerRepairEnd.addCondition(Condition(func))
+
+// ============================================================================
+public function registerRepairAdd(code func)
+  g_triggerRepairAdd.addCondition(Condition(func))
+
+// ============================================================================
+public function registerRepairRemove(code func)
+  g_triggerRepairRemove.addCondition(Condition(func))
+
+// ============================================================================
+public function getRepairingUnit() returns unit
+  return g_repairingUnitStack[g_repairingUnitStackIndex]
+
+// ============================================================================
+public function getRepairTargetUnit() returns unit
+  return g_targetUnitStack[g_targetUnitStackIndex]
+
+// ============================================================================
+public function getRepairAbilityId() returns int
+  return g_repairAbilityIdStack[g_repairAbilityIdStackIndex]
+
+// ============================================================================
+public function getRepairerUnits(unit targetUnit) returns group
+  return g_targetUnitRepairGroup[getRepairUnitIndex(targetUnit)]
+
+// ============================================================================
+function evaluateTrigger(trigger trg, unit castingUnit, unit targetUnit, int repairAbilityId)
+  g_repairingUnitStack[g_repairingUnitStackIndex] = castingUnit
+  g_repairingUnitStackIndex++
+  
+  g_targetUnitStack[g_targetUnitStackIndex] = targetUnit
+  g_targetUnitStackIndex++
+  
+  g_repairAbilityIdStack[g_repairAbilityIdStackIndex] = repairAbilityId
+  g_repairAbilityIdStackIndex++ 
+
+  trg.evaluate()
+  
+  g_repairingUnitStackIndex--
+  g_targetUnitStackIndex--
+  g_repairAbilityIdStackIndex--
+
+// ============================================================================
+function addRepairer(unit targetUnit, unit castingUnit, int repairAbilityId)
+  let targetUnitIndex = getRepairUnitIndex(targetUnit)
+  let castingUnitIndex = getRepairUnitIndex(castingUnit)
+
+  if (g_targetUnitRepairGroup[targetUnitIndex] == null)
+    g_targetUnitRepairGroup[targetUnitIndex] = getGroup()
+    evaluateTrigger(g_triggerRepairStart, castingUnit, targetUnit, repairAbilityId)
+  
+  g_targetUnitRepairGroup[targetUnitIndex].addUnit(castingUnit)
+  g_repairAbilityIds[castingUnitIndex] = repairAbilityId
+  evaluateTrigger(g_triggerRepairAdd, castingUnit, targetUnit, repairAbilityId)
+
+// ============================================================================
+function removeRepairer(unit targetUnit, unit castingUnit)
+  let targetUnitIndex = getRepairUnitIndex(targetUnit)
+  let castingUnitIndex = getRepairUnitIndex(castingUnit)
+    
+  if (g_targetUnitRepairGroup[targetUnitIndex] == null)
+    return
+
+  let repairAbilityId = g_repairAbilityIds[castingUnitIndex]
+
+  g_targetUnitRepairGroup[targetUnitIndex].removeUnit(castingUnit)
+  g_repairAbilityIds[castingUnitIndex] = 0
+  evaluateTrigger(g_triggerRepairRemove, castingUnit, targetUnit, repairAbilityId)
+
+  // Need to refresh due to "ghost" units
+  g_targetUnitRepairGroup[targetUnitIndex].refresh()
+
+  // Target is no longer being repaired
+  if (g_targetUnitRepairGroup[targetUnitIndex].isEmpty())
+    evaluateTrigger(g_triggerRepairEnd, castingUnit, targetUnit, repairAbilityId)
+    g_targetUnitRepairGroup[targetUnitIndex].release()
+    g_targetUnitRepairGroup[targetUnitIndex] = null
+
+// ============================================================================
+function onSpellCast()
+
+  let abilityId = GetSpellAbilityId()
+  if (not isRepairAbility(abilityId))
+    return
+
+  let castingUnit = GetSpellAbilityUnit()
+  if (not trackRepairingUnit(castingUnit))
+    return
+
+  let targetUnit = GetSpellTargetUnit()
+  if (not trackRepairTargetUnit(targetUnit))
+    return
+
+  addRepairer(targetUnit, castingUnit, abilityId)
+
+// ============================================================================
+function onSpellEndCast()
+
+  let abilityId = GetSpellAbilityId()
+  if (not isRepairAbility(abilityId))
+    return
+
+  let castingUnit = GetSpellAbilityUnit()
+  if (not trackRepairingUnit(castingUnit))
+    return
+
+  let targetUnit = GetSpellTargetUnit()
+  if (not trackRepairTargetUnit(targetUnit))
+    return
+
+  removeRepairer(targetUnit, castingUnit)
+
+// ============================================================================
+function onUnitDeath()
+  let dyingUnit = GetDyingUnit()
+  let dyingUnitIndex = getRepairUnitIndex(dyingUnit)
+  
+  let repairers = g_targetUnitRepairGroup[dyingUnitIndex]
+  if (repairers != null and not repairers.isEmpty())
+    for castingUnit in repairers
+      removeRepairer(dyingUnit, castingUnit)
+
+  if (g_repairAbilityIds[dyingUnitIndex] != 0)
+    g_repairAbilityIds[dyingUnitIndex] = 0
+
+// ============================================================================
+init
+
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_CAST, function onSpellCast)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_ENDCAST, function onSpellEndCast)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)
+
+  g_triggerRepairStart = CreateTrigger()
+  g_triggerRepairEnd = CreateTrigger()
+  g_triggerRepairAdd = CreateTrigger()
+  g_triggerRepairRemove = CreateTrigger()

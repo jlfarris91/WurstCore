@@ -158,6 +158,15 @@ public function real.fuzzyEquals(real other) returns bool
   return (this - other).abs() < EPSILON
 
 // ============================================================================
+/** Uses an approximation of the hill equation that starts at 0.0 and approaches 1.0
+    0 <= x <= 1
+    0 <= y <= 1
+    https://en.wikipedia.org/wiki/Hill_equation_(biochemistry)
+*/
+public function hill01(real x, real y) returns real
+  return x / (x + y)
+
+// ============================================================================
 /** Taken from Unity */
 tuple smoothDampResult(real value, real vel)
 public function smoothDamp(real current, real target, real currentVelocity, real smoothTime, real maxSpeed, real deltaTime) returns smoothDampResult
