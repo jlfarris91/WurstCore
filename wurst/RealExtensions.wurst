@@ -13,6 +13,10 @@ public function real.truncate(int decimalPlace) returns real
   return p == 0 ? p : (r + ((this - r) * p).floor() / p)
 
 // ============================================================================
+public function real.toPercentageString() returns string
+  return this.toInt().toString() + "%"
+
+// ============================================================================
 public function real.toPercentageString01() returns string
   return this.toPercentageString01(1)
 
