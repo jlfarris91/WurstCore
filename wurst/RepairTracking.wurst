@@ -6,7 +6,12 @@ import RegisterEvents
 import ErrorHandling
 
 group array g_targetUnitRepairGroup
+unit array g_targetUnits
 int array g_repairAbilityIds
+
+trigger array g_targetUnitFullHealthTrigger
+group g_upgradingTargetUnits = CreateGroup()
+group g_allUpgradingUnits = CreateGroup()
 
 trigger g_triggerRepairStart
 trigger g_triggerRepairEnd
@@ -60,22 +65,22 @@ public function registerRepairRemove(code func)
 
 // ============================================================================
 public function getRepairingUnit() returns unit
-  return g_repairingUnitStack[g_repairingUnitStackIndex]
+  return g_repairingUnitStack[g_repairingUnitStackIndex - 1]
 
 // ============================================================================
 public function getRepairTargetUnit() returns unit
-  return g_targetUnitStack[g_targetUnitStackIndex]
+  return g_targetUnitStack[g_targetUnitStackIndex - 1]
 
 // ============================================================================
 public function getRepairAbilityId() returns int
-  return g_repairAbilityIdStack[g_repairAbilityIdStackIndex]
+  return g_repairAbilityIdStack[g_repairAbilityIdStackIndex - 1]
 
 // ============================================================================
-public function getRepairerUnits(unit targetUnit) returns group
+public function getRepairingUnits(unit targetUnit) returns group
   return g_targetUnitRepairGroup[getRepairUnitIndex(targetUnit)]
 
 // ============================================================================
-function evaluateTrigger(trigger trg, unit castingUnit, unit targetUnit, int repairAbilityId)
+function evaluateTrigger(trigger trg, unit targetUnit, unit castingUnit, int repairAbilityId)
   g_repairingUnitStack[g_repairingUnitStackIndex] = castingUnit
   g_repairingUnitStackIndex++
   
@@ -96,36 +101,120 @@ function addRepairer(unit targetUnit, unit castingUnit, int repairAbilityId)
   let targetUnitIndex = getRepairUnitIndex(targetUnit)
   let castingUnitIndex = getRepairUnitIndex(castingUnit)
 
+  var starting = false
   if (g_targetUnitRepairGroup[targetUnitIndex] == null)
     g_targetUnitRepairGroup[targetUnitIndex] = getGroup()
-    evaluateTrigger(g_triggerRepairStart, castingUnit, targetUnit, repairAbilityId)
-  
+    starting = true
+
   g_targetUnitRepairGroup[targetUnitIndex].addUnit(castingUnit)
   g_repairAbilityIds[castingUnitIndex] = repairAbilityId
-  evaluateTrigger(g_triggerRepairAdd, castingUnit, targetUnit, repairAbilityId)
+  g_targetUnits[castingUnitIndex] = targetUnit
+
+  if (starting)
+  //{
+
+    // If the unit was already in the middle of upgrading then we need to wait
+    // to register the trigger to check for when the unit reaches full health
+    // until after the upgrade completes, when the new max health is set
+    if (g_allUpgradingUnits.contains(targetUnit))
+      g_upgradingTargetUnits.addUnit(targetUnit)
+    else
+      registerUnitToCheckForFullHealth(targetUnit)
+    
+    // Log.info("Repair start " + castingUnit.getName() + " -> " + targetUnit.getName() + " : " + repairAbilityId.toRawCode())
+    evaluateTrigger(g_triggerRepairStart, targetUnit, castingUnit, repairAbilityId)
+  //}
+
+  // Log.info("Repair add " + castingUnit.getName() + " -> " + targetUnit.getName() + " : " + repairAbilityId.toRawCode())
+  evaluateTrigger(g_triggerRepairAdd, targetUnit, castingUnit, repairAbilityId)
 
 // ============================================================================
 function removeRepairer(unit targetUnit, unit castingUnit)
+  let castingUnitIndex = getRepairUnitIndex(castingUnit)
+  let repairAbilityId = g_repairAbilityIds[castingUnitIndex]
+  if (repairAbilityId == 0)
+    return
+  removeRepairer(targetUnit, castingUnit, repairAbilityId)
+
+// ============================================================================
+function removeRepairer(unit targetUnit, unit castingUnit, int repairAbilityId)
   let targetUnitIndex = getRepairUnitIndex(targetUnit)
   let castingUnitIndex = getRepairUnitIndex(castingUnit)
     
-  if (g_targetUnitRepairGroup[targetUnitIndex] == null)
+  let repairerGroup = g_targetUnitRepairGroup[targetUnitIndex]
+  if (repairerGroup == null)
     return
 
-  let repairAbilityId = g_repairAbilityIds[castingUnitIndex]
+  repairerGroup.removeUnit(castingUnit)
 
-  g_targetUnitRepairGroup[targetUnitIndex].removeUnit(castingUnit)
   g_repairAbilityIds[castingUnitIndex] = 0
-  evaluateTrigger(g_triggerRepairRemove, castingUnit, targetUnit, repairAbilityId)
+  g_targetUnits[castingUnitIndex] = null
 
   // Need to refresh due to "ghost" units
-  g_targetUnitRepairGroup[targetUnitIndex].refresh()
+  repairerGroup.refresh()
+
+  // Log.info("Repair remove " + castingUnit.getName() + " -> " + targetUnit.getName() + " : " + repairAbilityId.toRawCode())
+  evaluateTrigger(g_triggerRepairRemove, targetUnit, castingUnit, repairAbilityId)
+
+  // Log.info("Repairers remaining " + repairerGroup.size().toString())
 
   // Target is no longer being repaired
-  if (g_targetUnitRepairGroup[targetUnitIndex].isEmpty())
-    evaluateTrigger(g_triggerRepairEnd, castingUnit, targetUnit, repairAbilityId)
-    g_targetUnitRepairGroup[targetUnitIndex].release()
+  if (repairerGroup.isEmpty())
+  //{
+    // Log.info("Repair end " + castingUnit.getName() + " -> " + targetUnit.getName() + " : " + repairAbilityId.toRawCode())
+    evaluateTrigger(g_triggerRepairEnd, targetUnit, castingUnit, repairAbilityId)
+    repairerGroup.release()
     g_targetUnitRepairGroup[targetUnitIndex] = null
+    unregisterUnitToCheckForFullHealth(targetUnit)
+  //}
+
+// ============================================================================
+function untrackTargetUnit(unit targetUnit)  
+  let targetUnitIndex = getRepairUnitIndex(targetUnit)
+  
+  // If this unit had a group of units repairing it then clear that group
+  // and fire events for each removal and the end of the repair
+  let repairers = g_targetUnitRepairGroup[targetUnitIndex]
+  if (repairers != null)
+    for repairingUnit in repairers
+      removeRepairer(targetUnit, repairingUnit)
+  
+  // If this unit had a full health trigger active then destroy it. Technically,
+  // this should happen when the final repairing unit is removed above but :shrug:
+  // being extra careful here, I guess.
+  unregisterUnitToCheckForFullHealth(targetUnit)
+
+  // If this unit was in the middle of an upgrade then stop tracking it.
+  g_upgradingTargetUnits.removeUnit(targetUnit)
+
+// ============================================================================
+function registerUnitToCheckForFullHealth(unit targetUnit)
+  let targetUnitIndex = getRepairUnitIndex(targetUnit)
+
+  // Already registered
+  if (g_targetUnitFullHealthTrigger[targetUnitIndex] != null)
+    return
+
+  // Log.info("registered trigger for " + targetUnit.getName() + " : " + targetUnit.getMaxHP().toString())
+
+  let t = CreateTrigger()
+  t.registerUnitStateEvent(
+    targetUnit,
+    UNIT_STATE_LIFE,
+    GREATER_THAN_OR_EQUAL,
+    targetUnit.getMaxHP())
+  t.addCondition(Condition(function onUnitReachedFullHealth))
+
+  g_targetUnitFullHealthTrigger[targetUnitIndex] = t
+
+// ============================================================================
+function unregisterUnitToCheckForFullHealth(unit targetUnit)
+  let targetUnitIndex = getRepairUnitIndex(targetUnit)
+  
+  if (g_targetUnitFullHealthTrigger[targetUnitIndex] != null)
+    // Log.info("unregistered trigger for " + targetUnitIndex.toString())
+    g_targetUnitFullHealthTrigger[targetUnitIndex].destr()
+    g_targetUnitFullHealthTrigger[targetUnitIndex] = null
 
 // ============================================================================
 function onSpellCast()
@@ -142,6 +231,7 @@ function onSpellCast()
   if (not trackRepairTargetUnit(targetUnit))
     return
 
+  // Log.info("onSpellCast")
   addRepairer(targetUnit, castingUnit, abilityId)
 
 // ============================================================================
@@ -159,27 +249,98 @@ function onSpellEndCast()
   if (not trackRepairTargetUnit(targetUnit))
     return
 
-  removeRepairer(targetUnit, castingUnit)
+  // Log.info("onSpellEndCast")
+  removeRepairer(targetUnit, castingUnit, abilityId)
 
 // ============================================================================
 function onUnitDeath()
   let dyingUnit = GetDyingUnit()
   let dyingUnitIndex = getRepairUnitIndex(dyingUnit)
   
-  let repairers = g_targetUnitRepairGroup[dyingUnitIndex]
-  if (repairers != null and not repairers.isEmpty())
-    for castingUnit in repairers
-      removeRepairer(dyingUnit, castingUnit)
+  untrackTargetUnit(dyingUnit)
 
-  if (g_repairAbilityIds[dyingUnitIndex] != 0)
-    g_repairAbilityIds[dyingUnitIndex] = 0
+  g_allUpgradingUnits.removeUnit(dyingUnit)
+  g_upgradingTargetUnits.removeUnit(dyingUnit)
+
+  g_repairAbilityIds[dyingUnitIndex] = 0
+  g_targetUnits[dyingUnitIndex] = null
+
+// ============================================================================
+function onUnitIssuedOrder()
+
+  let orderedUnit = GetOrderedUnit()
+  let orderedUnitIndex = getRepairUnitIndex(orderedUnit)
+  let targetUnit = g_targetUnits[orderedUnitIndex]
+  if (targetUnit == null)
+    return
+
+  // Log.info("onUnitIssuedOrder")
+  removeRepairer(targetUnit, orderedUnit)
+
+// ============================================================================
+function onConstructCanceledOrFinished()
+  // Log.info("onConstructCanceledOrFinished")
+  untrackTargetUnit(GetConstructedStructure())
+
+// ============================================================================
+function onUpgradeStart()
+  // Log.info("onUpgradeStart")
+  
+  let upgradingUnit = GetTriggerUnit()
+  let upgradingUnitIndex = getRepairUnitIndex(upgradingUnit)
+
+  // Keep track of all upgrading units so that if we start repairing the structure
+  // while it has an upgrade in progress then we can wait to register the full
+  // health trigger until it finishes upgrading.
+  g_allUpgradingUnits.addUnit(upgradingUnit)
+  
+  // If the upgrading structure was in the middle of being repaired then it will
+  // have a trigger to check for when it reaches full health. However, the new
+  // upgraded unit may have a different max hp - so this trigger becomes invalid.
+  // Destroy the trigger and re-register it when the upgrade finishes or is canceled.
+  if (g_targetUnitFullHealthTrigger[upgradingUnitIndex] != null)
+    unregisterUnitToCheckForFullHealth(upgradingUnit)
+
+  // Whether this structure has a full health trigger or not, if it has a group
+  // of units currently repairing it then we need to add this structure to a group
+  // of structures that have an upgrade in progress so that we can re-register
+  // the full health trigger in onUpgradeFinishOrCancel().
+  if (g_targetUnitRepairGroup[upgradingUnitIndex] != null)
+    g_upgradingTargetUnits.addUnit(upgradingUnit)
+
+// ============================================================================
+function onUpgradeFinishOrCancel()
+  // Log.info("onUpgradeFinishOrCancel")
+  
+  let upgradedUnit = GetTriggerUnit()
+
+  g_allUpgradingUnits.removeUnit(upgradedUnit)
+
+  if (g_upgradingTargetUnits.contains(upgradedUnit))
+    registerUnitToCheckForFullHealth(upgradedUnit)
+    g_upgradingTargetUnits.removeUnit(upgradedUnit)
+
+// ============================================================================
+function onUnitReachedFullHealth()
+  // Log.info("onUnitReachedFullHealth")
+  untrackTargetUnit(GetTriggerUnit())
 
 // ============================================================================
 init
 
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_CAST, function onSpellCast)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_FINISH, function onSpellEndCast)
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_SPELL_ENDCAST, function onSpellEndCast)
   registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_ORDER, function onUnitIssuedOrder)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, function onUnitIssuedOrder)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, function onUnitIssuedOrder)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_ISSUED_UNIT_ORDER, function onUnitIssuedOrder)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_FINISH, function onConstructCanceledOrFinished)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_CONSTRUCT_CANCEL, function onConstructCanceledOrFinished)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_UPGRADE_START, function onUpgradeStart)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_UPGRADE_CANCEL, function onUpgradeFinishOrCancel)
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_UPGRADE_FINISH, function onUpgradeFinishOrCancel)
 
   g_triggerRepairStart = CreateTrigger()
   g_triggerRepairEnd = CreateTrigger()
