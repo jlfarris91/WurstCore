@@ -1,5 +1,12 @@
 package Predicate
+import RefObject
 
 // ============================================================================
-public interface Predicate<T>
-  function call(T element) returns bool
+public abstract class Predicate<T>
+  use RefObject
+  abstract function call(T subject) returns bool
+  function acquireCallRelease(T subject) returns bool
+    acquire()
+    let result = call(subject)
+    release()
+    return result

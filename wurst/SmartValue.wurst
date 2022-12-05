@@ -4,12 +4,29 @@ import ClosureTimers
 import Events
 import Dispatcher
 import ErrorHandling
+import Predicate
+import Result
 
 // ============================================================================
 public enum AffectorType
   BASE
   SCALE
   ABSOLUTE
+
+// ============================================================================
+public tuple resultAffectorType(AffectorType value, string errorMessage)
+
+// ============================================================================
+public function resultAffectorType.succeeded() returns bool
+  return this.errorMessage == null
+
+// ============================================================================
+public function succeeded(AffectorType value) returns resultAffectorType
+  return resultAffectorType(value, null)
+
+// ============================================================================
+public function failed_AffectorType(string error) returns resultAffectorType
+  return resultAffectorType(0 castTo AffectorType, error)
 
 // ============================================================================
 public class SmartValueAffector
@@ -28,7 +45,7 @@ public class SmartValueAffector
     if (duration > 0.0)
       m_callback = doAfter(duration) () ->
         m_callback = null // destroyed by internal timer cleanup
-        owner.remove(_handle(this castTo int))
+        owner.removeAffector(_handle(this castTo int))
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -222,7 +239,7 @@ public class SmartValue
     return h
 
   // --------------------------------------------------------------------------
-  function remove(_handle h) returns bool
+  function removeAffector(_handle h) returns bool
     if (m_affectors == null)
       return false
     let iterator = m_affectors.iterator()
@@ -245,6 +262,60 @@ public class SmartValue
       destroy m_affectors
       m_affectors = null
     raiseValueChangedEvent()
+
+  // --------------------------------------------------------------------------
+  function getAffector(Predicate<SmartValueAffector> predicate) returns _handle
+    let affector = getAffectorUnsafe(predicate)
+    return affector != null ? _handle(affector castTo int) : INVALID_HANDLE
+    
+  // --------------------------------------------------------------------------
+  function getAffectorByUserData(int userData) returns _handle
+    let affector = getAffectorUnsafe(affector -> affector.getUserData() == userData)
+    return affector != null ? _handle(affector castTo int) : INVALID_HANDLE
+
+  // --------------------------------------------------------------------------
+  function getAffectorValue(_handle h) returns resultReal
+    let affector = getAffectorUnsafe(h)
+    return affector != null ? succeeded(affector.getValue()) : failed_real("Affector does not exist")
+
+  // --------------------------------------------------------------------------
+  function getAffectorIntValue(_handle h) returns resultInt
+    let affector = getAffectorUnsafe(h)
+    return affector != null ? succeeded(affector.getValue().floor()) : failed_int("Affector does not exist")
+
+  // --------------------------------------------------------------------------
+  function getAffectorDuration(_handle h) returns resultReal
+    let affector = getAffectorUnsafe(h)
+    return affector != null ? succeeded(affector.getDurationSeconds()) : failed_real("Affector does not exist")
+
+  // --------------------------------------------------------------------------
+  function getAffectorRemainingSeconds(_handle h) returns resultReal
+    let affector = getAffectorUnsafe(h)
+    return affector != null ? succeeded(affector.getRemainingSeconds()) : failed_real("Affector does not exist")
+
+  // --------------------------------------------------------------------------
+  function getAffectorType(_handle h) returns resultAffectorType
+    let affector = getAffectorUnsafe(h)
+    return affector != null ? succeeded(affector.getType()) : failed_AffectorType("Affector does not exist")
+
+  // --------------------------------------------------------------------------
+  private function getAffectorUnsafe(_handle h) returns SmartValueAffector
+    return getAffectorUnsafe(affector -> (affector castTo int) == h.id)
+
+  // --------------------------------------------------------------------------
+  private function getAffectorUnsafe(Predicate<SmartValueAffector> predicate) returns SmartValueAffector
+    predicate.acquire()
+    SmartValueAffector matchingAffector = null
+    if (m_affectors != null)
+      let iterator = m_affectors.iterator()
+      while iterator.hasNext()
+        let affector = iterator.next()
+        if (predicate.call(affector))
+          matchingAffector = affector
+          break
+      iterator.close()
+    predicate.release()
+    return matchingAffector
 
   // --------------------------------------------------------------------------
   function attach(IDispatcher dispatcher) returns SmartValue
