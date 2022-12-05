@@ -1,0 +1,787 @@
+package ECS
+import LinkedList
+import RealtimeUpdate
+import Vector
+import HashMap
+import Func
+import ErrorHandling
+import HashList
+import Transform
+import ObjectIds
+import Reflection
+import Action
+
+HashMap<int, ECSComponentMetadata> g_componentMetadataMap = new HashMap<int, ECSComponentMetadata>()
+HashMap<int, ECSSystemMetadata> g_systemMetadataMap = new HashMap<int, ECSSystemMetadata>()
+HashMap<int, ECChannelMetadata> g_channelMetadataMap = new HashMap<int, ECChannelMetadata>()
+Vector<ECSComponentMetadata> g_componentMetadata = new Vector<ECSComponentMetadata>()
+Vector<ECSSystemMetadata> g_systemMetadata = new Vector<ECSSystemMetadata>()
+Vector<ECChannelMetadata> g_channelMetadata = new Vector<ECChannelMetadata>()
+
+enum ECSState
+  RUNNING
+  PAUSED
+  STOPPED
+
+ECSState g_state = ECSState.STOPPED
+
+ECEntity array g_entities
+int g_entityCount = 0
+int g_entityIdGen = 1
+int g_totalEntitiesCreated= 0
+
+int array g_freeEntityIds
+int g_freeEntityIdCount = 0
+
+ECEntity array g_entitiesToDestroy
+int g_entitiesToDestroyCounter
+
+// ============================================================================
+public abstract class ECS
+
+  static constant int DEFAULT_CHANNEL_ID = 'DFCH'
+  static constant int DEFAULT_CHANNEL_PRIORITY = 100
+
+  // --------------------------------------------------------------------------
+  static function registerComponentType(int componentTypeId) returns IComponentTypeRegistrar
+    let componentMetadata = new ECSComponentMetadata()
+    componentMetadata.componentTypeId = componentTypeId
+
+    g_componentMetadata.add(componentMetadata)
+    g_componentMetadataMap.put(componentTypeId, componentMetadata)
+
+    // Register any systems with this component type
+    for systemMetadata in g_systemMetadata
+      if (systemMetadata.components.has(componentTypeId))
+        componentMetadata.systems.add(systemMetadata.system.typeId)
+
+    return new ComponentTypeRegistrar(componentMetadata)
+
+  // --------------------------------------------------------------------------
+  static function registerSystem(ECSystemBase system) returns ISystemRegistrar
+    let metadata = new ECSSystemMetadata()
+    metadata.system = system
+
+    g_systemMetadata.add(metadata)
+    g_systemMetadataMap.put(system.typeId, metadata)
+
+    for i = 0 to system.getComponentTypeCount() - 1
+      let componentTypeId = system.getComponentTypeId(i)
+      let componentMetadata = getComponentMetadata(componentTypeId)
+      metadata.components.add(componentTypeId)
+      componentMetadata.systems.add(system.typeId)
+
+    let defaultChannelMetadata = getDefaultChannelMetadata()
+    defaultChannelMetadata.systems.add(system.typeId)
+
+    return new SystemRegistrar(metadata)
+
+  // --------------------------------------------------------------------------
+  static function getSystem(int systemTypeId) returns ECSystemBase
+    return getSystemMetadata(systemTypeId).system
+
+  // --------------------------------------------------------------------------
+  static function registerChannel(int channelId, RealtimeUpdatePriority updatePriority)
+    let channelMetadata = new ECChannelMetadata()
+    channelMetadata.channelId = channelId
+    channelMetadata.updatePriority = updatePriority
+
+    g_channelMetadata.add(channelMetadata)
+    g_channelMetadataMap.put(channelId, channelMetadata)
+
+    // Register any systems with this channel
+    for systemMetadata in g_systemMetadata
+      if (systemMetadata.channelId == channelId)
+        channelMetadata.systems.add(systemMetadata.system.typeId)
+
+  // --------------------------------------------------------------------------
+  static function getState() returns ECSState
+    return g_state
+
+  // --------------------------------------------------------------------------
+  static function start()
+
+    if (g_state == ECSState.STOPPED)
+    //{
+      for channelMetadata in g_channelMetadata
+      //{
+        let sortedSystemMetadatas = new LinkedList<ECSSystemMetadata>()
+
+        // Log.info("channel {0} has {1} system(s) registered".format(
+        //   channelMetadata.channelId.toRawCode(),
+        //   channelMetadata.systems.size().toString()))
+
+        for systemTypeId in channelMetadata.systems
+          // Log.info("  " + typeIdToTypeName(systemTypeId))
+          sortedSystemMetadatas.add(getSystemMetadata(systemTypeId))
+
+        sortedSystemMetadatas.sortWith() (ECSSystemMetadata o1, ECSSystemMetadata o2) ->
+          return o1.channelPriority - o2.channelPriority
+
+        let sortedSystems = new LinkedList<ECSystemBase>()
+
+        for systemMetadata in sortedSystemMetadatas
+          sortedSystems.add(systemMetadata.system)
+
+        destroy sortedSystemMetadatas
+          
+        let channel = new ECChannel(channelMetadata.channelId, sortedSystems)
+        channel.registerForRealtimeUpdate(channelMetadata.updatePriority)
+
+        channelMetadata.activeChannel = channel
+      //}
+    //}
+    
+    if (g_state == ECSState.PAUSED)
+    //{
+      for channelMetadata in g_channelMetadata
+        if (channelMetadata.activeChannel != null)
+          channelMetadata.activeChannel.registerForRealtimeUpdate(channelMetadata.updatePriority)
+    //}
+
+  // --------------------------------------------------------------------------
+  static function pause()
+
+    if (g_state == ECSState.RUNNING)
+    //{
+      for channelMetadata in g_channelMetadata
+        if (channelMetadata.activeChannel != null)
+          channelMetadata.activeChannel.unregisterForRealtimeUpdate()
+    //}
+
+  // --------------------------------------------------------------------------
+  static function stop()
+
+    if (g_state == ECSState.STOPPED)
+    //{
+      for channelMetadata in g_channelMetadata
+        if (channelMetadata.activeChannel != null)
+          destroy channelMetadata.activeChannel
+          channelMetadata.activeChannel = null
+    //}
+
+  // --------------------------------------------------------------------------
+  static function createEntity(Action1<ECEntity> initialize) returns ECEntity
+    
+    let entityId = getNextEntityId()
+    let entity = new ECEntity(entityId)
+
+    for systemMetadata in g_systemMetadata
+      if (systemMetadata.system.getComponentTypeCount() == 0)
+        systemMetadata.system.registerEntity(entity)
+
+    initialize.acquire()
+    initialize.call(entity)
+    initialize.release()
+
+    g_totalEntitiesCreated++
+
+    return entity
+
+  // --------------------------------------------------------------------------
+  protected static function releaseEntityId(int entityId)
+    g_freeEntityIds[g_freeEntityIdCount] = entityId
+    g_freeEntityIdCount++
+
+  // --------------------------------------------------------------------------
+  private static function getNextEntityId() returns int
+    if (g_freeEntityIdCount > 0)
+      g_freeEntityIdCount--
+      return g_freeEntityIds[g_freeEntityIdCount]
+
+    let entityId = g_entityIdGen
+    g_entityIdGen++
+    g_entityCount++
+    return entityId
+
+  // --------------------------------------------------------------------------
+  protected static function getSystemMetadata(int systemTypeId) returns ECSSystemMetadata
+    if (not g_systemMetadataMap.has(systemTypeId))
+      error("System {0} must be registered with the ECS system first".format(typeIdToTypeName(systemTypeId)))
+    return g_systemMetadataMap.get(systemTypeId)
+
+  // --------------------------------------------------------------------------
+  protected static function getComponentMetadata(int componentTypeId) returns ECSComponentMetadata
+    if (not g_componentMetadataMap.has(componentTypeId))
+      error("Component {0} must be registered with the ECS system first".format(typeIdToTypeName(componentTypeId)))
+    return g_componentMetadataMap.get(componentTypeId)
+
+  // --------------------------------------------------------------------------
+  protected static function getChannelMetadata(int channelId) returns ECChannelMetadata
+    if (not g_channelMetadataMap.has(channelId))
+      error("Channel {0} must be registered with the ECS system first".format(channelId.toRawCode()))
+    return g_channelMetadataMap.get(channelId)
+
+  // --------------------------------------------------------------------------
+  protected static function getDefaultChannelMetadata() returns ECChannelMetadata
+    return g_channelMetadata.getFirst()
+  
+  // --------------------------------------------------------------------------
+  protected static function registerSystemComponentType(int systemTypeId, int componentTypeId)
+    let metadata = getSystemMetadata(systemTypeId)
+    metadata.components.add(componentTypeId)
+  
+  // --------------------------------------------------------------------------
+  protected static function registerSystemWithChannel(int systemTypeId, int channelId)
+    let systemMetadata = getSystemMetadata(systemTypeId)
+
+    let previousChannel = getChannelMetadata(systemMetadata.channelId)  
+    if (previousChannel != null)
+      previousChannel.systems.remove(systemTypeId)
+
+    let metadata = getChannelMetadata(channelId)
+    metadata.systems.add(systemTypeId)
+
+  // --------------------------------------------------------------------------
+  protected static function onComponentAdded(ECEntity entity, ECComponent component)
+    // Log.info("Added component " + typeIdToTypeName(component.typeId) + " to " + entity.getId().toString())
+    let componentMetadata = getComponentMetadata(component.typeId)
+    for systemTypeId in componentMetadata.systems
+      let systemMetadata = getSystemMetadata(systemTypeId)
+      systemMetadata.system.registerEntity(entity)
+
+  // --------------------------------------------------------------------------
+  protected static function onComponentRemoved(ECEntity entity, ECComponent component)
+    // Log.info("Removed component " + typeIdToTypeName(component.typeId) + " from " + entity.getId().toString())
+    let componentMetadata = getComponentMetadata(component.typeId)
+    for systemTypeId in componentMetadata.systems
+      let systemMetadata = getSystemMetadata(systemTypeId)
+      systemMetadata.system.unregisterEntity(entity)
+
+  // --------------------------------------------------------------------------
+  protected static function createComponent(ECEntity entity, int componentTypeId) returns ECComponent
+    // Log.info("Creating component " + typeIdToTypeName(componentTypeId) + " for " + entity.getId().toString())
+    let componentMetadata = getComponentMetadata(componentTypeId)
+    return componentMetadata.componentFactory.call(entity)
+
+  // --------------------------------------------------------------------------
+  protected static function getComponent(ECEntity entity, int componentTypeId) returns ECComponent
+    let componentMetadata = getComponentMetadata(componentTypeId)
+    return componentMetadata.componentGetter.call(entity)
+
+  // --------------------------------------------------------------------------
+  protected static function destroyEntity(ECEntity entity)
+    g_entitiesToDestroy[g_entitiesToDestroyCounter] = entity
+    g_entitiesToDestroyCounter++
+
+  // --------------------------------------------------------------------------
+  protected static function destroyEntitiesMarkedForDestroy()
+
+    while g_entitiesToDestroyCounter > 0
+    //{
+      g_entitiesToDestroyCounter--
+
+      let entity = g_entitiesToDestroy[g_entitiesToDestroyCounter]
+    
+      Log.info("Destroying entity " + entity.getId().toString())
+
+      for system in g_systemMetadata
+        system.system.unregisterEntity(entity)
+
+      let iterator = entity.iterateComponents()
+      while iterator.hasNext()
+        let comp = iterator.next()
+        // Log.info("Destroying entity " + entity.getId().toString() + " comp " + typeIdToTypeName(comp.typeId))
+        destroy comp
+      iterator.close()
+
+      destroy entity
+  //}
+
+// ============================================================================
+class ECSComponentMetadata
+  int componentTypeId = 0
+  Func1<ECEntity, ECComponent> componentFactory = null
+  Func1<ECEntity, ECComponent> componentGetter = null
+  HashList<int> systems = new HashList<int>()
+
+// ============================================================================
+class ECSSystemMetadata
+  ECSystemBase system = null
+  HashList<int> components = new HashList<int>()
+  int channelId = ECS.DEFAULT_CHANNEL_ID
+  int channelPriority = ECS.DEFAULT_CHANNEL_PRIORITY
+
+// ============================================================================
+class ECChannelMetadata
+  int channelId = 0
+  HashList<int> systems = new HashList<int>()
+  RealtimeUpdatePriority updatePriority = RealtimeUpdatePriority.Idle
+  ECChannel activeChannel = null
+
+// ============================================================================
+public interface ISystemRegistrar
+  function withUpdateChannel(int channelId)
+  function withPriority(int channelPriority)
+
+// ============================================================================
+class SystemRegistrar implements ISystemRegistrar
+  private ECSSystemMetadata m_metadata
+
+  // --------------------------------------------------------------------------
+  construct (ECSSystemMetadata metadata)
+    m_metadata = metadata
+
+  // --------------------------------------------------------------------------
+  override function withUpdateChannel(int channelId)
+    m_metadata.channelId = channelId
+    ECS.registerSystemWithChannel(m_metadata.system.typeId, channelId)
+
+  // --------------------------------------------------------------------------
+  override function withPriority(int channelPriority)
+    m_metadata.channelPriority = channelPriority
+
+// ============================================================================
+public interface IComponentTypeRegistrar
+  function registerComponentFactory(Func1<ECEntity, ECComponent> componentFactory)
+  function registerComponentGetter(Func1<ECEntity, ECComponent> componentGetter)
+
+// ============================================================================
+class ComponentTypeRegistrar implements IComponentTypeRegistrar
+  private ECSComponentMetadata m_metadata
+
+  // --------------------------------------------------------------------------
+  construct (ECSComponentMetadata metadata)
+    m_metadata = metadata
+
+  // --------------------------------------------------------------------------
+  override function registerComponentFactory(Func1<ECEntity, ECComponent> componentFactory)
+    m_metadata.componentFactory = componentFactory.acquire()
+
+  // --------------------------------------------------------------------------
+  override function registerComponentGetter(Func1<ECEntity, ECComponent> componentGetter)
+    m_metadata.componentGetter = componentGetter.acquire()
+
+// ============================================================================
+public class ECEntity
+  private int m_id
+  private bool m_markedForDestroy
+  private LinkedList<ECComponent> m_components
+
+  // --------------------------------------------------------------------------
+  construct(int id)
+    g_entities[id] = this
+    m_id = id
+    m_markedForDestroy = false
+    m_components = new LinkedList<ECComponent>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    g_entities[m_id] = null
+    ECS.releaseEntityId(m_id)
+
+  // --------------------------------------------------------------------------
+  function getId() returns int
+    return m_id
+
+  // --------------------------------------------------------------------------
+  function isMarkedForDestroy() returns bool
+    return m_markedForDestroy
+
+  // --------------------------------------------------------------------------
+  function markForDestroy()
+    if (not m_markedForDestroy)
+      m_markedForDestroy = true
+      ECS.destroyEntity(this)
+
+  // --------------------------------------------------------------------------
+  function getComponent(int componentTypeId) returns ECComponent
+    for comp in m_components
+      if comp.typeId == componentTypeId
+        return comp
+    return null
+
+  // --------------------------------------------------------------------------
+  function getComponentAs<TComp>(int componentTypeId) returns TComp
+    return getComponent(componentTypeId) castTo int castTo TComp
+
+  // --------------------------------------------------------------------------
+  function getOrAddComponent(int componentTypeId) returns ECComponent
+    var comp = getComponent(componentTypeId)
+    if (comp == null)
+      comp = addComponent(componentTypeId)
+    return comp
+
+  // --------------------------------------------------------------------------
+  function getOrAddComponentAs<TComp>(int componentTypeId) returns TComp
+    return getOrAddComponent(componentTypeId) castTo int castTo TComp
+
+  // --------------------------------------------------------------------------
+  function addComponent(int componentTypeId) returns ECComponent
+    let component = ECS.createComponent(this, componentTypeId)  
+    m_components.add(component)
+    ECS.onComponentAdded(this, component)
+    return component
+
+  // --------------------------------------------------------------------------
+  function addComponentAs<TComp>(int componentTypeId) returns TComp
+    return addComponent(componentTypeId) castTo int castTo TComp
+
+  // --------------------------------------------------------------------------
+  function removeComponent(int componentTypeId) returns bool
+    var removedComponent = false
+    let iter = m_components.iterator()
+    while (iter.hasNext())
+      let component = iter.next()
+      if (component.typeId == componentTypeId)
+        iter.remove()
+        ECS.onComponentRemoved(this, component)
+        removedComponent = true
+        break
+    iter.close()
+    return removedComponent
+
+  // --------------------------------------------------------------------------
+  function iterateComponents() returns LLIterator<ECComponent>
+    return m_components.iterator()
+
+  // --------------------------------------------------------------------------
+  function hasComponent(int componentTypeId) returns bool
+    return getComponent(componentTypeId) != null
+
+// ============================================================================
+public class ECComponent
+  private ECEntity m_entity
+  private bool m_enabled
+
+  // --------------------------------------------------------------------------
+  construct (ECEntity entity)
+    m_entity = entity
+
+  // --------------------------------------------------------------------------
+  function getEntity() returns ECEntity
+    return m_entity
+
+  // --------------------------------------------------------------------------
+  function getEnabled() returns bool
+    return m_enabled
+
+  // --------------------------------------------------------------------------
+  function setEnabled(bool value)
+    if (m_enabled != value)
+      m_enabled = value
+
+  // --------------------------------------------------------------------------
+  function enable()
+    setEnabled(true)
+
+  // --------------------------------------------------------------------------
+  function disable()
+    setEnabled(false)
+
+// ============================================================================
+public abstract class ECSystemBase implements IRealtimeListener
+  protected LinkedList<ECEntity> m_entities = new LinkedList<ECEntity>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_entities
+
+  // --------------------------------------------------------------------------
+  abstract function getComponentTypeId(int index) returns int
+
+  // --------------------------------------------------------------------------
+  abstract function getComponentTypeCount() returns int
+
+  // --------------------------------------------------------------------------
+  protected function registerEntity(ECEntity entity)
+
+    for i = 0 to getComponentTypeCount() - 1
+      let componentTypeId = getComponentTypeId(i)
+      if (not entity.hasComponent(componentTypeId))
+        // Log.info("Could not add entity " + entity.getId().toString() + " to " + typeIdToTypeName(this.typeId) + " -> missing " + typeIdToTypeName(componentTypeId))
+        return
+
+    // Log.info("Added entity " + entity.getId().toString() + " to " + typeIdToTypeName(this.typeId))
+    m_entities.add(entity)
+
+  // --------------------------------------------------------------------------
+  protected function unregisterEntity(ECEntity entity)
+    // Log.info("Removing entity " + entity.getId().toString() + " from " + typeIdToTypeName(this.typeId))
+    m_entities.remove(entity)
+
+// ============================================================================
+public abstract class ECSystem extends ECSystemBase
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeCount() returns int
+    return 0
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeId(int _index) returns int
+    return 0
+
+  // --------------------------------------------------------------------------
+  override protected function realtimeUpdate(real dt)
+
+    for i = 0 to m_entities.size() - 1
+      let entity = m_entities.get(i)
+      updateEntity(entity, dt)
+
+  // --------------------------------------------------------------------------
+  protected function updateEntity(ECEntity _entity, real _dt)
+    skip
+
+// ============================================================================
+public abstract class ECSystem1<TComp1> extends ECSystem
+  private int m_comp1TypeId
+  private ECSSystemMetadata m_systemMetadata
+  private Func1<ECEntity, ECComponent> m_component1Getter
+
+  // --------------------------------------------------------------------------
+  construct (int comp1TypeId)
+    m_comp1TypeId = comp1TypeId
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeCount() returns int
+    return 1
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeId(int index) returns int
+    switch (index)
+      case 0
+        return m_comp1TypeId
+      default
+        return 0
+
+  // --------------------------------------------------------------------------
+  override protected function realtimeUpdate(real dt)
+
+    if (m_systemMetadata == null)
+      m_systemMetadata = ECS.getSystemMetadata(this.typeId)
+      if (m_systemMetadata.components.size() != 1)
+        error("System component mismatch")
+      m_component1Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(0)).componentGetter
+
+    for i = 0 to m_entities.size() - 1
+      let entity = m_entities.get(i)
+      let comp1 = (m_component1Getter.call(entity) castTo int) castTo TComp1
+      updateEntity(entity, comp1, dt)
+
+  // --------------------------------------------------------------------------
+  protected function updateEntity(ECEntity _entity, TComp1 _comp1, real _dt)
+    skip
+
+// ============================================================================
+public abstract class ECSystem2<TComp1, TComp2> extends ECSystem
+  private int m_comp1TypeId
+  private int m_comp2TypeId
+  private ECSSystemMetadata m_systemMetadata
+  private Func1<ECEntity, ECComponent> m_component1Getter
+  private Func1<ECEntity, ECComponent> m_component2Getter
+
+  // --------------------------------------------------------------------------
+  construct (int comp1TypeId, int comp2TypeId)
+    m_comp1TypeId = comp1TypeId
+    m_comp2TypeId = comp2TypeId
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeCount() returns int
+    return 2
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeId(int index) returns int
+    switch (index)
+      case 0
+        return m_comp1TypeId
+      case 1
+        return m_comp2TypeId
+      default
+        return 0
+
+  // --------------------------------------------------------------------------
+  override protected function realtimeUpdate(real dt)
+
+    if (m_systemMetadata == null)
+      m_systemMetadata = ECS.getSystemMetadata(this.typeId)
+      if (m_systemMetadata.components.size() != 2)
+        error("System component mismatch")
+      m_component1Getter = ECS.getComponentMetadata(m_comp1TypeId).componentGetter
+      m_component2Getter = ECS.getComponentMetadata(m_comp2TypeId).componentGetter
+
+    for i = 0 to m_entities.size() - 1
+      let entity = m_entities.get(i)
+      let comp1 = m_component1Getter.call(entity) castTo int castTo TComp1
+      let comp2 = m_component2Getter.call(entity) castTo int castTo TComp2
+      updateEntity(entity, comp1, comp2, dt)
+
+  // --------------------------------------------------------------------------
+  protected function updateEntity(ECEntity _entity, TComp1 _comp1, TComp2 _comp2, real _dt)
+    skip
+
+// ============================================================================
+public abstract class ECSystem3<TComp1, TComp2, TComp3> extends ECSystem
+  private int m_comp1TypeId
+  private int m_comp2TypeId
+  private int m_comp3TypeId
+  private ECSSystemMetadata m_systemMetadata
+  private Func1<ECEntity, ECComponent> m_component1Getter
+  private Func1<ECEntity, ECComponent> m_component2Getter
+  private Func1<ECEntity, ECComponent> m_component3Getter
+
+  // --------------------------------------------------------------------------
+  construct (int comp1TypeId, int comp2TypeId, int comp3TypeId)
+    m_comp1TypeId = comp1TypeId
+    m_comp2TypeId = comp2TypeId
+    m_comp3TypeId = comp3TypeId
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeCount() returns int
+    return 3
+
+  // --------------------------------------------------------------------------
+  override function getComponentTypeId(int index) returns int
+    switch (index)
+      case 0
+        return m_comp1TypeId
+      case 1
+        return m_comp2TypeId
+      case 2
+        return m_comp3TypeId
+      default
+        return 0
+
+  // --------------------------------------------------------------------------
+  override protected function realtimeUpdate(real dt)
+
+    if (m_systemMetadata == null)
+      m_systemMetadata = ECS.getSystemMetadata(this.typeId)
+      if (m_systemMetadata.components.size() != 3)
+        error("System component mismatch")
+      m_component1Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(0)).componentGetter
+      m_component2Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(1)).componentGetter
+      m_component3Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(2)).componentGetter
+
+    for i = 0 to m_entities.size() - 1
+      let entity = m_entities.get(i)
+      let comp1 = (m_component1Getter.call(entity) castTo int) castTo TComp1
+      let comp2 = (m_component2Getter.call(entity) castTo int) castTo TComp2
+      let comp3 = (m_component3Getter.call(entity) castTo int) castTo TComp3
+      updateEntity(entity, comp1, comp2, comp3, dt)
+
+  // --------------------------------------------------------------------------
+  protected function updateEntity(ECEntity _entity, TComp1 _comp1, TComp2 _comp2, TComp3 _comp3, real _dt)
+    skip
+
+// ============================================================================
+public class ECChannel implements IRealtimeListener
+  private int m_channelId
+  private LinkedList<ECSystemBase> m_systems
+
+  // --------------------------------------------------------------------------
+  construct(int channelId, LinkedList<ECSystemBase> systems)
+    m_channelId = channelId
+    m_systems = systems
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_systems
+    m_systems = null
+
+  // --------------------------------------------------------------------------
+  override protected function realtimeUpdate(real dt)
+
+    for system in m_systems
+      system.realtimeUpdate(dt)
+
+    ECS.destroyEntitiesMarkedForDestroy()
+
+ECWorldComponent array g_worldComponents
+
+// ============================================================================
+public class ECWorldComponent extends ECComponent
+  private Transform m_transform = new Transform()
+  private ECWorldComponent m_parent = null
+  private LinkedList<ECWorldComponent> m_children = new LinkedList<ECWorldComponent>()
+
+  // --------------------------------------------------------------------------
+  construct (ECEntity entity)
+    super(entity)
+    g_worldComponents[entity.getId()] = this
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    if (m_children != null)
+      destroy m_children
+      m_children = null
+
+    if (m_transform != null)
+      destroy m_transform
+      m_transform = null
+
+    g_worldComponents[getEntity().getId()] = null
+
+  // --------------------------------------------------------------------------
+  function getParent() returns ECWorldComponent
+    return m_parent
+
+  // --------------------------------------------------------------------------
+  function setParent(ECWorldComponent parent)
+    setParent(parent, false)
+
+  // --------------------------------------------------------------------------
+  function setParent(ECWorldComponent parent, bool keepWorldTransform)
+
+    if (m_parent == parent)
+      return
+
+    if (m_parent != null)
+      m_parent.m_children.remove(this)
+
+    m_parent = parent
+    m_parent.m_children.add(this)
+
+    var previousWorldTransform = IDENTITYT
+    if (keepWorldTransform)
+      previousWorldTransform = m_transform.getWorldTransform()
+    
+    m_transform.setParent(m_parent.m_transform)
+
+    if (keepWorldTransform)
+      m_transform.setWorldTransform(previousWorldTransform)
+
+  // --------------------------------------------------------------------------
+  function getChild(int index) returns ECWorldComponent
+    return m_children.get(index)
+
+  // --------------------------------------------------------------------------
+  function getChildrenCount() returns int
+    return m_children.size()
+
+  // --------------------------------------------------------------------------
+  function getTransform() returns Transform
+    return m_transform
+
+// ============================================================================
+public class ECWorldSystem extends ECSystem1<ECWorldComponent>
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(ECWorldComponent.typeId)
+
+  // --------------------------------------------------------------------------
+  override protected function updateEntity(ECEntity entity, ECWorldComponent worldComponent, real _dt)
+    
+    if (entity.isMarkedForDestroy())
+    //{
+      // Mark all child entities to be deleted
+      while worldComponent.getChildrenCount() > 0
+        let childComp = worldComponent.getChild(0)
+        childComp.getEntity().markForDestroy()
+        childComp.setParent(null)
+
+      // Disconnect from the world entity hierarchy
+      worldComponent.setParent(null)
+    //}
+
+// ============================================================================
+init
+
+  ECS.registerChannel(ECS.DEFAULT_CHANNEL_ID, RealtimeUpdatePriority.Fast)
+
+  ECS.registerComponentType(ECWorldComponent.typeId)
+    ..registerComponentFactory(entity -> new ECWorldComponent(entity))
+    ..registerComponentGetter(entity -> g_worldComponents[entity.getId()])
+
+  ECS.registerSystem(new ECWorldSystem())

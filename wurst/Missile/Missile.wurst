@@ -1,0 +1,107 @@
+package Missile
+import Transform
+import ECS
+import RealtimeUpdate
+
+MissileEffectComponent array g_missileEffectComponents
+MissileMovementComponent array g_missileMovementComponents
+
+constant real DEFAULT_ARRIVAL_THRESHOLD = 10.0
+
+// ============================================================================
+public class MissileEffectComponent extends ECComponent
+  effect m_effect = null
+  transform m_transform = IDENTITYT
+
+  // --------------------------------------------------------------------------
+  construct(ECEntity entity)
+    super(entity)
+    g_missileEffectComponents[entity.getId()] = this
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    g_missileEffectComponents[getEntity().getId()] = null
+
+    if (m_effect != null)
+      m_effect.destr()
+      m_effect = null
+
+// ============================================================================
+public class MissileMovementComponent extends ECComponent
+  widget m_targetWidget = null
+  real m_targetWidgetHeight = 0.0
+  vec3 m_targetPos = ZERO3
+  real m_speed = 0.0 
+  real m_arrivalThreshold = DEFAULT_ARRIVAL_THRESHOLD
+
+  // --------------------------------------------------------------------------
+  construct(ECEntity entity)
+    super(entity)
+    g_missileMovementComponents[entity.getId()] = this
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    g_missileMovementComponents[getEntity().getId()] = null
+
+// ============================================================================
+public class MissileMovementSystem extends ECSystem2<MissileEffectComponent, MissileMovementComponent>
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(MissileEffectComponent.typeId, MissileMovementComponent.typeId)
+
+  // --------------------------------------------------------------------------
+  override protected function updateEntity(ECEntity entity, MissileEffectComponent effectComponent, MissileMovementComponent movementComponent, real dt)
+
+    if (entity.isMarkedForDestroy())
+      return
+
+    var transform = effectComponent.m_transform
+
+    vec3 targetPos
+
+    if (movementComponent.m_targetWidget != null)
+      targetPos = movementComponent.m_targetWidget.getPos().withZ(movementComponent.m_targetWidgetHeight)
+    else
+      targetPos = movementComponent.m_targetPos
+
+    let dist = targetPos - transform.pos
+    let length = dist.length()
+
+    if (length < movementComponent.m_arrivalThreshold)
+      entity.markForDestroy()
+      return
+
+    let speedDt = movementComponent.m_speed * dt
+
+    if (speedDt > length)
+      entity.markForDestroy()
+      return
+
+    let dir = dist.norm()
+
+    transform.pos += dir * speedDt
+    transform = transform.setForward(dir)
+
+    if (effectComponent.m_effect != null)
+      effectComponent.m_effect.applyTransform(transform)
+
+    effectComponent.m_transform = transform
+
+// ============================================================================
+init
+
+  ECS.registerComponentType(MissileEffectComponent.typeId)
+    ..registerComponentFactory(entity -> new MissileEffectComponent(entity))
+    ..registerComponentGetter(entity -> g_missileEffectComponents[entity.getId()])
+
+  ECS.registerComponentType(MissileMovementComponent.typeId)
+    ..registerComponentFactory(entity -> new MissileMovementComponent(entity))
+    ..registerComponentGetter(entity -> g_missileMovementComponents[entity.getId()])
+
+  ECS.registerChannel('ASDF', RealtimeUpdatePriority.Realtime)
+
+  ECS.registerSystem(new MissileMovementSystem())
+    ..withUpdateChannel('ASDF')
+
+  ECS.start()
