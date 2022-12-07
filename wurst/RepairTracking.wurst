@@ -3,7 +3,7 @@ import GroupExtensions
 import GroupUtils
 import AbilityIds
 import RegisterEvents
-import ErrorHandling
+import UnitIndexer
 
 group array g_targetUnitRepairGroup
 unit array g_targetUnits
@@ -43,9 +43,8 @@ int g_repairAbilityIdStackIndex
   return true
 
 // ============================================================================
-@configurable public function getRepairUnitIndex(unit _unit) returns int
-  error("getRepairUnitIndex(unit) must be configured before RepairTracking can be used")
-  return 0
+@configurable public function getRepairUnitIndex(unit u) returns int
+  return u.getIndex()
 
 // ============================================================================
 public function registerRepairStart(code func)

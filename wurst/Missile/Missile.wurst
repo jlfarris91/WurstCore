@@ -2,6 +2,7 @@ package Missile
 import Transform
 import ECS
 import RealtimeUpdate
+import Math
 
 MissileEffectComponent array g_missileEffectComponents
 MissileMovementComponent array g_missileMovementComponents
@@ -28,11 +29,15 @@ public class MissileEffectComponent extends ECComponent
 
 // ============================================================================
 public class MissileMovementComponent extends ECComponent
+  transform m_transform = IDENTITYT
   widget m_targetWidget = null
   real m_targetWidgetHeight = 0.0
   vec3 m_targetPos = ZERO3
   real m_speed = 0.0 
+  real m_arc = 0.0
   real m_arrivalThreshold = DEFAULT_ARRIVAL_THRESHOLD
+  vec3 m_startPos = ZERO3
+  vec3 m_arcUp = UP3
 
   // --------------------------------------------------------------------------
   construct(ECEntity entity)
@@ -56,7 +61,7 @@ public class MissileMovementSystem extends ECSystem2<MissileEffectComponent, Mis
     if (entity.isMarkedForDestroy())
       return
 
-    var transform = effectComponent.m_transform
+    var movementTransform = movementComponent.m_transform
 
     vec3 targetPos
 
@@ -65,8 +70,8 @@ public class MissileMovementSystem extends ECSystem2<MissileEffectComponent, Mis
     else
       targetPos = movementComponent.m_targetPos
 
-    let dist = targetPos - transform.pos
-    let length = dist.length()
+    let v = targetPos - movementTransform.pos
+    let length = v.length()
 
     if (length < movementComponent.m_arrivalThreshold)
       entity.markForDestroy()
@@ -78,15 +83,28 @@ public class MissileMovementSystem extends ECSystem2<MissileEffectComponent, Mis
       entity.markForDestroy()
       return
 
-    let dir = dist.norm()
+    let velDir = v.norm()
 
-    transform.pos += dir * speedDt
-    transform = transform.setForward(dir)
+    movementTransform.pos += velDir * speedDt
+    movementComponent.m_transform = movementTransform
+
+    // Calculate arc z offset but only apply to the effect
+    let totalDist = movementComponent.m_startPos.distanceTo(targetPos)
+    let t = totalDist == 0.0 ? 1.0 : clamp01(length / totalDist)
+    let arcRads = t * PI
+    let arcZOffset = Sin(arcRads) * totalDist * movementComponent.m_arc
+
+    var effectTransform = movementTransform
+    effectTransform.pos += movementComponent.m_arcUp * arcZOffset
+
+    let lastEffectTransform = effectComponent.m_transform
+    let lookDir = (effectTransform.pos - lastEffectTransform.pos).norm()
+    effectTransform = effectTransform.setForward(lookDir)
 
     if (effectComponent.m_effect != null)
-      effectComponent.m_effect.applyTransform(transform)
+      effectComponent.m_effect.applyTransform(effectTransform)
 
-    effectComponent.m_transform = transform
+    effectComponent.m_transform = effectTransform
 
 // ============================================================================
 init
