@@ -99,6 +99,21 @@ public function unit.getTransform() returns transform
   return transform(this.getPos3Fly(), ZERO3, eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
 
 // ============================================================================
+public function createUnit(player owner, int unitTypeId, transform worldTransform) returns unit
+  let facingAngle = worldTransform.rot.getEulerYaw().asAngleRadians()
+  return createUnit(owner, unitTypeId, worldTransform.pos, facingAngle)
+
+// ============================================================================
+public function createDestructable(int destructableTypeId, int variation, transform worldTransform) returns destructable
+  let facingAngle = worldTransform.rot.getEulerYaw().asAngleRadians()
+  return createDestructable(
+    destructableTypeId,
+    worldTransform.pos,
+    facingAngle,
+    worldTransform.scale,
+    variation)
+
+// ============================================================================
 public class Transform
   private Transform m_parent = null
   private Vector<Transform> m_children
