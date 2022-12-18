@@ -73,6 +73,9 @@ public class JobThread
 
   // --------------------------------------------------------------------------
   function enqueue(Job job)
+    if (job == null)
+      error("Job is null!")
+
     let existingThread = job.getThread()
     if (existingThread != null)
       error("Job is already in queue for thread " + existingThread.getId())
@@ -141,52 +144,41 @@ public class JobThread
       return
 
     Trace.trace("Work.processQueue")
-
-    let iter = m_jobQueue.staticItr()
-    iter.reset()
+    
+    let time = getRealTimeSeconds()
     
     var workCounter = 0
     var processCounter = 0
-    while (workCounter < m_maxWorkPerTick)
+    while (not m_jobQueue.isEmpty() and workCounter < m_maxWorkPerTick)
     //{
-
-      if (not iter.hasNext())
-        if (m_jobQueue.isEmpty())
-          break
-        iter.reset()
-
-      let job = iter.next()
+      let job = m_jobQueue.dequeue()
 
       if (not job.getIsCancellationRequested() and job.hasNext())
         job.setStatus(JobStatus.RUNNING)
         processCounter++
         let work = job.next()
-        if (work > 0)
-          workCounter += work
+        workCounter += max(work, 0)
 
       // Work has been cancelled (check again after work is done above)
       if (job.getIsCancellationRequested())
         m_workCanceledCount++
-        completeAndRemoveJobFromQueue(iter, JobStatus.CANCELED)
+        finalizeJob(job, JobStatus.CANCELED)
 
       // Work is done, close it out
       else if (not job.hasNext())
         m_workCompletedCount++
-        completeAndRemoveJobFromQueue(iter, JobStatus.SUCCEEDED)
+        finalizeJob(job, JobStatus.SUCCEEDED)
 
       // Work timed out
-      else if (job.didTimeout())
+      else if (time - job.m_startTime > job.m_timeout)
         m_workTimeoutCount++
-        completeAndRemoveJobFromQueue(iter, JobStatus.TIMEDOUT)
+        finalizeJob(job, JobStatus.TIMEDOUT)
 
       // Still has more to spawn move it to the back of the line
-      else if (iter.hasNext())
-        iter.remove()
+      else
         m_jobQueue.add(job)
 
     //}
-
-    iter.close()
     
     Trace.trace("Work.subWork", workCounter)
     Trace.trace("Work.items", processCounter)
@@ -195,9 +187,7 @@ public class JobThread
       stopProcessQueue()
 
   // --------------------------------------------------------------------------
-  private function completeAndRemoveJobFromQueue(LLIterator<Job> iter, JobStatus status)
-    let job = iter.next()
-    iter.remove()
+  private function finalizeJob(Job job, JobStatus status)
     job.setExecutingThread(null)
     job.setStatus(status)
     job.complete()
@@ -249,10 +239,10 @@ public abstract class Job
     return m_executingThread
 
   // --------------------------------------------------------------------------
-  protected function setExecutingThread(JobThread executingThread)
-    if (m_executingThread != null)
+  protected function setExecutingThread(JobThread value)
+    if (value != null and m_executingThread != null)
       error("Job cannot be executed on more than one thread at a time!")
-    m_executingThread = executingThread
+    m_executingThread = value
 
   // --------------------------------------------------------------------------
   function onCompleted() returns IEvent1<Job>
@@ -264,7 +254,7 @@ public abstract class Job
   function setCancellationToken(CancellationToken ct)
     if (m_ct != null)
       m_ct.release()
-    m_ct = ct.acquire()
+    m_ct = (ct != null) ? ct.acquire() : null
 
   // --------------------------------------------------------------------------
   function getCancellationToken() returns CancellationToken
@@ -287,10 +277,6 @@ public abstract class Job
   // --------------------------------------------------------------------------
   protected function setStatus(JobStatus value)
     m_status = value
-
-  // --------------------------------------------------------------------------
-  function didTimeout() returns bool
-    return (getRealTimeSeconds() - m_startTime) > m_timeout
 
   // --------------------------------------------------------------------------
   abstract function next() returns int
