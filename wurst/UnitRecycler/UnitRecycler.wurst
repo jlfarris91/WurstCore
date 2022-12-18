@@ -346,7 +346,7 @@ public class UnitRecycler
 
 // ============================================================================
 public function createUnitRecycled(player owner, int unitId, vec2 pos, angle facing) returns unit
-  return createUnitRecycled(owner, pos.toVec3(), facing)
+  return createUnitRecycled(owner, unitId, pos.toVec3(), facing)
 
 // ============================================================================
 public function createUnitRecycled(player owner, int unitId, vec3 pos, angle facing) returns unit
