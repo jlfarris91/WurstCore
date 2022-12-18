@@ -171,6 +171,10 @@ public function unit.fadeIn()
   this.fadeIn(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, color(255,255,255))
 
 // ============================================================================
+public function unit.fadeIn(real duration)
+  this.fadeIn(UNIT_FADE_INTERVAL, duration, color(255,255,255))
+
+// ============================================================================
 public function unit.fadeIn(color vertexColor)
   this.fadeIn(UNIT_FADE_INTERVAL, UNIT_FADE_DURATION, vertexColor)
 

@@ -7,6 +7,8 @@ import Action
 import CancellationToken
 import Events
 import Func
+import ErrorHandling
+import RefObject
 
 constant int DEFAULT_MAX_WORK_PER_TICK = 8 // 1 per player?
 constant real DEFAULT_PROCESS_INTERVAL = 0.1
@@ -30,6 +32,10 @@ public class JobThread
   construct(string id)
     m_id = id
   
+  // --------------------------------------------------------------------------
+  function getId() returns string
+    return m_id
+
   // --------------------------------------------------------------------------
   function getEnabled() returns bool
     return m_enabled
@@ -67,10 +73,19 @@ public class JobThread
 
   // --------------------------------------------------------------------------
   function enqueue(Job job)
-    if (m_jobQueue.has(job))
-      return
+    let existingThread = job.getThread()
+    if (existingThread != null)
+      error("Job is already in queue for thread " + existingThread.getId())
+
+    job.acquire()
     m_jobQueue.add(job)
+    job.setExecutingThread(this)
     startProcessQueue()
+
+  // --------------------------------------------------------------------------
+  function enqueue(CancellationToken ct, Job job)
+    job.setCancellationToken(ct)
+    enqueue(job)
 
   // --------------------------------------------------------------------------
   private function startProcessQueue()
@@ -151,27 +166,18 @@ public class JobThread
 
       // Work has been cancelled (check again after work is done above)
       if (job.getIsCancellationRequested())
-        job.setStatus(JobStatus.CANCELED)
-        job.complete()
         m_workCanceledCount++
-        iter.remove()
-        job.close()
+        completeAndRemoveJobFromQueue(iter, JobStatus.CANCELED)
 
       // Work is done, close it out
       else if (not job.hasNext())
-        job.setStatus(JobStatus.SUCCEEDED)
-        job.complete()
         m_workCompletedCount++
-        iter.remove()
-        job.close()
+        completeAndRemoveJobFromQueue(iter, JobStatus.SUCCEEDED)
 
       // Work timed out
       else if (job.didTimeout())
-        job.setStatus(JobStatus.TIMEDOUT)
-        job.complete()
         m_workTimeoutCount++
-        iter.remove()
-        job.close()
+        completeAndRemoveJobFromQueue(iter, JobStatus.TIMEDOUT)
 
       // Still has more to spawn move it to the back of the line
       else if (iter.hasNext())
@@ -188,6 +194,15 @@ public class JobThread
     if (m_jobQueue.isEmpty())
       stopProcessQueue()
 
+  // --------------------------------------------------------------------------
+  private function completeAndRemoveJobFromQueue(LLIterator<Job> iter, JobStatus status)
+    let job = iter.next()
+    iter.remove()
+    job.setExecutingThread(null)
+    job.setStatus(status)
+    job.complete()
+    job.release()
+
 // ============================================================================
 public enum JobStatus
   WAITING     // In queue, hasn't started yet
@@ -199,12 +214,15 @@ public enum JobStatus
 
 // ============================================================================
 public abstract class Job
+  private JobThread m_executingThread = null
   protected real m_timeout
   protected int m_startTime
   protected CancellationToken m_ct
   private JobStatus m_status = WAITING
   private Event1<Job> m_completedEvent = null
   private bool m_completed = false
+
+  use RefObject
 
   // --------------------------------------------------------------------------
   construct ()
@@ -225,6 +243,16 @@ public abstract class Job
     if (m_ct != null)
       m_ct.release()
       m_ct = null
+
+  // --------------------------------------------------------------------------
+  protected function getThread() returns JobThread
+    return m_executingThread
+
+  // --------------------------------------------------------------------------
+  protected function setExecutingThread(JobThread executingThread)
+    if (m_executingThread != null)
+      error("Job cannot be executed on more than one thread at a time!")
+    m_executingThread = executingThread
 
   // --------------------------------------------------------------------------
   function onCompleted() returns IEvent1<Job>
@@ -286,10 +314,6 @@ public abstract class Job
       m_completedEvent.call(this)
 
   // --------------------------------------------------------------------------
-  function close()
-    destroy this
-
-  // --------------------------------------------------------------------------
   protected function completeInternal()
     skip
 
@@ -334,6 +358,12 @@ public function JobThread.invoke(Action action) returns ActionJob
   return job
 
 // ============================================================================
+public function JobThread.invoke(CancellationToken ct, Action action) returns ActionJob
+  let job = new ActionJob(action)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
 public class Action1Job<TArg1> extends Job
   private Action1<TArg1> m_action
   private TArg1 m_arg1
@@ -370,11 +400,17 @@ public class Action1Job<TArg1> extends Job
   override function getDebuggerStateString() returns string
     return ""
 
-// // ============================================================================
-// public function JobThread.invoke<TArg1>(Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
-//   let actionJob = new Action1Job<TArg1>(action, arg1)
-//   this.enqueue(actionJob)
-//   return actionJob
+// ============================================================================
+public function JobThread.invoke<TArg1>(Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
+  let actionJob = new Action1Job<TArg1>(action, arg1)
+  this.enqueue(actionJob)
+  return actionJob
+
+// ============================================================================
+public function JobThread.invoke<TArg1>(CancellationToken ct, Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
+  let actionJob = new Action1Job<TArg1>(action, arg1)..setCancellationToken(ct)
+  this.enqueue(actionJob)
+  return actionJob
 
 // ============================================================================
 public class RepeatJob extends Job
@@ -410,6 +446,12 @@ public class RepeatJob extends Job
 // ============================================================================
 public function JobThread.repeat(int count, Action1<int> action) returns RepeatJob
   let job = new RepeatJob(count, action)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+public function JobThread.repeat(CancellationToken ct, int count, Action1<int> action) returns RepeatJob
+  let job = new RepeatJob(count, action)..setCancellationToken(ct)
   this.enqueue(job)
   return job
 
@@ -467,3 +509,157 @@ public function JobThread.invokeFunc<TResult>(Func<TResult> func) returns FuncJo
   let job = new FuncJob(func)
   this.enqueue(job)
   return job
+
+// ============================================================================
+public function JobThread.invokeFunc<TResult>(CancellationToken ct, Func<TResult> func) returns FuncJob<TResult>
+  let job = new FuncJob(func)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+public class WhileJob extends Job
+  private Action1<int> m_action
+  private Func<bool> m_condition
+  private int m_index
+
+  // --------------------------------------------------------------------------
+  construct(Action1<int> action, Func<bool> condition)
+    m_action = action.acquire()
+    m_condition = condition.acquire()
+    m_index = 0
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    m_action.release()
+    m_action = null
+
+    m_condition.release()
+    m_condition = null
+
+  // --------------------------------------------------------------------------
+  override function next() returns int
+    m_action.call(m_index)
+    m_index++
+    return 1
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    return m_condition.call()
+
+  // --------------------------------------------------------------------------
+  override function getDebuggerStateString() returns string
+    return ""
+
+// ============================================================================
+public function JobThread.repeatWhile(Action1<int> action, Func<bool> condition) returns WhileJob
+  let job = new WhileJob(action, condition)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+public function JobThread.repeatWhile(CancellationToken ct, Action1<int> action, Func<bool> condition) returns WhileJob
+  let job = new WhileJob(action, condition)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+// public function JobThread.waitAll(JobQueue)
+
+// ============================================================================
+public abstract class JobGroup extends Job
+  private LinkedList<Job> m_jobs = new LinkedList<Job>()
+  private LinkedList<_handle> m_callbacks = new LinkedList<_handle>()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    while m_jobs.isEmpty() == false
+      let job = m_jobs.get(0)
+      job.onCompleted().unregister(m_callbacks.get(0))
+      m_jobs.removeAt(0)
+      m_callbacks.removeAt(0)
+      job.release()
+
+    destroy m_jobs
+    m_jobs = null
+
+    destroy m_callbacks
+    m_callbacks = null
+
+  // --------------------------------------------------------------------------
+  function addJob(Job job)
+    job.acquire()
+    m_jobs.add(job)
+    let callback = job.onCompleted().register() (Job childJob) ->
+      onChildJobCompleted(childJob)
+    m_callbacks.add(callback)
+
+  // --------------------------------------------------------------------------
+  function removeJob(Job job)
+    let index = m_jobs.indexOf(job)
+    if (index == -1)
+      return
+
+    m_jobs.removeAt(index)
+    let callback = m_callbacks.get(index)
+    job.onCompleted().unregister(callback)
+    m_callbacks.removeAt(index)
+    job.release()
+
+  // --------------------------------------------------------------------------
+  function getJobCount() returns int
+    return m_jobs.size()
+
+  // --------------------------------------------------------------------------
+  protected function onChildJobCompleted(Job _childJob)
+    skip
+
+// ============================================================================
+public class WhenAllJob extends JobGroup
+  private int m_jobsCompleted = 0
+
+  // --------------------------------------------------------------------------
+  override function next() returns int
+    return 0 // did no work, just waiting on jobs
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    return m_jobsCompleted < getJobCount()
+
+  // --------------------------------------------------------------------------
+  override function getDebuggerStateString() returns string
+    return "WhenAll({0}/{1})".format(m_jobsCompleted.toString(), getJobCount().toString())
+
+  // --------------------------------------------------------------------------
+  override protected function onChildJobCompleted(Job childJob)
+    m_jobsCompleted++
+
+// ============================================================================
+public class WhenAnyJob extends JobGroup
+  private int m_jobsCompleted = 0
+  private JobStatus m_filter
+
+  // --------------------------------------------------------------------------
+  construct()
+    m_filter = JobStatus.SUCCEEDED
+
+  // --------------------------------------------------------------------------
+  construct(JobStatus filter)
+    m_filter = filter
+
+  // --------------------------------------------------------------------------
+  override function next() returns int
+    return 0 // did no work, just waiting on jobs
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    return m_jobsCompleted < 1
+
+  // --------------------------------------------------------------------------
+  override function getDebuggerStateString() returns string
+    return "WhenAny({0}/{1})".format(m_jobsCompleted.toString(), getJobCount().toString())
+
+  // --------------------------------------------------------------------------
+  override protected function onChildJobCompleted(Job childJob)
+    if (childJob.getStatus() == m_filter)
+      m_jobsCompleted++

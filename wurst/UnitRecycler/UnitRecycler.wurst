@@ -218,6 +218,10 @@ public class UnitRecycler
 
   // --------------------------------------------------------------------------
   function getUnit(player owner, vec2 pos, angle angle) returns unit
+    return getUnit(owner, pos.toVec3(), angle)
+
+  // --------------------------------------------------------------------------
+  function getUnit(player owner, vec3 pos, angle angle) returns unit
     var _unit = getNextAvailableUnit()
 
     if (_unit == null)
@@ -227,7 +231,7 @@ public class UnitRecycler
     m_lastRecycledUnit = _unit
 
     _unit.setOwner(owner, true)
-    _unit.setPos(pos)
+    _unit.setPosFly(pos)
     _unit.setFacing(angle)
     activateUnit(_unit)
 
@@ -295,12 +299,14 @@ public class UnitRecycler
     return m_stocked.getFirst()
 
   // --------------------------------------------------------------------------
-  private function createUnitInternal(player owner, vec2 pos, angle facingAngle) returns unit
+  private function createUnitInternal(player owner, vec3 pos, angle facingAngle) returns unit
     if (m_active.size() + m_stocked.size() == MAX_CAPACITY)
       error("exceeded capacity!")
       return null
 
     let u = CreateUnit(owner, m_unitId, pos.x, pos.y, facingAngle.radians)
+    u.setFlyHeight(pos.z, 0.0)
+
     g_unitToRecyclerMap.put(u, this)
 
     m_name = u.getName()
@@ -340,6 +346,10 @@ public class UnitRecycler
 
 // ============================================================================
 public function createUnitRecycled(player owner, int unitId, vec2 pos, angle facing) returns unit
+  return createUnitRecycled(owner, pos.toVec3(), facing)
+
+// ============================================================================
+public function createUnitRecycled(player owner, int unitId, vec3 pos, angle facing) returns unit
   let recycler = getOrCreateUnitRecycler(unitId)
   return recycler.getUnit(owner, pos, facing)
 
