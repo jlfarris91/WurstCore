@@ -204,6 +204,9 @@ public enum JobStatus
 
 // ============================================================================
 public abstract class Job
+
+  static constant Job succeeded = new CompletedJob(JobStatus.SUCCEEDED).acquire()
+
   private JobThread m_executingThread = null
   protected real m_timeout
   protected int m_startTime
@@ -302,6 +305,30 @@ public abstract class Job
   // --------------------------------------------------------------------------
   protected function completeInternal()
     skip
+
+// ============================================================================
+class CompletedJob extends Job
+
+  // --------------------------------------------------------------------------
+  construct(JobStatus status)
+    setStatus(status)
+    complete()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    error("This should not be destroyed!")
+
+  // --------------------------------------------------------------------------
+  override function next() returns int
+    return 0
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    return false
+
+  // --------------------------------------------------------------------------
+  override function getDebuggerStateString() returns string
+    return "Completed"
 
 // ============================================================================
 public class ActionJob extends Job
