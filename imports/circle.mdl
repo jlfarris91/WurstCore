@@ -11,9 +11,21 @@ Model "" {
 	MaximumExtent {64, 64, 0.25024},
 	BoundsRadius 90.509754,
 }
-Sequences 1 {
+Sequences 3 {
 	Anim "Stand" {
 		Interval {416, 833},
+		MinimumExtent {-64, -64, 0},
+		MaximumExtent {64, 64, 0.25024},
+		BoundsRadius 90.509754,
+	}
+	Anim "Birth" {
+		Interval {1000, 1500},
+		MinimumExtent {-64, -64, 0},
+		MaximumExtent {64, 64, 0.25024},
+		BoundsRadius 90.509754,
+	}
+	Anim "Death" {
+		Interval {3000, 3500},
 		MinimumExtent {-64, -64, 0},
 		MaximumExtent {64, 64, 0.25024},
 		BoundsRadius 90.509754,
@@ -29,11 +41,19 @@ Textures 1 {
 Materials 1 {
 	Material {
 		Layer {
-			FilterMode Transparent,
+			FilterMode Blend,
 			Unshaded,
 			TwoSided,
 			static TextureID 0,
-			static Alpha 1,
+			Alpha 6 {
+				Linear,
+				416 : 1,
+				833 : 1,
+				1000 : 0,
+				1500 : 1,
+				3000 : 1,
+				3500 : 0
+			}
 		}
 	}
 }
@@ -632,6 +652,16 @@ Geoset {
 	MinimumExtent {-64, -64, 0},
 	MaximumExtent {64, 64, 0.25024},
 	BoundsRadius 90.509754,
+	Anim {
+		MinimumExtent {-64, -64, 0},
+		MaximumExtent {64, 64, 0.25024},
+		BoundsRadius 90.509754,
+	}
+	Anim {
+		MinimumExtent {-64, -64, 0},
+		MaximumExtent {64, 64, 0.25024},
+		BoundsRadius 90.509754,
+	}
 	Anim {
 		MinimumExtent {-64, -64, 0},
 		MaximumExtent {64, 64, 0.25024},
