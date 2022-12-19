@@ -371,6 +371,14 @@ public function unit.stock()
     error("Trying to stock a unit that does not belong to a recycler")
 
 // ============================================================================
+public function unit.removeOrStock()
+  let recycler = this.getRecycler()
+  if (recycler != null)
+    recycler.stock(this)
+  else
+    this.remove()
+
+// ============================================================================
 public function getUnitRecycler(int unitId) returns UnitRecycler
   return g_unitIdToUnitRecyclerMap.get(unitId)
 

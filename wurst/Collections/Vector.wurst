@@ -122,6 +122,33 @@ public class Vector<T> extends ICollection<T>
       mutableIndex++
     m_count--
     return _item
+    
+  // --------------------------------------------------------------------------
+  /** Removes an item at the given index and decrements the size but does not
+      shift items in the array that come after the index. Instead, it replaces
+      the item at the index with the last item in the array.
+   */
+  function removeUnordered(T _item) returns bool
+    let index = indexOf(_item)
+    if (index == -1)
+      return false
+    removeAtUnordered(index)
+    return true
+
+  // --------------------------------------------------------------------------
+  /** Removes an item at the given index and decrements the size but does not
+      shift items in the array that come after the index. Instead, it replaces
+      the item at the index with the last item in the array.
+   */
+  function removeAtUnordered(int index) returns T
+    if (index < 0 or index >= size())
+      error("Index out of range: " + index.toString())
+    let _item = get(index)
+    if (m_count > 1)
+      m_array.set(index, get(m_count - 1))
+      m_array.set(m_count - 1, null)
+    m_count--
+    return _item    
 
   // --------------------------------------------------------------------------
   function resize(int size)

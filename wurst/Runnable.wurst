@@ -2,6 +2,7 @@ package Runnable
 import Events
 import IProgress
 import Reflection
+import CancellationToken
 
 @configurable public bool g_enableRunnableLogging = false
 
@@ -32,6 +33,7 @@ public abstract class Runnable implements IRunnable, IProgress
   private string m_error
   private Event1<IRunnable> m_stateChangedEvent
   private Event1<IProgress> m_progressChangedEvent
+  private CancellationToken m_ct
   
   // --------------------------------------------------------------------------
   construct()
@@ -42,6 +44,10 @@ public abstract class Runnable implements IRunnable, IProgress
   ondestroy
     if (m_state != COMPLETED)
       complete()
+
+    if (m_ct != null)
+      m_ct.release()
+      m_ct = null
 
     if (m_stateChangedEvent != null)
       destroy m_stateChangedEvent
@@ -58,6 +64,12 @@ public abstract class Runnable implements IRunnable, IProgress
   // --------------------------------------------------------------------------
   override function getError() returns string
     return m_error
+
+  // --------------------------------------------------------------------------
+  function getCancellationToken() returns CancellationToken
+    if (m_ct == null)
+      m_ct = new CancellationToken()..acquire()
+    return m_ct
 
   // --------------------------------------------------------------------------
   override function start()
@@ -141,6 +153,10 @@ public abstract class Runnable implements IRunnable, IProgress
   override function cancel()
     fail("Canceled")
 
+    if (m_ct != null)
+      m_ct.cancelAndRelease()
+      m_ct = null
+
   // --------------------------------------------------------------------------
   function restart()
     cancel()
@@ -207,6 +223,10 @@ public abstract class Runnable implements IRunnable, IProgress
   // --------------------------------------------------------------------------
   private function resetInternal()
     m_error = null
+
+    if (m_ct != null)
+      m_ct.cancelAndRelease()
+      m_ct = null
 
   // --------------------------------------------------------------------------
   private function log(string funcName, string message)

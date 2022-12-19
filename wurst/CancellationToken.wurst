@@ -13,6 +13,7 @@ public class CancellationToken
   ondestroy
     if (m_canceledEvent != null)
       destroy m_canceledEvent
+      m_canceledEvent = null
 
   // --------------------------------------------------------------------------
   function isCanceled() returns bool
