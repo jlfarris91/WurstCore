@@ -11,6 +11,8 @@ import ErrorHandling
 import RefObject
 import HashList
 
+@configurable constant bool enableLogging = false
+
 constant int DEFAULT_MAX_WORK_PER_TICK = 8 // 1 per player?
 constant real DEFAULT_PROCESS_INTERVAL = 0.1
 
@@ -93,6 +95,8 @@ public class Thread
     if (existingThread != null)
       error("Job is already in queue for thread " + existingThread.getId())
 
+    log("Enqueued job " + job.getId())
+
     job.acquire()
     m_jobQueue.add(job)
     job.setExecutingThread(this)
@@ -108,6 +112,7 @@ public class Thread
     if (m_processQueueCallback == null)
       m_processQueueCallback = doPeriodically(m_tickInterval, cb -> processQueue())
     g_runningThreads.add(this)
+    log("Started processing queue")
     
   // --------------------------------------------------------------------------
   private function stopProcessQueue()
@@ -115,12 +120,14 @@ public class Thread
       destroy m_processQueueCallback
       m_processQueueCallback = null
     g_runningThreads.remove(this)
+    log("Stopped processing queue")
 
   // --------------------------------------------------------------------------
   function remove(Job job) returns bool
     let removed = m_jobQueue.remove(job)
     if (removed)
       job.release()
+      log("Removed job " + job.getId())
     if (m_jobQueue.isEmpty())
       stopProcessQueue()
     return removed
@@ -216,6 +223,11 @@ public class Thread
     job.complete()
     job.release()
 
+  // --------------------------------------------------------------------------
+  private function log(string message)
+    if (enableLogging)
+      Log.debug("[TH:{0}] " + message.format(m_id))
+
 // ============================================================================
 public enum JobStatus
   WAITING     // In queue, hasn't started yet
@@ -226,10 +238,29 @@ public enum JobStatus
   FAILED      // Out of queue, failed for some job-defined reason
 
 // ============================================================================
+public function JobStatus.toString() returns string
+  switch (this)
+    case WAITING
+      return "Waiting"
+    case RUNNING
+      return "Running"
+    case SUCCEEDED
+      return "Succeeded"
+    case TIMEDOUT
+      return "Timedout"
+    case CANCELED
+      return "Canceled"
+    case FAILED
+      return "Failed"
+    default
+      return "<Unknown>"
+
+// ============================================================================
 public abstract class Job
 
   static constant Job succeeded = new CompletedJob(JobStatus.SUCCEEDED).acquire()
 
+  private string m_id
   private Thread m_executingThread = null
   protected real m_timeout
   protected int m_startTime
@@ -241,12 +272,14 @@ public abstract class Job
   use RefObject
 
   // --------------------------------------------------------------------------
-  construct ()
+  construct (string id)
+    m_id = id
     m_timeout = REAL_MAX
     m_startTime = getRealTimeSeconds()
 
   // --------------------------------------------------------------------------
-  construct (real timeout)
+  construct (string id, real timeout)
+    m_id = id
     m_timeout = timeout
     m_startTime = getRealTimeSeconds()
 
@@ -261,6 +294,10 @@ public abstract class Job
       m_ct = null
 
   // --------------------------------------------------------------------------
+  function getId() returns string
+    return m_id
+
+  // --------------------------------------------------------------------------
   protected function getThread() returns Thread
     return m_executingThread
 
@@ -269,6 +306,7 @@ public abstract class Job
     if (value != null and m_executingThread != null)
       error("Job cannot be executed on more than one thread at a time!")
     m_executingThread = value
+    log("Executing thread: " + (value == null ? "none" : value.getId()))
 
   // --------------------------------------------------------------------------
   function onCompleted() returns IEvent1<Job>
@@ -295,6 +333,7 @@ public abstract class Job
     if (m_ct == null)
       m_ct = new CancellationToken().acquire()
     m_ct.cancel()
+    log("Cancel requested")
 
   // --------------------------------------------------------------------------
   function getStatus() returns JobStatus
@@ -320,6 +359,8 @@ public abstract class Job
 
     m_completed = true
 
+    log("Completed " + m_status.toString())
+
     completeInternal()
 
     if (m_completedEvent != null)
@@ -329,11 +370,17 @@ public abstract class Job
   protected function completeInternal()
     skip
 
+  // --------------------------------------------------------------------------
+  protected function log(string message)
+    if (enableLogging)
+      Log.debug("[JB:{0}] ".format(m_id) + message)
+
 // ============================================================================
 class CompletedJob extends Job
 
   // --------------------------------------------------------------------------
   construct(JobStatus status)
+    super(status.toString())
     setStatus(status)
     complete()
 
@@ -360,11 +407,25 @@ public class ActionJob extends Job
 
   // --------------------------------------------------------------------------
   construct(Action action)
+    super("Action")
+    m_action = action.acquire()
+    m_counter = 1
+
+  // --------------------------------------------------------------------------
+  construct(string id, Action action)
+    super(id)
     m_action = action.acquire()
     m_counter = 1
 
   // --------------------------------------------------------------------------
   construct(Action action, int timesToCall)
+    super("Actionx" + timesToCall.toString())
+    m_action = action.acquire()
+    m_counter = timesToCall
+
+  // --------------------------------------------------------------------------
+  construct(string id, Action action, int timesToCall)
+    super(id)
     m_action = action.acquire()
     m_counter = timesToCall
 
@@ -407,12 +468,28 @@ public class Action1Job<TArg1> extends Job
 
   // --------------------------------------------------------------------------
   construct(Action1<TArg1> action, TArg1 arg1)
+    super("Action1")
+    m_action = action.acquire()
+    m_arg1 = arg1
+    m_counter = 1
+
+  // --------------------------------------------------------------------------
+  construct(string id, Action1<TArg1> action, TArg1 arg1)
+    super(id)
     m_action = action.acquire()
     m_arg1 = arg1
     m_counter = 1
 
   // --------------------------------------------------------------------------
   construct(Action1<TArg1> action, TArg1 arg1, int timesToCall)
+    super("Action1x" + timesToCall.toString())
+    m_action = action.acquire()
+    m_arg1 = arg1
+    m_counter = timesToCall
+
+  // --------------------------------------------------------------------------
+  construct(string id, Action1<TArg1> action, TArg1 arg1, int timesToCall)
+    super(id)
     m_action = action.acquire()
     m_arg1 = arg1
     m_counter = timesToCall
@@ -456,6 +533,14 @@ public class RepeatJob extends Job
 
   // --------------------------------------------------------------------------
   construct(int count, Action1<int> action)
+    super("Repeatx" + count.toString())
+    m_action = action.acquire()
+    m_count = count
+    m_index = 0
+
+  // --------------------------------------------------------------------------
+  construct(string id, int count, Action1<int> action)
+    super(id)
     m_action = action.acquire()
     m_count = count
     m_index = 0
@@ -500,6 +585,12 @@ public class FuncJob<TResult> extends Job
 
   // --------------------------------------------------------------------------
   construct(Func<TResult> func)
+    super("Func")
+    m_func = func.acquire()
+
+  // --------------------------------------------------------------------------
+  construct(string id, Func<TResult> func)
+    super(id)
     m_func = func.acquire()
 
   // --------------------------------------------------------------------------
@@ -560,6 +651,14 @@ public class WhileJob extends Job
 
   // --------------------------------------------------------------------------
   construct(Action1<int> action, Func<bool> condition)
+    super("While")
+    m_action = action.acquire()
+    m_condition = condition.acquire()
+    m_index = 0
+
+  // --------------------------------------------------------------------------
+  construct(string id, Action1<int> action, Func<bool> condition)
+    super(id)
     m_action = action.acquire()
     m_condition = condition.acquire()
     m_index = 0
@@ -605,6 +704,10 @@ public function Thread.repeatWhile(CancellationToken ct, Action1<int> action, Fu
 public abstract class JobGroup extends Job
   private LinkedList<Job> m_jobs = new LinkedList<Job>()
   private LinkedList<_handle> m_callbacks = new LinkedList<_handle>()
+
+  // --------------------------------------------------------------------------
+  construct(string id)
+    super(id)
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -655,6 +758,14 @@ public class WhenAllJob extends JobGroup
   private int m_jobsCompleted = 0
 
   // --------------------------------------------------------------------------
+  construct()
+    super("WhenAll")
+
+  // --------------------------------------------------------------------------
+  construct(string id)
+    super(id)
+
+  // --------------------------------------------------------------------------
   override function next() returns int
     return 0 // did no work, just waiting on jobs
 
@@ -677,10 +788,22 @@ public class WhenAnyJob extends JobGroup
 
   // --------------------------------------------------------------------------
   construct()
+    super("WhenAny")
+    m_filter = JobStatus.SUCCEEDED
+
+  // --------------------------------------------------------------------------
+  construct(string id)
+    super(id)
     m_filter = JobStatus.SUCCEEDED
 
   // --------------------------------------------------------------------------
   construct(JobStatus filter)
+    super("WhenAny" + filter.toString())
+    m_filter = filter
+
+  // --------------------------------------------------------------------------
+  construct(string id, JobStatus filter)
+    super(id)
     m_filter = filter
 
   // --------------------------------------------------------------------------
