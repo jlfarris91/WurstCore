@@ -12,6 +12,7 @@ import RefObject
 import HashList
 
 @configurable constant bool enableLogging = false
+@configurable constant int MAX_PROCESS_PER_TICK = 64
 
 constant int DEFAULT_MAX_WORK_PER_TICK = 8 // 1 per player?
 constant real DEFAULT_PROCESS_INTERVAL = 0.1
@@ -21,12 +22,15 @@ HashList<Thread> g_runningThreads = new HashList<Thread>()
 
 // ============================================================================
 public class Thread
-  private string m_id
+
+  private int m_id
+  private string m_name
   private LinkedList<Job> m_jobQueue = new LinkedList<Job>()
   private CallbackPeriodic m_processQueueCallback = null
   private bool m_enabled = false
   private int m_jobSubWorkCompletedCount = 0
   private int m_jobsCompletedCount = 0
+  private int m_jobsProcessedCount = 0
   private int m_jobsTimeoutCount = 0
   private int m_jobsCanceledCount = 0
   private int m_maxWorkPerTick = DEFAULT_MAX_WORK_PER_TICK
@@ -34,10 +38,16 @@ public class Thread
   private Thread m_dependsOnThread = null
 
   static Thread defaultQueue = new Thread("default")..setEnabled(true)
+  
+  private static int s_threadIdGen = 0
+  private static int s_currTime = 0
 
   // --------------------------------------------------------------------------
-  construct(string id)
-    m_id = id
+  construct(string name)
+    m_name = name
+
+    s_threadIdGen++
+    m_id = s_threadIdGen
 
     g_allThreads.add(this)
 
@@ -46,10 +56,22 @@ public class Thread
 
     g_allThreads.remove(this)
     g_runningThreads.remove(this)
+
+  // --------------------------------------------------------------------------
+  static function getStaticThreadIdGen() returns int
+    return s_threadIdGen
+
+  // --------------------------------------------------------------------------
+  static function getAllThreads() returns HashList<Thread>
+    return g_allThreads
+
+  // --------------------------------------------------------------------------
+  static function getRunningThreads() returns HashList<Thread>
+    return g_runningThreads
   
   // --------------------------------------------------------------------------
-  function getId() returns string
-    return m_id
+  function getName() returns string
+    return m_name
 
   // --------------------------------------------------------------------------
   function getEnabled() returns bool
@@ -93,7 +115,7 @@ public class Thread
 
     let existingThread = job.getThread()
     if (existingThread != null)
-      error("Job is already in queue for thread " + existingThread.getId())
+      error("Job is already in queue for thread " + existingThread.getName())
 
     log("Enqueued job " + job.getId())
 
@@ -111,16 +133,16 @@ public class Thread
   private function startProcessQueue()
     if (m_processQueueCallback == null)
       m_processQueueCallback = doPeriodically(m_tickInterval, cb -> processQueue())
-    g_runningThreads.add(this)
-    log("Started processing queue")
+      g_runningThreads.add(this)
+      log("Started processing queue")
     
   // --------------------------------------------------------------------------
   private function stopProcessQueue()
     if (m_processQueueCallback != null)
       destroy m_processQueueCallback
       m_processQueueCallback = null
-    g_runningThreads.remove(this)
-    log("Stopped processing queue")
+      g_runningThreads.remove(this)
+      log("Stopped processing queue")
 
   // --------------------------------------------------------------------------
   function remove(Job job) returns bool
@@ -143,6 +165,10 @@ public class Thread
   // --------------------------------------------------------------------------
   function getCompletedJobsCount() returns int
     return m_jobsCompletedCount
+
+  // --------------------------------------------------------------------------
+  function getProcessedCount() returns int
+    return m_jobsProcessedCount
 
   // --------------------------------------------------------------------------
   function getCanceledWorkCount() returns int
@@ -173,41 +199,17 @@ public class Thread
 
     Trace.trace("Work.processQueue")
     
-    let time = getRealTimeSeconds()
+    s_currTime = getRealTimeSeconds()
     
     var workCounter = 0
     var processCounter = 0
-    while (not m_jobQueue.isEmpty() and workCounter < m_maxWorkPerTick)
+
+    while (not m_jobQueue.isEmpty()
+           and workCounter < m_maxWorkPerTick
+           and processCounter < MAX_PROCESS_PER_TICK)
     //{
-      let job = m_jobQueue.dequeue()
-
-      if (not job.getIsCancellationRequested() and job.hasNext())
-        job.setStatus(JobStatus.RUNNING)
-        processCounter++
-        let work = job.next()
-        let positiveWork = max(work, 0)
-        workCounter += positiveWork
-        m_jobSubWorkCompletedCount += positiveWork
-
-      // Work has been cancelled (check again after work is done above)
-      if (job.getIsCancellationRequested())
-        m_jobsCanceledCount++
-        finalizeJob(job, JobStatus.CANCELED)
-
-      // Work is done, close it out
-      else if (not job.hasNext())
-        m_jobsCompletedCount++
-        finalizeJob(job, JobStatus.SUCCEEDED)
-
-      // Work timed out
-      else if (time - job.m_startTime > job.m_timeout)
-        m_jobsTimeoutCount++
-        finalizeJob(job, JobStatus.TIMEDOUT)
-
-      // Still has more to spawn move it to the back of the line
-      else
-        m_jobQueue.add(job)
-
+      processCounter++
+      workCounter += processJob(m_jobQueue.dequeue())
     //}
     
     Trace.trace("Work.subWork", workCounter)
@@ -217,23 +219,70 @@ public class Thread
       stopProcessQueue()
 
   // --------------------------------------------------------------------------
-  private function finalizeJob(Job job, JobStatus status)
-    job.setExecutingThread(null)
-    job.setStatus(status)
-    job.complete()
-    job.release()
+  private function processJob(Job job) returns int
+
+    var workCounter = 0
+
+    if (job.isCompleted())
+      job.release()
+      return workCounter
+
+    if (not job.getIsCancellationRequested() and job.hasNext())
+      job.setStatus(JobStatus.RUNNING)
+      m_jobsProcessedCount++
+      let work = job.next()
+      let positiveWork = max(work, 0)
+      workCounter += positiveWork
+      m_jobSubWorkCompletedCount += positiveWork
+
+    // Job completed itself while working
+    if (job.isCompleted())
+      m_jobsCompletedCount++
+      job.setExecutingThread(null)
+      job.release()
+      return workCounter
+
+    // Work has been cancelled (check again after work is done above)
+    if (job.getIsCancellationRequested())
+      m_jobsCanceledCount++
+      job.setExecutingThread(null)
+      job.cancel()
+      job.release()
+      return workCounter
+
+    // Work is done, close it out
+    if (not job.hasNext())
+      m_jobsCompletedCount++
+      job.setExecutingThread(null)
+      job.succeed()
+      job.release()
+      return workCounter
+
+    // Work timed out
+    if (s_currTime - job.m_startTime > job.m_timeout)
+      m_jobsTimeoutCount++
+      job.setExecutingThread(null)
+      job.fail("Timedout")
+      job.release()
+      return workCounter
+
+    // Still has more to spawn move it to the back of the line
+    job.requeued()
+    m_jobQueue.add(job)
+    // log("Requeued " + job.getId())
+
+    return workCounter
 
   // --------------------------------------------------------------------------
   private function log(string message)
     if (enableLogging)
-      Log.debug("[TH:{0}] " + message.format(m_id))
+      Log.debug("[TH:{0}] ".format(m_name) + message)
 
 // ============================================================================
 public enum JobStatus
   WAITING     // In queue, hasn't started yet
   RUNNING     // In queue and has been processed at least once
   SUCCEEDED   // Out of queue, no more work to do
-  TIMEDOUT    // Out of queue, ran out of time
   CANCELED    // Out of queue, canceled by caller
   FAILED      // Out of queue, failed for some job-defined reason
 
@@ -246,8 +295,6 @@ public function JobStatus.toString() returns string
       return "Running"
     case SUCCEEDED
       return "Succeeded"
-    case TIMEDOUT
-      return "Timedout"
     case CANCELED
       return "Canceled"
     case FAILED
@@ -268,6 +315,8 @@ public abstract class Job
   private JobStatus m_status = WAITING
   private Event1<Job> m_completedEvent = null
   private bool m_completed = false
+  private int m_requeueCount = 0
+  private string m_errorMessage = ""
 
   use RefObject
 
@@ -285,6 +334,11 @@ public abstract class Job
 
   // --------------------------------------------------------------------------
   ondestroy
+
+    if (m_executingThread != null)
+      m_executingThread.remove(this)
+      m_executingThread = null
+
     if (m_completedEvent != null)
       destroy m_completedEvent
       m_completedEvent = null
@@ -298,6 +352,14 @@ public abstract class Job
     return m_id
 
   // --------------------------------------------------------------------------
+  function isCompleted() returns bool
+    return m_completed
+
+  // --------------------------------------------------------------------------
+  function getErrorMessage() returns string
+    return m_errorMessage
+
+  // --------------------------------------------------------------------------
   protected function getThread() returns Thread
     return m_executingThread
 
@@ -306,7 +368,7 @@ public abstract class Job
     if (value != null and m_executingThread != null)
       error("Job cannot be executed on more than one thread at a time!")
     m_executingThread = value
-    log("Executing thread: " + (value == null ? "none" : value.getId()))
+    log("Executing thread: " + (value == null ? "none" : value.getName()))
 
   // --------------------------------------------------------------------------
   function onCompleted() returns IEvent1<Job>
@@ -329,19 +391,20 @@ public abstract class Job
     return m_ct != null and m_ct.isCanceled()
 
   // --------------------------------------------------------------------------
-  function cancel()
-    if (m_ct == null)
-      m_ct = new CancellationToken().acquire()
-    m_ct.cancel()
-    log("Cancel requested")
-
-  // --------------------------------------------------------------------------
   function getStatus() returns JobStatus
     return m_status
 
   // --------------------------------------------------------------------------
   protected function setStatus(JobStatus value)
     m_status = value
+
+  // --------------------------------------------------------------------------
+  protected function requeued()
+    m_requeueCount++
+
+  // --------------------------------------------------------------------------
+  function getRequeueCount() returns int
+    return m_requeueCount
 
   // --------------------------------------------------------------------------
   abstract function next() returns int
@@ -353,7 +416,7 @@ public abstract class Job
   abstract function getDebuggerStateString() returns string
 
   // --------------------------------------------------------------------------
-  function complete()
+  protected function complete()
     if (m_completed)
       return
 
@@ -365,6 +428,24 @@ public abstract class Job
 
     if (m_completedEvent != null)
       m_completedEvent.call(this)
+
+  // --------------------------------------------------------------------------
+  function succeed()
+    m_errorMessage = ""
+    setStatus(JobStatus.SUCCEEDED)
+    complete()
+
+  // --------------------------------------------------------------------------
+  function fail(string message)
+    m_errorMessage = message
+    setStatus(JobStatus.FAILED)
+    complete()
+
+  // --------------------------------------------------------------------------
+  function cancel()
+    m_errorMessage = "Canceled"
+    setStatus(JobStatus.CANCELED)
+    complete()
 
   // --------------------------------------------------------------------------
   protected function completeInternal()
@@ -455,8 +536,20 @@ public function Thread.invoke(Action action) returns ActionJob
   return job
 
 // ============================================================================
+public function Thread.invoke(string id, Action action) returns ActionJob
+  let job = new ActionJob(id, action)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
 public function Thread.invoke(CancellationToken ct, Action action) returns ActionJob
   let job = new ActionJob(action)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+public function Thread.invoke(string id, CancellationToken ct, Action action) returns ActionJob
+  let job = new ActionJob(id, action)..setCancellationToken(ct)
   this.enqueue(job)
   return job
 
@@ -464,35 +557,36 @@ public function Thread.invoke(CancellationToken ct, Action action) returns Actio
 public class Action1Job<TArg1> extends Job
   private Action1<TArg1> m_action
   private TArg1 m_arg1
-  private int m_counter
+  private int m_index
+  private int m_count
 
   // --------------------------------------------------------------------------
   construct(Action1<TArg1> action, TArg1 arg1)
     super("Action1")
     m_action = action.acquire()
     m_arg1 = arg1
-    m_counter = 1
+    m_count = 1
 
   // --------------------------------------------------------------------------
   construct(string id, Action1<TArg1> action, TArg1 arg1)
     super(id)
     m_action = action.acquire()
     m_arg1 = arg1
-    m_counter = 1
+    m_count = 1
 
   // --------------------------------------------------------------------------
   construct(Action1<TArg1> action, TArg1 arg1, int timesToCall)
     super("Action1x" + timesToCall.toString())
     m_action = action.acquire()
     m_arg1 = arg1
-    m_counter = timesToCall
+    m_count = timesToCall
 
   // --------------------------------------------------------------------------
   construct(string id, Action1<TArg1> action, TArg1 arg1, int timesToCall)
     super(id)
     m_action = action.acquire()
     m_arg1 = arg1
-    m_counter = timesToCall
+    m_count = timesToCall
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -502,16 +596,16 @@ public class Action1Job<TArg1> extends Job
   // --------------------------------------------------------------------------
   override function next() returns int
     m_action.call(m_arg1)
-    m_counter--
+    m_index++
     return 1
 
   // --------------------------------------------------------------------------
   override function hasNext() returns bool
-    return m_counter > 0
+    return m_index < m_count
 
   // --------------------------------------------------------------------------
   override function getDebuggerStateString() returns string
-    return ""
+    return m_index.toString() + "/" + m_count.toString()
 
 // ============================================================================
 public function Thread.invoke<TArg1>(Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
@@ -520,8 +614,20 @@ public function Thread.invoke<TArg1>(Action1<TArg1> action, TArg1 arg1) returns 
   return actionJob
 
 // ============================================================================
+public function Thread.invoke<TArg1>(string id, Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
+  let actionJob = new Action1Job<TArg1>(id, action, arg1)
+  this.enqueue(actionJob)
+  return actionJob
+
+// ============================================================================
 public function Thread.invoke<TArg1>(CancellationToken ct, Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
   let actionJob = new Action1Job<TArg1>(action, arg1)..setCancellationToken(ct)
+  this.enqueue(actionJob)
+  return actionJob
+
+// ============================================================================
+public function Thread.invoke<TArg1>(string id, CancellationToken ct, Action1<TArg1> action, TArg1 arg1) returns Action1Job<TArg1>
+  let actionJob = new Action1Job<TArg1>(id, action, arg1)..setCancellationToken(ct)
   this.enqueue(actionJob)
   return actionJob
 
@@ -562,7 +668,7 @@ public class RepeatJob extends Job
 
   // --------------------------------------------------------------------------
   override function getDebuggerStateString() returns string
-    return ""
+    return m_index.toString() + "/" + m_count.toString()
 
 // ============================================================================
 public function Thread.repeat(int count, Action1<int> action) returns RepeatJob
@@ -571,8 +677,20 @@ public function Thread.repeat(int count, Action1<int> action) returns RepeatJob
   return job
 
 // ============================================================================
+public function Thread.repeat(string id, int count, Action1<int> action) returns RepeatJob
+  let job = new RepeatJob(id, count, action)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
 public function Thread.repeat(CancellationToken ct, int count, Action1<int> action) returns RepeatJob
   let job = new RepeatJob(count, action)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+public function Thread.repeat(string id, CancellationToken ct, int count, Action1<int> action) returns RepeatJob
+  let job = new RepeatJob(id, count, action)..setCancellationToken(ct)
   this.enqueue(job)
   return job
 
@@ -638,8 +756,20 @@ public function Thread.invokeFunc<TResult>(Func<TResult> func) returns FuncJob<T
   return job
 
 // ============================================================================
+public function Thread.invokeFunc<TResult>(string id, Func<TResult> func) returns FuncJob<TResult>
+  let job = new FuncJob(id, func)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
 public function Thread.invokeFunc<TResult>(CancellationToken ct, Func<TResult> func) returns FuncJob<TResult>
   let job = new FuncJob(func)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
+public function Thread.invokeFunc<TResult>(string id, CancellationToken ct, Func<TResult> func) returns FuncJob<TResult>
+  let job = new FuncJob(id, func)..setCancellationToken(ct)
   this.enqueue(job)
   return job
 
@@ -692,13 +822,22 @@ public function Thread.repeatWhile(Action1<int> action, Func<bool> condition) re
   return job
 
 // ============================================================================
+public function Thread.repeatWhile(string id, Action1<int> action, Func<bool> condition) returns WhileJob
+  let job = new WhileJob(id, action, condition)
+  this.enqueue(job)
+  return job
+
+// ============================================================================
 public function Thread.repeatWhile(CancellationToken ct, Action1<int> action, Func<bool> condition) returns WhileJob
   let job = new WhileJob(action, condition)..setCancellationToken(ct)
   this.enqueue(job)
   return job
 
 // ============================================================================
-// public function JobThread.waitAll(JobQueue)
+public function Thread.repeatWhile(string id, CancellationToken ct, Action1<int> action, Func<bool> condition) returns WhileJob
+  let job = new WhileJob(id, action, condition)..setCancellationToken(ct)
+  this.enqueue(job)
+  return job
 
 // ============================================================================
 public abstract class JobGroup extends Job
@@ -775,7 +914,7 @@ public class WhenAllJob extends JobGroup
 
   // --------------------------------------------------------------------------
   override function getDebuggerStateString() returns string
-    return "WhenAll({0}/{1})".format(m_jobsCompleted.toString(), getJobCount().toString())
+    return m_jobsCompleted.toString() + "/" + getJobCount().toString()
 
   // --------------------------------------------------------------------------
   override protected function onChildJobCompleted(Job childJob)
@@ -816,7 +955,7 @@ public class WhenAnyJob extends JobGroup
 
   // --------------------------------------------------------------------------
   override function getDebuggerStateString() returns string
-    return "WhenAny({0}/{1})".format(m_jobsCompleted.toString(), getJobCount().toString())
+    return ""
 
   // --------------------------------------------------------------------------
   override protected function onChildJobCompleted(Job childJob)
