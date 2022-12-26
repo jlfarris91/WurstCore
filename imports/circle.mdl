@@ -12,20 +12,20 @@ Model "" {
 	BoundsRadius 90.509754,
 }
 Sequences 3 {
-	Anim "Stand" {
-		Interval {416, 833},
-		MinimumExtent {-64, -64, 0},
-		MaximumExtent {64, 64, 0.25024},
-		BoundsRadius 90.509754,
-	}
 	Anim "Birth" {
 		Interval {1000, 1500},
 		MinimumExtent {-64, -64, 0},
 		MaximumExtent {64, 64, 0.25024},
 		BoundsRadius 90.509754,
 	}
+	Anim "Stand" {
+		Interval {3000, 3250},
+		MinimumExtent {-64, -64, 0},
+		MaximumExtent {64, 64, 0.25024},
+		BoundsRadius 90.509754,
+	}
 	Anim "Death" {
-		Interval {3000, 3500},
+		Interval {5000, 5500},
 		MinimumExtent {-64, -64, 0},
 		MaximumExtent {64, 64, 0.25024},
 		BoundsRadius 90.509754,
@@ -45,14 +45,15 @@ Materials 1 {
 			Unshaded,
 			TwoSided,
 			static TextureID 0,
-			Alpha 6 {
+			Alpha 7 {
 				Linear,
-				416 : 1,
-				833 : 1,
+				0 : 0,
 				1000 : 0,
 				1500 : 1,
 				3000 : 1,
-				3500 : 0,
+				3250 : 1,
+				5000 : 1,
+				5500 : 0,
 			}
 		}
 	}
