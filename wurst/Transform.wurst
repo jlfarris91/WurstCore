@@ -66,7 +66,7 @@ public function transform.separate(transform worldTransform) returns transform
 
 // ============================================================================
 public function transform.getRight() returns vec3
-  return this.rot * RIGHT3
+  return this.transformDir(RIGHT3)
 
 // ============================================================================
 public function transform.setRight(vec3 value) returns transform
@@ -76,7 +76,7 @@ public function transform.setRight(vec3 value) returns transform
 
 // ============================================================================
 public function transform.getUp() returns vec3
-  return this.rot * UP3
+  return this.transformDir(UP3)
 
 // ============================================================================
 public function transform.setUp(vec3 value) returns transform
@@ -86,13 +86,43 @@ public function transform.setUp(vec3 value) returns transform
 
 // ============================================================================
 public function transform.getForward() returns vec3
-  return this.rot * FORWARD3
+  return this.transformDir(FORWARD3)
 
 // ============================================================================
 public function transform.setForward(vec3 value) returns transform
   var transform = this
   transform.rot = quatFromToRotation(RIGHT3, value)
   return transform
+
+// ============================================================================
+/** Affected by position, scale and rotaiton */
+public function transform.transformPoint(vec2 point) returns vec2
+  return this.transformPoint(point.toVec3()).toVec2()
+
+// ============================================================================
+/** Affected by position, scale and rotaiton */
+public function transform.transformPoint(vec3 point) returns vec3
+  return this.rot * this.scale * point + this.pos
+
+// ============================================================================
+/** Not affected by position but is affected by scale */
+public function transform.transformVector(vec2 vec) returns vec2
+  return this.transformVector(vec.toVec3()).toVec2()
+
+// ============================================================================
+/** Not affected by position but is affected by scale */
+public function transform.transformVector(vec3 vec) returns vec3
+  return this.rot * this.scale * vec
+
+// ============================================================================
+/** Only affected by rotation */
+public function transform.transformDir(vec2 dir) returns vec2
+  return this.transformDir(dir.toVec3()).toVec2()
+
+// ============================================================================
+/** Only affected by rotation */
+public function transform.transformDir(vec3 dir) returns vec3
+  return this.rot * dir
 
 // ============================================================================
 public function transform.apply(effect fx)

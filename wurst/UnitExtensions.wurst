@@ -10,7 +10,7 @@ import HeroAge
 group g_tempGroup = CreateGroup()
 
 // ============================================================================
-public function unit.isStructure() returns bool
+public function unit.isBuilding() returns bool
   return this.isType(UNIT_TYPE_STRUCTURE)
 
 // ============================================================================
