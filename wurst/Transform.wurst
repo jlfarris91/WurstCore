@@ -3,9 +3,25 @@ import Quaternion
 import ErrorHandling
 import Vector
 
-public tuple transform(vec3 pos, vec3 pivot, quat rot, real scale)
+public tuple transform(vec3 pos, quat rot, real scale)
 
-public constant transform IDENTITYT = transform(ZERO3, ZERO3, IDENTITYQ, 1.0)
+public constant transform IDENTITYT = transform(ZERO3, IDENTITYQ, 1.0)
+
+// ============================================================================
+public function transform(vec2 pos) returns transform
+  return transform(pos.toVec3(), IDENTITYQ, 1.0)
+
+// ============================================================================
+public function transform(vec3 pos) returns transform
+  return transform(pos, IDENTITYQ, 1.0)
+
+// ============================================================================
+public function transform(vec2 pos, quat rotation) returns transform
+  return transform(pos.toVec3(), rotation, 1.0)
+
+// ============================================================================
+public function transform(vec3 pos, quat rotation) returns transform
+  return transform(pos, rotation, 1.0)
 
 // ============================================================================
 public function transform.op_mult(transform localTransform) returns transform
@@ -14,21 +30,39 @@ public function transform.op_mult(transform localTransform) returns transform
 // ============================================================================
 public function transform.concat(transform localTransform) returns transform
   let r = this.rot * localTransform.rot
-  var v = (localTransform.pivot + localTransform.pos - this.pivot) * this.scale
+  var v = localTransform.pos * this.scale
   v = v.rotate(this.rot)
-  let p = v + this.pivot + this.pos - localTransform.pivot
+  let p = v + this.pos
   let s = this.scale * localTransform.scale
-  return transform(p, localTransform.pivot, r, s)
+  return transform(p, r, s)
 
 // ============================================================================
 public function transform.separate(transform worldTransform) returns transform
   let scaleSafe = this.scale == 0.0 ? 1.0 : this.scale
   let s = worldTransform.scale / scaleSafe
   let r = this.rot.conj() * worldTransform.rot.norm()
-  var v = worldTransform.pos + worldTransform.pivot - this.pos - this.pivot
+  var v = worldTransform.pos - this.pos
   v = v.rotate(this.rot.inv()) / scaleSafe
-  let p = v + this.pivot - worldTransform.pivot
-  return transform(p, worldTransform.pivot, r, s)
+  return transform(v, r, s)
+
+// // ============================================================================
+// public function transform.concat(transform localTransform) returns transform
+//   let r = this.rot * localTransform.rot
+//   var v = (localTransform.pivot + localTransform.pos - this.pivot) * this.scale
+//   v = v.rotate(this.rot)
+//   let p = v + this.pivot + this.pos - localTransform.pivot
+//   let s = this.scale * localTransform.scale
+//   return transform(p, localTransform.pivot, r, s)
+
+// // ============================================================================
+// public function transform.separate(transform worldTransform) returns transform
+//   let scaleSafe = this.scale == 0.0 ? 1.0 : this.scale
+//   let s = worldTransform.scale / scaleSafe
+//   let r = this.rot.conj() * worldTransform.rot.norm()
+//   var v = worldTransform.pos + worldTransform.pivot - this.pos - this.pivot
+//   v = v.rotate(this.rot.inv()) / scaleSafe
+//   let p = v + this.pivot - worldTransform.pivot
+//   return transform(p, worldTransform.pivot, r, s)
 
 // ============================================================================
 public function transform.getRight() returns vec3
@@ -96,7 +130,7 @@ public function item.applyTransform(transform t)
 
 // ============================================================================
 public function unit.getTransform() returns transform
-  return transform(this.getPos3Fly(), ZERO3, eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
+  return transform(this.getPos3Fly(), eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
 
 // ============================================================================
 public function createUnit(player owner, int unitTypeId, transform worldTransform) returns unit
