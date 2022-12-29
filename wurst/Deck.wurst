@@ -1,0 +1,195 @@
+package Deck
+import WeightedSet
+import HashMap
+import ErrorHandling
+import SmartValue
+import RefObject
+
+// ============================================================================
+public class Card
+  private string m_id
+  private CardCategory m_category
+  private SmartValue m_cost
+
+  use RefObject
+
+  // --------------------------------------------------------------------------
+  construct(string id)
+    m_id = id
+    m_cost = new SmartValue()
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    destroy m_cost
+    m_cost = null
+
+  // --------------------------------------------------------------------------
+  function getId() returns string
+    return m_id
+
+  // --------------------------------------------------------------------------
+  function getCost() returns int
+    return m_cost.getIntValue()
+
+  // --------------------------------------------------------------------------
+  function getSmartCost() returns SmartValue
+    return m_cost
+  
+  // --------------------------------------------------------------------------
+  function setCost(int value)
+    m_cost.setBase(value)
+
+  // --------------------------------------------------------------------------
+  function getCategory() returns CardCategory
+    return m_category
+  
+  // --------------------------------------------------------------------------
+  function setCategory(CardCategory value)
+    m_category = value
+
+  // --------------------------------------------------------------------------
+  function canActivate() returns bool
+    return true
+
+// ============================================================================
+public class CardCategory
+  private Deck m_deck
+  private string m_id
+  private WeightedSet<Card> m_cards = new WeightedSet<Card>()
+  private Card m_mostExpensiveCard
+
+  // --------------------------------------------------------------------------
+  construct(Deck deck, string id)
+    m_deck = deck
+    m_id = id
+
+  // --------------------------------------------------------------------------
+  function getId() returns string
+    return m_id
+
+  // --------------------------------------------------------------------------
+  function getCards() returns WeightedSet<Card>
+    return m_cards
+
+  // --------------------------------------------------------------------------
+  function addCard(Card card, real weight)
+
+    let category = card.getCategory()
+    if (category != null)
+      category.removeCard(card)
+
+    m_cards.add(card, weight)
+    card.setCategory(this)
+
+    if (m_mostExpensiveCard == null or card.getCost() > m_mostExpensiveCard.getCost())
+      m_mostExpensiveCard = card
+      m_deck.updateMostExpensiveCard()
+
+  // --------------------------------------------------------------------------
+  function removeCard(Card card)
+    m_cards.remove(card)
+    card.setCategory(null)
+
+    if (m_mostExpensiveCard == card)
+      updateMostExpensiveCard()
+
+  // --------------------------------------------------------------------------
+  function getCardWeight(Card card) returns real
+    return m_cards.getWeight(card)
+
+  // --------------------------------------------------------------------------
+  function getCardRelativeWeight(Card card) returns real
+    return m_cards.getChance(card)
+
+  // --------------------------------------------------------------------------
+  function drawCard() returns Card
+    return m_cards.getRandom()
+
+  // --------------------------------------------------------------------------
+  function popCard() returns Card
+    return m_cards.popRandom()
+
+  // --------------------------------------------------------------------------
+  function getMostExpensiveCard() returns Card
+    return m_mostExpensiveCard
+
+  // --------------------------------------------------------------------------
+  private function updateMostExpensiveCard()
+    m_mostExpensiveCard = null
+    for otherCard in m_cards
+      if (m_mostExpensiveCard == null or otherCard.getCost() > m_mostExpensiveCard.getCost())
+        m_mostExpensiveCard = otherCard
+    m_deck.updateMostExpensiveCard()
+
+// ============================================================================
+public class Deck
+  private HashMap<string, CardCategory> m_categoryMap = new HashMap<string, CardCategory>()
+  private WeightedSet<CardCategory> m_categories = new WeightedSet<CardCategory>()
+  private Card m_mostExpensiveCard
+
+  use RefObject
+
+  // --------------------------------------------------------------------------
+  function addDefaultCategory() returns CardCategory
+    return addDefaultCategory(1.0)
+
+  // --------------------------------------------------------------------------
+  function addDefaultCategory(real weight) returns CardCategory
+    return addCategory("default", weight)
+
+  // --------------------------------------------------------------------------
+  function addCategory(string id, real weight) returns CardCategory
+
+    if (m_categoryMap.has(id))
+      error("Deck already has a category with id " + id)
+      return null
+
+    let category = new CardCategory(this, id)
+    m_categories.add(category, weight)
+    m_categoryMap.put(id, category)
+    return category
+
+  // --------------------------------------------------------------------------
+  function removeCategory(string id) returns bool
+    let category = getCategory(id)
+    if (category == null)
+      return false
+    m_categories.remove(category)
+    m_categoryMap.remove(category.getId())
+    return true
+
+  // --------------------------------------------------------------------------
+  function getCategories() returns WeightedSet<CardCategory>
+    return m_categories
+
+  // --------------------------------------------------------------------------
+  function getCategory(string id) returns CardCategory
+    return m_categoryMap.get(id)
+
+  // --------------------------------------------------------------------------
+  function getCategoryWeight(string id) returns real
+    let category = getCategory(id)
+    return m_categories.getWeight(category)
+
+  // --------------------------------------------------------------------------
+  function getCategoryRelativeWeight(string id) returns real
+    let category = getCategory(id)
+    return m_categories.getChance(category)
+
+  // --------------------------------------------------------------------------
+  function getMostExpensiveCard() returns Card
+    return m_mostExpensiveCard
+
+  // --------------------------------------------------------------------------
+  function drawCard() returns Card
+    let category = m_categories.getRandom()
+    return category.drawCard()
+
+  // --------------------------------------------------------------------------
+  protected function updateMostExpensiveCard()
+    m_mostExpensiveCard = null
+    for category in m_categories
+      let categoryCard = category.getMostExpensiveCard()
+      if (categoryCard != null)
+        if (m_mostExpensiveCard == null or categoryCard.getCost() > m_mostExpensiveCard.getCost())
+          m_mostExpensiveCard = categoryCard

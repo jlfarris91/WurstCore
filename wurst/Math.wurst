@@ -2,7 +2,7 @@ package Math
 
 rect g_WorldBounds
 constant real BOUNDARY_OFFSET = 512.0
-public constant int UNLIMITED = 99999
+public constant int UNLIMITED = INT_MAX
 public constant real EPSILON = 0.00001
 
 // ============================================================================
