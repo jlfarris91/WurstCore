@@ -1,7 +1,7 @@
 package RealTime
 import ClosureTimers
 
-int g_realTimeSeconds
+int g_realTimeSeconds = 0
 
 // ============================================================================
 public function getRealTimeSeconds() returns int
