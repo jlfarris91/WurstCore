@@ -264,7 +264,9 @@ public class Thread
 
     var workCounter = 0
 
+    // Job owner must have completed the job outside of the thread
     if (job.isCompleted())
+      job.setExecutingThread(null)
       job.release()
       return workCounter
 
