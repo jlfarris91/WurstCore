@@ -10,6 +10,7 @@ import Func
 import ErrorHandling
 import RefObject
 import HashList
+import Vector
 
 @configurable constant bool enableLogging = false
 @configurable constant int MAX_PROCESS_PER_TICK = 64
@@ -25,7 +26,6 @@ public class Thread
 
   private int m_id
   private string m_name
-  private LinkedList<Job> m_jobQueue = new LinkedList<Job>()
   private CallbackPeriodic m_processQueueCallback = null
   private bool m_enabled = false
   private int m_jobSubWorkCompletedCount = 0
@@ -36,6 +36,10 @@ public class Thread
   private int m_maxWorkPerTick = DEFAULT_MAX_WORK_PER_TICK
   private real m_tickInterval = DEFAULT_PROCESS_INTERVAL
   private Thread m_dependsOnThread = null
+
+  private Vector<Job> m_readQueue = new Vector<Job>(16)
+  private Vector<Job> m_writeQueue = new Vector<Job>(16)
+  private int m_readPosition = 0
 
   static Thread defaultQueue = new Thread("default")..setEnabled(true)
   
@@ -56,6 +60,12 @@ public class Thread
 
     g_allThreads.remove(this)
     g_runningThreads.remove(this)
+
+    destroy m_writeQueue
+    m_writeQueue = null
+
+    destroy m_readQueue
+    m_readQueue = null
 
   // --------------------------------------------------------------------------
   static function getStaticThreadIdGen() returns int
@@ -79,7 +89,10 @@ public class Thread
 
   // --------------------------------------------------------------------------
   function setEnabled(bool enabled)
-    m_enabled = enabled
+    if (m_enabled != enabled)
+      m_enabled = enabled
+      if (not enabled)
+        stopProcessing()
 
   // --------------------------------------------------------------------------
   function getTickInterval() returns real
@@ -89,8 +102,8 @@ public class Thread
   function setTickInterval(real value)
     m_tickInterval = value
     if (m_processQueueCallback != null)
-      stopProcessQueue()
-      startProcessQueue()
+      stopProcessing()
+      startProcessing()
 
   // --------------------------------------------------------------------------
   function getMaxWorkPerTick() returns int
@@ -120,9 +133,9 @@ public class Thread
     log("Enqueued job " + job.getId())
 
     job.acquire()
-    m_jobQueue.add(job)
+    m_writeQueue.add(job)
     job.setExecutingThread(this)
-    startProcessQueue()
+    startProcessing()
 
   // --------------------------------------------------------------------------
   function enqueue(CancellationToken ct, Job job)
@@ -130,14 +143,14 @@ public class Thread
     enqueue(job)
 
   // --------------------------------------------------------------------------
-  private function startProcessQueue()
-    if (m_processQueueCallback == null)
-      m_processQueueCallback = doPeriodically(m_tickInterval, cb -> processQueue())
+  private function startProcessing()
+    if (m_processQueueCallback == null and m_enabled)
+      m_processQueueCallback = doPeriodically(m_tickInterval, cb -> processReadQueue())
       g_runningThreads.add(this)
       log("Started processing queue")
     
   // --------------------------------------------------------------------------
-  private function stopProcessQueue()
+  private function stopProcessing()
     if (m_processQueueCallback != null)
       destroy m_processQueueCallback
       m_processQueueCallback = null
@@ -146,17 +159,17 @@ public class Thread
 
   // --------------------------------------------------------------------------
   function remove(Job job) returns bool
-    let removed = m_jobQueue.remove(job)
+    let removed = m_readQueue.emplaceRemove(job) or m_writeQueue.emplaceRemove(job)
     if (removed)
       job.release()
       log("Removed job " + job.getId())
-    if (m_jobQueue.isEmpty())
-      stopProcessQueue()
+    if (getRemainingWorkCount() == 0)
+      stopProcessing()
     return removed
 
   // --------------------------------------------------------------------------
   function getRemainingWorkCount() returns int
-    return m_jobQueue.size()
+    return max(m_readQueue.size() - m_readPosition, 0) + m_writeQueue.size()
 
   // --------------------------------------------------------------------------
   function getTotalSubWorkCompletedCount() returns int
@@ -179,21 +192,28 @@ public class Thread
     return m_jobsTimeoutCount
 
   // --------------------------------------------------------------------------
-  function getQueue() returns LinkedList<Job>
-    return m_jobQueue
+  /**Do NOT modify this vector. May contain null entries.*/
+  function getReadQueue() returns Vector<Job>
+    return m_readQueue
 
   // --------------------------------------------------------------------------
-  private function processQueue()
-    
-    if (not m_enabled)
+  /**Do NOT modify this vector. May contain null entries.*/
+  function getWriteQueue() returns Vector<Job>
+    return m_writeQueue
+
+  // --------------------------------------------------------------------------
+  protected function processReadQueue()
+
+    if (getRemainingWorkCount() == 0)
+      stopProcessing()
       return
 
-    if (m_jobQueue.isEmpty())
-      stopProcessQueue()
-      return
+    // First time through the function after starting to process the read queue
+    // the read queue will be empty and if we get here then we know that the
+    // write queue is not empty, so do the initial swap.
+    swapQueuesIfNecessary()
 
-    if (m_dependsOnThread != null and
-        m_dependsOnThread.getRemainingWorkCount() > 0)
+    if (m_dependsOnThread != null and m_dependsOnThread.getRemainingWorkCount() > 0)
       Trace.trace("Work.waitDependency")
       return
 
@@ -203,20 +223,41 @@ public class Thread
     
     var workCounter = 0
     var processCounter = 0
+    let readQueueSize = m_readQueue.size()
 
-    while (not m_jobQueue.isEmpty()
+    while (m_readPosition < readQueueSize
            and workCounter < m_maxWorkPerTick
            and processCounter < MAX_PROCESS_PER_TICK)
     //{
-      processCounter++
-      workCounter += processJob(m_jobQueue.dequeue())
+      // Removing a job from the read queue replaces the entry with null using
+      // Vector.emplaceRemove to avoid costly Vector.remove call.
+      // So, job can be null here and that's okay.
+      let job = m_readQueue.get(m_readPosition)
+      if (job != null)
+        processCounter++
+        workCounter += processJob(job)
+
+      m_readPosition++
     //}
+
+    if (getRemainingWorkCount() == 0)
+      stopProcessing()
     
     Trace.trace("Work.subWork", workCounter)
     Trace.trace("Work.items", processCounter)
 
-    if (m_jobQueue.isEmpty())
-      stopProcessQueue()
+  // --------------------------------------------------------------------------
+  private function swapQueuesIfNecessary()
+
+    if (m_readPosition == m_readQueue.size())
+    //{
+      let tempQueue = m_readQueue
+      m_readQueue = m_writeQueue
+      m_writeQueue = tempQueue
+      
+      m_writeQueue.clear()
+      m_readPosition = 0
+    //}
 
   // --------------------------------------------------------------------------
   private function processJob(Job job) returns int
@@ -266,10 +307,10 @@ public class Thread
       job.release()
       return workCounter
 
-    // Still has more to spawn move it to the back of the line
+    // Round robin strategy
+    // The job still has more work to do so move it to the back of the inactive queue
     job.requeued()
-    m_jobQueue.add(job)
-    // log("Requeued " + job.getId())
+    m_writeQueue.add(job)
 
     return workCounter
 
@@ -413,7 +454,8 @@ public abstract class Job
   abstract function hasNext() returns bool
 
   // --------------------------------------------------------------------------
-  abstract function getDebuggerStateString() returns string
+  function getDebuggerStateString() returns string
+    return m_id
 
   // --------------------------------------------------------------------------
   protected function complete()
@@ -524,10 +566,6 @@ public class ActionJob extends Job
   // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_counter > 0
-
-  // --------------------------------------------------------------------------
-  override function getDebuggerStateString() returns string
-    return ""
 
 // ============================================================================
 public function Thread.invoke(Action action) returns ActionJob
@@ -745,10 +783,6 @@ public class FuncJob<TResult> extends Job
   override function hasNext() returns bool
     return not m_called
 
-  // --------------------------------------------------------------------------
-  override function getDebuggerStateString() returns string
-    return ""
-
 // ============================================================================
 public function Thread.invokeFunc<TResult>(Func<TResult> func) returns FuncJob<TResult>
   let job = new FuncJob(func)
@@ -810,10 +844,6 @@ public class WhileJob extends Job
   // --------------------------------------------------------------------------
   override function hasNext() returns bool
     return m_condition.call()
-
-  // --------------------------------------------------------------------------
-  override function getDebuggerStateString() returns string
-    return ""
 
 // ============================================================================
 public function Thread.repeatWhile(Action1<int> action, Func<bool> condition) returns WhileJob
@@ -954,10 +984,123 @@ public class WhenAnyJob extends JobGroup
     return m_jobsCompleted < 1
 
   // --------------------------------------------------------------------------
-  override function getDebuggerStateString() returns string
-    return ""
-
-  // --------------------------------------------------------------------------
   override protected function onChildJobCompleted(Job childJob)
     if (childJob.getStatus() == m_filter)
       m_jobsCompleted++
+
+// ============================================================================
+class TestJob extends Job
+
+  int nextValue = 0
+  bool hasNextValue = true
+
+  // --------------------------------------------------------------------------
+  construct()
+    super("TestJob")
+
+  // --------------------------------------------------------------------------
+  construct(string id)
+    super(id)
+
+  // --------------------------------------------------------------------------
+  override function next() returns int
+    return nextValue
+
+  // --------------------------------------------------------------------------
+  override function hasNext() returns bool
+    return hasNextValue
+
+// ============================================================================
+@test function thread_enqueue_adds_jobs_to_write_queue()
+
+  let thread = new Thread("TestThread")
+
+  Job array[3] jobs
+
+  for i = 0 to 2
+    jobs[i] = new TestJob("TestJob" + i.toString())
+    thread.enqueue(jobs[i])
+
+  thread.getReadQueue().isEmpty().assertTrue()
+  thread.getWriteQueue().size().assertEquals(3)
+
+  for i = 0 to 2
+    thread.getWriteQueue().indexOf(jobs[i]).assertEquals(i)
+
+// ============================================================================
+@test function thread_processReadQueue_swaps_read_write_queues_when_read_queue_is_empty()
+
+  let thread = new Thread("TestThread")
+  ..setMaxWorkPerTick(1)
+
+  Job array[3] jobs
+
+  for i = 0 to 2
+    jobs[i] = new TestJob("TestJob" + i.toString())
+    thread.enqueue(jobs[i])
+
+  let writeQueue1 = thread.getWriteQueue()
+  let readQueue1 = thread.getReadQueue()
+
+  // Process the queue once
+  thread.processReadQueue()
+
+  let writeQueue2 = thread.getWriteQueue()
+  let readQueue2 = thread.getReadQueue()
+
+  // Should have swapped queues since the read queue was empty
+  assertTrue(writeQueue2 == readQueue1)
+  assertTrue(readQueue2 == writeQueue1)
+
+// ============================================================================
+@test function thread_processReadQueue_requeues_job_when_hasNext_is_true()
+
+  let thread = new Thread("TestThread")
+  ..setMaxWorkPerTick(1)
+
+  let job = new TestJob()
+  job.hasNextValue = true
+
+  thread.enqueue(job)
+
+  // Process the queue once
+  thread.processReadQueue()
+
+  // Should have been automatically requeued
+  thread.getWriteQueue().contains(job).assertTrue()
+
+// ============================================================================
+@test function asdf()
+
+  let thread = new Thread("TestThread")
+  ..setMaxWorkPerTick(1)
+
+  let job = new TestJob()
+
+  job.nextValue = 1
+  job.hasNextValue = true
+
+  // Writes to the write queue
+  thread.enqueue(job)
+
+  let writeQueue1 = thread.getWriteQueue()
+  let readQueue1 = thread.getReadQueue()
+
+  writeQueue1.size().assertEquals(1)
+  thread.getRemainingWorkCount().assertEquals(1)
+
+  // Process our job once
+  thread.processReadQueue()
+
+  let writeQueue2 = thread.getWriteQueue()
+  let readQueue2 = thread.getReadQueue()
+
+  // Should have swapped queues to process read queue
+  assertTrue(writeQueue2 == readQueue1)
+  assertTrue(readQueue2 == writeQueue1)
+
+  // We should have processed our one job once
+  thread.getRemainingWorkCount().assertEquals(1)
+
+  // Our job should have been requeued since hasNextValue was true
+  writeQueue2.contains(job).assertTrue()

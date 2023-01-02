@@ -24,8 +24,6 @@ public module RefObject
   ondestroy
     if (m_refs > 0)
       error("RefObject destroyed while still referenced ({0})".format(m_refs.toString()))
-    if (m_refs < 0)
-      error("RefObject get-release mismatch ({0})".format(m_refs.toString()))
 
   // --------------------------------------------------------------------------
   function acquire() returns thistype
@@ -35,9 +33,11 @@ public module RefObject
 
   // --------------------------------------------------------------------------
   function release()
+    if (m_refs == 0)
+      error("RefObject release called more times than acquire ({0})".format(m_refs.toString()))
     m_refs--
     // Log.info("[{0}] m_refs--: {1}".format(debugName, m_refs.toString()))
-    if (m_refs <= 0)
+    if (m_refs == 0)
       destroy this
 
   // --------------------------------------------------------------------------
