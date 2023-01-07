@@ -4,6 +4,7 @@ import HashMap
 import ErrorHandling
 import SmartValue
 import RefObject
+import Vector
 
 // ============================================================================
 public class Card
@@ -166,15 +167,11 @@ public class Deck
   function getCategory(string id) returns CardCategory
     return m_categoryMap.get(id)
 
-  // --------------------------------------------------------------------------
-  function getCategoryWeight(string id) returns real
-    let category = getCategory(id)
-    return m_categories.getWeight(category)
-
-  // --------------------------------------------------------------------------
-  function getCategoryRelativeWeight(string id) returns real
-    let category = getCategory(id)
-    return m_categories.getChance(category)
+  // ----------------------------------------------------------------------------
+  function getCardRelativeWeight(CardCategory category, Card card) returns real
+    let categoryRelativeWeight = m_categories.getChance(category)
+    let cardRelativeWeight = category.getCardRelativeWeight(card)
+    return categoryRelativeWeight * cardRelativeWeight
 
   // --------------------------------------------------------------------------
   function getMostExpensiveCard() returns Card
@@ -185,6 +182,10 @@ public class Deck
     let category = m_categories.getRandom()
     return category.drawCard()
 
+  // ----------------------------------------------------------------------------
+  function createInstance() returns DeckInstance
+    return new DeckInstance(this)
+
   // --------------------------------------------------------------------------
   protected function updateMostExpensiveCard()
     m_mostExpensiveCard = null
@@ -193,3 +194,35 @@ public class Deck
       if (categoryCard != null)
         if (m_mostExpensiveCard == null or categoryCard.getCost() > m_mostExpensiveCard.getCost())
           m_mostExpensiveCard = categoryCard
+
+// ============================================================================
+public class DeckInstance
+  private Deck m_deck
+  private WeightedSet<Card> m_cards
+
+  // ----------------------------------------------------------------------------
+  construct(Deck deck)
+    m_deck = deck.acquire()
+    m_cards = new WeightedSet<Card>()
+
+    let categories = m_deck.getCategories()
+    for cat in categories
+      for card in cat.getCards()
+        let weight = m_deck.getCardRelativeWeight(cat, card)
+        m_cards.add(card, weight)
+
+  // ----------------------------------------------------------------------------
+  ondestroy
+    destroy m_cards
+    m_cards = null
+
+    m_deck.release()
+    m_deck = null
+
+  // ----------------------------------------------------------------------------
+  function drawCard() returns Card
+    return m_cards.popRandom()
+  
+  // ----------------------------------------------------------------------------
+  function isEmpty() returns bool
+    return m_cards.isEmpty()
