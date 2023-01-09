@@ -108,6 +108,8 @@ public class WeightedSet<T>
   // --------------------------------------------------------------------------
   /** Returns a random element from the set */
   function getRandom() returns T
+    if (isEmpty())
+      return null
     let entry = getEntry(GetRandomReal(0, this.totalWeight))
     return entry != null ? entry.elem : null
 

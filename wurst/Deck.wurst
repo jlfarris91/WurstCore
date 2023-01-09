@@ -10,6 +10,7 @@ public class Card
   private string m_id
   private CardCategory m_category
   private SmartValue m_cost
+  private real m_weight = 1.0
 
   use RefObject
 
@@ -38,6 +39,14 @@ public class Card
   // --------------------------------------------------------------------------
   function setCost(int value)
     m_cost.setBase(value)
+
+  // ----------------------------------------------------------------------------
+  function getWeight() returns real
+    return m_weight
+  
+  // ----------------------------------------------------------------------------
+  function setWeight(real value)
+    m_weight = value
 
   // --------------------------------------------------------------------------
   function getCategory() returns CardCategory
@@ -72,13 +81,13 @@ public class CardCategory
     return m_cards
 
   // --------------------------------------------------------------------------
-  function addCard(Card card, real weight)
+  function addCard(Card card)
 
     let category = card.getCategory()
     if (category != null)
       category.removeCard(card)
 
-    m_cards.add(card, weight)
+    m_cards.add(card, card.getWeight())
     card.setCategory(this)
 
     if (m_mostExpensiveCard == null or card.getCost() > m_mostExpensiveCard.getCost())
@@ -221,6 +230,10 @@ public class DeckInstance
   // ----------------------------------------------------------------------------
   function drawCard() returns Card
     return m_cards.popRandom()
+
+  // ----------------------------------------------------------------------------
+  function add(Card card)
+    m_cards.add(card, card.getWeight())
   
   // ----------------------------------------------------------------------------
   function isEmpty() returns bool
