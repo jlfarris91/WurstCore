@@ -4,7 +4,6 @@ import HashMap
 import ErrorHandling
 import SmartValue
 import RefObject
-import Vector
 
 // ============================================================================
 public class Card
