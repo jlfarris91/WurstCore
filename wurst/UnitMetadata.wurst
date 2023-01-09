@@ -1,14 +1,13 @@
 package UnitMetadata
-import public Composition
+import Composition
 import LinkedList
 import ErrorHandling
 import ClosureEvents
-import initlater UnitComponent
 import UnitExtensions
 import UnitIndexer
-import Meta
 import Preload
 import Events
+import public Dispatcher
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
@@ -23,7 +22,6 @@ function logDebug(string message)
     Log.debug(message)
 
 // ============================================================================
-public constant int typeId_IUnitMetadata = Meta.reserveInterface("UnitMetadata.IUnitMetadata")
 public interface IUnitMetadata extends IComposite
   function getUnit() returns unit
   function attach(unit u)
@@ -36,6 +34,82 @@ public interface IUnitMetadataFactory
 // ============================================================================
 public interface IUnitComponentGenerator
   function generateComponents(IUnitMetadata metadata) returns bool
+
+// ============================================================================
+public class UnitComponentCreationContext
+  IUnitMetadata owner
+
+// ============================================================================
+public abstract class UnitComponent extends Component implements IDispatcher
+  private IUnitMetadata m_owner
+  private bool m_disableOnDeath = true
+
+  // --------------------------------------------------------------------------
+  construct(IUnitMetadata ownerUnit)
+    super(ownerUnit)
+    m_owner = ownerUnit
+
+  // --------------------------------------------------------------------------
+  override function getOwner() returns IUnitMetadata
+    return m_owner
+
+  // --------------------------------------------------------------------------
+  function getOwnerUnit() returns unit
+    return m_owner.getUnit()
+
+  // --------------------------------------------------------------------------
+  function getOwnerPlayer() returns player
+    return getOwnerUnit().getOwner()
+
+  // --------------------------------------------------------------------------
+  function setDisableOnDeath(bool disableOnDeath)
+    m_disableOnDeath = disableOnDeath
+
+  // --------------------------------------------------------------------------
+  function getDisableOnDeath() returns bool
+    return m_disableOnDeath
+
+  // --------------------------------------------------------------------------
+  function onOwnerKilled()
+    if (m_disableOnDeath)
+      disable()
+
+  // --------------------------------------------------------------------------
+  function onOwnerRevived()
+    enable()
+
+  // --------------------------------------------------------------------------
+  function onOwnerUpgraded()
+    skip
+
+  // --------------------------------------------------------------------------
+  function onUnitChanged(unit _oldUnit, unit _newUnit)
+    skip
+
+  // --------------------------------------------------------------------------
+  override function getDispatcherContext(bool requireEnabled) returns DispatcherContext
+    return new UnitComponentDispatcher(getOwnerUnit(), this.typeId, requireEnabled)
+
+// ============================================================================
+class UnitComponentDispatcher extends DispatcherContext
+  private unit m_ownerUnit
+  private int m_compTypeId
+  private bool m_requireEnabled
+
+  // --------------------------------------------------------------------------
+  construct(unit ownerUnit, int compTypeId, bool requireEnabled)
+    m_ownerUnit = ownerUnit
+    m_compTypeId = compTypeId
+    m_requireEnabled = requireEnabled
+
+  // --------------------------------------------------------------------------
+  override function canDispatch() returns bool
+    if (m_ownerUnit != null and m_ownerUnit.isAlive())
+      let comp = m_ownerUnit.getComponent(m_compTypeId)
+      if (comp != null)
+        if (not m_requireEnabled or comp.getEnabled())
+          return true
+    return false
 
 // ============================================================================
 public class UnitMetadata extends Composable implements IUnitMetadata
@@ -442,8 +516,6 @@ public function isIgnoringIndexing(player p) returns bool
 
 // ============================================================================
 init
-  Meta.register("UnitMetadata", (registrar) -> registerMetadata(registrar))
-
   g_unitMetadataFactories = new LinkedList<IUnitMetadataFactory>()
   g_unitComponentGenerators = new LinkedList<IUnitComponentGenerator>()
 
@@ -456,10 +528,3 @@ init
 
   onUnitIndex(() -> onUnitIndexed(getIndexingUnit()))
   onUnitDeindex(() -> onUnitDeindexed(getIndexingUnit()))
-
-///////////////////////////////////////////////////////////////////////////////
-function registerMetadata(MetaRegistrar registrar)
-  registrar.registerInterface(typeId_IUnitMetadata, "UnitMetadata.IUnitMetadata")..registerInterface(typeId_IComposite).getTypeId()
-  registrar.registerClass(UnitMetadata.typeId)..registerInterface(typeId_IUnitMetadata)
-///////////////////////////////////////////////////////////////////////////////
-  

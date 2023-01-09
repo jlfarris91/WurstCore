@@ -1,0 +1,20 @@
+package PlayerMetadataMeta
+import PlayerMetadata
+import Meta
+
+public constant int typeId_IPlayerMetadata = Meta.reserveInterface("PlayerMetadata.IPlayerMetadata")
+public constant int typeId_PlayerComponent = Meta.reserveAbstractClass("PlayerComponent.PlayerComponent")
+
+// ============================================================================
+init
+  Meta.register("PlayerMetadata", (registrar) -> registerMetadata(registrar))
+
+///////////////////////////////////////////////////////////////////////////////
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerClass(PlayerComponentCreationContext.typeId)
+  registrar.registerAbstractClass(typeId_PlayerComponent, "PlayerComponent.PlayerComponent")
+    ..setBase(typeId_Component)
+    ..registerDestructor((object object) -> destroy object.cast<PlayerComponent>(typeId_PlayerComponent))
+  registrar.registerInterface(typeId_IPlayerMetadata, "PlayerMetadata.IPlayerMetadata")..registerInterface(typeId_IComposite)
+  registrar.registerClass(PlayerMetadata.typeId)..setBase(Composable.typeId)..registerInterface(typeId_IPlayerMetadata)
+///////////////////////////////////////////////////////////////////////////////

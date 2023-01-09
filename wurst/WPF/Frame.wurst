@@ -5,7 +5,7 @@ import HashMap
 import LinkedList
 import Layout
 import Action
-import Object
+import Meta
 import Flags
 import ClosureTimers
 import ErrorHandling

@@ -1,14 +1,13 @@
 package Serializers
 import Serialization
 import Dictionary
-import Object
+import Meta
 import UnitIds
-import UnitComponent
+import UnitMetadata
 import ObjectIds
 import ByteBuffer
 import BinaryReaderWriter
 import PlayerMetadata
-import PlayerComponent
 
 // ============================================================================
 public class DictionarySerializer implements ISerializerTyped<Dictionary>

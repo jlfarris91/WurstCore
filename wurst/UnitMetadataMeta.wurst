@@ -1,0 +1,20 @@
+package UnitMetadataMeta
+import UnitMetadata
+import Meta
+
+public constant int typeId_IUnitMetadata = Meta.reserveInterface("UnitMetadata.IUnitMetadata")
+public constant int typeId_UnitComponent = Meta.reserveAbstractClass("UnitComponent.UnitComponent")
+
+// ============================================================================
+init
+  Meta.register("UnitMetadata", (registrar) -> registerMetadata(registrar))
+
+///////////////////////////////////////////////////////////////////////////////
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerAbstractClass(typeId_UnitComponent, "UnitComponent.UnitComponent")
+    ..setBase(typeId_Component)
+    ..registerDestructor((object object) -> destroy object.cast<UnitComponent>(typeId_Component))
+  registrar.registerClass(UnitComponentCreationContext.typeId)
+  registrar.registerInterface(typeId_IUnitMetadata, "UnitMetadata.IUnitMetadata")..registerInterface(typeId_IComposite).getTypeId()
+  registrar.registerClass(UnitMetadata.typeId)..registerInterface(typeId_IUnitMetadata)
+///////////////////////////////////////////////////////////////////////////////

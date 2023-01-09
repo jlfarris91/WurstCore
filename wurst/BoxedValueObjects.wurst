@@ -1,5 +1,4 @@
 package BoxedValueObjects
-import Meta
 
 // ============================================================================
 public class String
@@ -100,16 +99,3 @@ public class Vec2
   // --------------------------------------------------------------------------
   function setValue(vec2 value)
     m_value = value
-
-// ============================================================================
-init
-  Meta.register("BoxedValueObjects", (registrar) -> registerMetadata(registrar))
-
-///////////////////////////////////////////////////////////////////////////////
-function registerMetadata(MetaRegistrar registrar)
-  registrar.registerClass(String.typeId)
-  registrar.registerClass(Integer.typeId)
-  registrar.registerClass(Real.typeId)
-  registrar.registerClass(Bool.typeId)
-  registrar.registerClass(Vec2.typeId)
-///////////////////////////////////////////////////////////////////////////////

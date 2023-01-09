@@ -1,12 +1,82 @@
-package Composable
-import IComposite
-import IComponent
+package Composition
 import Meta
+import Events
 import LinkedList
 import HashMap
 import ClosureTimers
 import ErrorHandling
-import Events
+
+// ============================================================================
+public constant int typeId_IComponent = Meta.reserveInterface("IComponent.IComponent")
+public interface IComponent
+  function getOwner() returns IComposite
+  function setEnabled(bool enabled)
+  function getEnabled() returns bool
+
+// ============================================================================
+public constant int typeId_Component = Meta.reserveAbstractClass("Component.Component")
+public abstract class Component implements IComponent
+  private IComposite m_owner
+  private bool m_enabled
+
+  // --------------------------------------------------------------------------
+  construct(IComposite owner)
+    m_owner = owner
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    setEnabled(false)
+
+  // --------------------------------------------------------------------------
+  override function getOwner() returns IComposite
+    return m_owner
+
+  // --------------------------------------------------------------------------
+  override function setEnabled(bool enabled)
+    if (m_enabled != enabled)
+      if (enabled)
+        onEnabled()
+      else
+        onDisabled()
+      m_enabled = enabled
+
+  // --------------------------------------------------------------------------
+  override function getEnabled() returns bool
+    return m_enabled
+
+  // --------------------------------------------------------------------------
+  function enable()
+    setEnabled(true)
+
+  // --------------------------------------------------------------------------
+  function disable()
+    setEnabled(false)
+
+  // --------------------------------------------------------------------------
+  protected function onEnabled()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function onDisabled()
+    skip
+
+  // --------------------------------------------------------------------------
+  protected function removeThis()
+    m_owner.removeComponent(this)
+
+// ============================================================================
+public constant int typeId_IComposite = Meta.reserveInterface("IComposite.IComposite")
+public interface IComposite
+  function onComponentAdded() returns IEvent2<IComposite, IComponent>
+  function onComponentRemoved() returns IEvent2<IComposite, IComponent>
+  function getComponent(int componentTypeId) returns IComponent
+  function addComponent(IComponent component) returns IComponent
+  function addComponent(IComponent component, bool startEnabled) returns IComponent
+  function removeComponent(IComponent component) returns bool
+
+// ============================================================================
+public function IComposite.hasComponent(int componentTypeId) returns bool
+  return this.hasComponent(componentTypeId)
 
 // ============================================================================
 public class Composable implements IComposite
@@ -105,5 +175,12 @@ public class Composable implements IComposite
 
 // ============================================================================
 init
-  Meta.register("Composable") registrar ->
-    registrar.registerClass(Composable.typeId)..registerInterface(typeId_IComposite)
+  Meta.register("Composition", (registrar) -> registerMetadata(registrar))
+
+///////////////////////////////////////////////////////////////////////////////
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerInterface(typeId_IComponent, "IComponent.IComponent")
+  registrar.registerAbstractClass(typeId_Component, "Component.Component")..registerInterface(typeId_IComponent)
+  registrar.registerInterface(typeId_IComposite, "IComposite.IComposite")
+  registrar.registerClass(Composable.typeId)..registerInterface(typeId_IComposite)
+///////////////////////////////////////////////////////////////////////////////

@@ -8,7 +8,6 @@ import Events
 import HashMap
 import Action
 import Execute
-import Object
 import ClosureTimers
 import CancellableClosureTimers
 import Observable
@@ -28,12 +27,12 @@ public class Task
   private LinkedList<Action1<Task>> m_actions     // lazily constructed
   private LinkedList<_handle> m_handles           // lazily constructed
   private Event1<Task> m_completed = null         // lazily constructed
-  private object m_userData = NULL
+  private int m_userData = 0
   private _handle m_cancellationTokenCanceledHandler = INVALID_HANDLE
   private bool m_destroyOnCompletion = false
   
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct)
     m_definition = definition
     m_parent = parent
     m_userData = userData
@@ -74,10 +73,10 @@ public class Task
 
   // --------------------------------------------------------------------------
   function getUserData<T>() returns T
-    return m_userData.castUnsafe<T>()
+    return m_userData castTo T
 
   // --------------------------------------------------------------------------
-  function getUserDataObject() returns object
+  function getUserDataInt() returns int
     return m_userData
 
   // --------------------------------------------------------------------------
@@ -219,14 +218,14 @@ public class Task
 
   // --------------------------------------------------------------------------
   static function run(CancellationToken ct, Action1<Task> action) returns Task
-    return run(ct, NULL, action)
+    return run(ct, 0, action)
 
   // --------------------------------------------------------------------------
-  static function run(CancellationToken ct, object userData, Action1<Task> action) returns Task
+  static function run(CancellationToken ct, int userData, Action1<Task> action) returns Task
     return run(ct, "", userData, action)
 
   // --------------------------------------------------------------------------
-  static function run(CancellationToken ct, string label, object userData, Action1<Task> action) returns Task
+  static function run(CancellationToken ct, string label, int userData, Action1<Task> action) returns Task
     return runOneOffDefinition(new ActionTaskDefinition(null, label, action), ct, userData)
 
   // --------------------------------------------------------------------------
@@ -239,22 +238,22 @@ public class Task
 
   // --------------------------------------------------------------------------
   static function run<TUserData>(CancellationToken ct, string label, TUserData userData, Action2<Task, TUserData> action) returns Task
-    return runOneOffDefinition(new ActionTask2Definition(null, label, action), ct, toObjectUnsafe<TUserData>(userData))
+    return runOneOffDefinition(new ActionTask2Definition(null, label, action), ct, userData castTo int)
 
   // --------------------------------------------------------------------------
   static function wait(CancellationToken ct, string label, real seconds) returns Task
-    return runOneOffDefinition(new WaitTaskDefinition(null, label, seconds), ct, NULL)
+    return runOneOffDefinition(new WaitTaskDefinition(null, label, seconds), ct, 0)
 
   // --------------------------------------------------------------------------
-  static function waitFor(object userData, real pollTime, Func1<Task, bool> predicate) returns Task
+  static function waitFor(int userData, real pollTime, Func1<Task, bool> predicate) returns Task
     return waitFor("", userData, pollTime, predicate)
 
   // --------------------------------------------------------------------------
-  static function waitFor(string label, object userData, real pollTime, Func1<Task, bool> predicate) returns Task
+  static function waitFor(string label, int userData, real pollTime, Func1<Task, bool> predicate) returns Task
     return waitFor(null, label, userData, pollTime, predicate)
 
   // --------------------------------------------------------------------------
-  static function waitFor(CancellationToken ct, string label, object userData, real pollTime, Func1<Task, bool> predicate) returns Task
+  static function waitFor(CancellationToken ct, string label, int userData, real pollTime, Func1<Task, bool> predicate) returns Task
     return runOneOffDefinition(new WaitForTaskDefinition(null, label, pollTime, predicate), ct, userData)
 
   // --------------------------------------------------------------------------
@@ -267,25 +266,25 @@ public class Task
 
   // --------------------------------------------------------------------------
   static function waitFor<TUserData>(CancellationToken ct, string label, TUserData userData, real pollTime, Func2<Task, TUserData, bool> predicate) returns Task
-    return runOneOffDefinition(new WaitForTask2Definition<TUserData>(null, label, pollTime, predicate), ct, toObjectUnsafe<TUserData>(userData))
+    return runOneOffDefinition(new WaitForTask2Definition<TUserData>(null, label, pollTime, predicate), ct, userData castTo int)
 
   // --------------------------------------------------------------------------
-  static function executeWhile(CancellationToken ct, string label, object userData, real time, int iterations, Func1<Task, bool> action) returns Task
+  static function executeWhile(CancellationToken ct, string label, int userData, real time, int iterations, Func1<Task, bool> action) returns Task
     return runOneOffDefinition(new ExecuteWhileTaskDefinition(null, label, time, iterations, action), ct, userData)
 
   // --------------------------------------------------------------------------
   static function executeWhile2<TUserData>(CancellationToken ct, string label, TUserData userData, real time, int iterations, Func2<Task, TUserData, bool> action) returns Task
-    return runOneOffDefinition(new ExecuteWhileTask2Definition(null, label, time, iterations, action), ct, toObjectUnsafe<TUserData>(userData))
+    return runOneOffDefinition(new ExecuteWhileTask2Definition(null, label, time, iterations, action), ct, userData castTo int)
 
   // --------------------------------------------------------------------------
-  static function forEachWhile<T>(CancellationToken ct, string label, object userData, real time, int iterations, Func1<Task, LinkedList<T>> listGetter, Action2<Task, T> action) returns Task
+  static function forEachWhile<T>(CancellationToken ct, string label, int userData, real time, int iterations, Func1<Task, LinkedList<T>> listGetter, Action2<Task, T> action) returns Task
     return runOneOffDefinition(new ForEachWhileTaskDefinition(null, label, time, iterations, listGetter, action), ct, userData)
 
   // --------------------------------------------------------------------------
   static function forEachWhile2<TUserData, T>(CancellationToken ct, string label, TUserData userData, real time, int iterations, Func2<Task, TUserData, LinkedList<T>> listGetter, Action3<Task, TUserData, T> action) returns Task
-    return runOneOffDefinition(new ForEachWhileTask2Definition(null, label, time, iterations, listGetter, action), ct, toObjectUnsafe<TUserData>(userData))
+    return runOneOffDefinition(new ForEachWhileTask2Definition(null, label, time, iterations, listGetter, action), ct, userData castTo int)
 
-  private static function runOneOffDefinition(TaskDefinition definition, CancellationToken ct, object userData) returns Task
+  private static function runOneOffDefinition(TaskDefinition definition, CancellationToken ct, int userData) returns Task
     let task = definition.createTask(null, userData, ct)
     task.onDestroy().register((task) -> destroy definition)
     task.run()
@@ -316,7 +315,7 @@ public function TaskState.toString() returns string
 // ============================================================================
 public abstract class TaskFactory
   use RefObject
-  abstract function createTask(TaskDefinition definition, Task parent, object userData, CancellationToken ct) returns Task
+  abstract function createTask(TaskDefinition definition, Task parent, int userData, CancellationToken ct) returns Task
 
 // ============================================================================
 public abstract class TaskDefinition
@@ -338,22 +337,22 @@ public abstract class TaskDefinition
 
   // --------------------------------------------------------------------------
   function run() returns Task
-    return run(null, NULL)
+    return run(null, 0)
 
   // --------------------------------------------------------------------------
   function run(CancellationToken ct) returns Task
-    return run(ct, NULL)
+    return run(ct, 0)
 
   // --------------------------------------------------------------------------
-  function run(object userData) returns Task
+  function run(int userData) returns Task
     return run(null, userData)
 
   // --------------------------------------------------------------------------
   function run<TUserData>(TUserData userData) returns Task
-    return run(null, toObjectUnsafe<TUserData>(userData))
+    return run(null, userData castTo int)
 
   // --------------------------------------------------------------------------
-  function run(CancellationToken ct, object userData) returns Task
+  function run(CancellationToken ct, int userData) returns Task
     let task = createTask(null, userData, ct)
     task.run()
     return task
@@ -394,7 +393,7 @@ public abstract class TaskDefinition
     return definition
     
   // --------------------------------------------------------------------------
-  abstract protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  abstract protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
 
 // ============================================================================
 abstract class AggregateTaskDefinition extends TaskDefinition
@@ -429,7 +428,7 @@ class TaskFactoryDefinition extends TaskDefinition
     destroy m_factory
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return m_factory.createTask(this, parent, userData, ct)
 
 // ============================================================================
@@ -476,7 +475,7 @@ public class SequenceTaskDefinition extends AggregateTaskDefinition
     super(parent, label)
     
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     let task = new SequenceTask(this, parent, userData, ct)
     for definition in m_childDefinitions
       task.m_tasks.add(definition.createTask(task, userData, ct))
@@ -490,7 +489,7 @@ class SequenceTask extends Task
   private Task m_currentTask = null
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct)
     super(definition, parent, userData, ct)
 
   // --------------------------------------------------------------------------
@@ -563,7 +562,7 @@ public class ActionTaskDefinition extends TaskDefinition
     m_action.release()
     
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new ActionTask(this, parent, userData, ct, m_action)
 
 // ============================================================================
@@ -571,7 +570,7 @@ class ActionTask extends Task
   protected Action1<Task> m_action
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, Action1<Task> action)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct, Action1<Task> action)
     super(definition, parent, userData, ct)
     m_action = action.acquire()
 
@@ -610,7 +609,7 @@ public class ActionTask2Definition<TUserData> extends TaskDefinition
     m_action.release()
     
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new ActionTask2<TUserData>(this, parent, userData, ct, m_action)
 
 // ============================================================================
@@ -618,7 +617,7 @@ class ActionTask2<TUserData> extends Task
   protected Action2<Task, TUserData> m_action
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, Action2<Task, TUserData> action)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct, Action2<Task, TUserData> action)
     super(definition, parent, userData, ct)
     m_action = action.acquire()
 
@@ -654,7 +653,7 @@ public class WaitTaskDefinition extends TaskDefinition
     m_seconds = seconds
     
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new WaitTask(this, parent, userData, ct, m_seconds)
 
 // ============================================================================
@@ -663,7 +662,7 @@ class WaitTask extends Task
   private CancellableCallbackSingle m_callback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real seconds)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct, real seconds)
     super(definition, parent, userData, ct)
     m_seconds = seconds
 
@@ -706,7 +705,7 @@ public class WaitForTaskDefinition extends TaskDefinition
     m_predicate.release()
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new WaitForTask(this, parent, userData, ct, m_pollTime, m_predicate)
 
 // ============================================================================
@@ -716,7 +715,7 @@ class WaitForTask extends Task
   private CancellableCallbackPeriodic m_callback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real pollTime, Func1<Task, bool> predicate)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct, real pollTime, Func1<Task, bool> predicate)
     super(definition, parent, userData, ct)
     m_predicate = predicate.acquire()
     m_pollTime = pollTime
@@ -762,7 +761,7 @@ public class WaitForTask2Definition<TUserData> extends TaskDefinition
     m_predicate.release()
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new WaitForTask2(this, parent, userData, ct, m_pollTime, m_predicate)
 
 // ============================================================================
@@ -772,7 +771,7 @@ class WaitForTask2<TUserData> extends Task
   private CancellableCallbackPeriodic m_callback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real pollTime, Func2<Task, TUserData, bool> predicate)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct, real pollTime, Func2<Task, TUserData, bool> predicate)
     super(definition, parent, userData, ct)
     m_predicate = predicate.acquire()
     m_pollTime = pollTime
@@ -808,7 +807,7 @@ public class WhenAllTaskDefinition extends AggregateTaskDefinition
     super(parent, label)
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     let task = new WhenAllTask(this, parent, userData, ct)
     for definition in m_childDefinitions
       task.m_tasks.add(definition.createTask(task, userData, ct))
@@ -821,7 +820,7 @@ class WhenAllTask extends Task
   use AggregateTask
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct)
     super(definition, parent, userData, ct)
 
   // --------------------------------------------------------------------------
@@ -852,7 +851,7 @@ public class WhenAnyTaskDefinition extends AggregateTaskDefinition
     super(parent, label)
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     let task = new WhenAnyTask(this, parent, userData, ct)
     for definition in m_childDefinitions
       task.m_tasks.add(definition.createTask(task, userData, ct))
@@ -865,7 +864,7 @@ class WhenAnyTask extends Task
   use AggregateTask
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct)
     super(definition, parent, userData, ct)
 
   // --------------------------------------------------------------------------
@@ -912,7 +911,7 @@ public class ExecuteWhileTaskDefinition extends TaskDefinition
     m_action.release()  
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new ExecuteWhileTask(this, parent, userData, ct, m_time, m_iterations, m_action)
 
 // ============================================================================
@@ -924,7 +923,7 @@ class ExecuteWhileTask extends Task
   private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct, real time, int iterations, Func1<Task, bool> action)
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct, real time, int iterations, Func1<Task, bool> action)
     super(definition, parent, userData, ct)
     m_time = time
     m_iterations = iterations
@@ -988,7 +987,7 @@ public class ExecuteWhileTask2Definition<TUserData> extends TaskDefinition
     m_action.release()  
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new ExecuteWhileTask2<TUserData>(this, parent, userData, ct, m_time, m_iterations, m_action)
 
 // ============================================================================
@@ -1000,7 +999,7 @@ class ExecuteWhileTask2<TUserData> extends Task
   private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct,
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct,
             real time, int iterations, Func2<Task, TUserData, bool> action)
     super(definition, parent, userData, ct)
     m_time = time
@@ -1069,7 +1068,7 @@ public class ForEachWhileTaskDefinition<T> extends TaskDefinition
     m_action.release()  
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new ForEachWhileTask<T>(this, parent, userData, ct, m_time, m_iterations, m_listGetter, m_action)
 
 // ============================================================================
@@ -1082,7 +1081,7 @@ class ForEachWhileTask<T> extends Task
   private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct,
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct,
             real time, int iterations, Func1<Task, LinkedList<T>> listGetter, Action2<Task, T> action)
     super(definition, parent, userData, ct)
     m_listGetter = listGetter.acquire()
@@ -1162,7 +1161,7 @@ public class ForEachWhileTask2Definition<TUserData, T> extends TaskDefinition
     m_action.release()  
 
   // --------------------------------------------------------------------------
-  override protected function createTask(Task parent, object userData, CancellationToken ct) returns Task
+  override protected function createTask(Task parent, int userData, CancellationToken ct) returns Task
     return new ForEachWhileTask2<TUserData, T>(this, parent, userData, ct, m_time, m_iterations, m_listGetter, m_action)
 
 // ============================================================================
@@ -1175,7 +1174,7 @@ class ForEachWhileTask2<TUserData, T> extends Task
   private CallbackSingle m_executeOnceCallback
 
   // --------------------------------------------------------------------------
-  construct(TaskDefinition definition, Task parent, object userData, CancellationToken ct,
+  construct(TaskDefinition definition, Task parent, int userData, CancellationToken ct,
             real time, int iterations, Func2<Task, TUserData, LinkedList<T>> listGetter, Action3<Task, TUserData, T> action)
     super(definition, parent, userData, ct)
     m_listGetter = listGetter.acquire()

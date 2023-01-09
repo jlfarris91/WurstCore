@@ -1,6 +1,6 @@
 package Serialization
 import ByteBuffer
-import initlater Object
+import Meta
 import HashMap
 import LinkedList
 import ObjectIds
@@ -9,6 +9,7 @@ import Execute
 import BinaryReaderWriter
 import FileIO
 import Base64
+import Reflection
 
 bool g_lastWriteSucceeded
 bool g_lastReadSucceeded

@@ -2,7 +2,7 @@ package UnitDescriptor
 import InspectionInterfaces
 import Descriptors
 import LinkedList
-import initlater UnitMetadata
+import UnitMetadata
 import Object
 
 LinkedList<IPropertyDescriptor> s_descriptors = new LinkedList<IPropertyDescriptor>()

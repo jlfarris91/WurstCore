@@ -1,0 +1,16 @@
+package BoxedValueObjectsMeta
+import BoxedValueObjects
+import Meta
+
+// ============================================================================
+init
+  Meta.register("BoxedValueObjects", (registrar) -> registerMetadata(registrar))
+
+///////////////////////////////////////////////////////////////////////////////
+function registerMetadata(MetaRegistrar registrar)
+  registrar.registerClass(String.typeId)
+  registrar.registerClass(Integer.typeId)
+  registrar.registerClass(Real.typeId)
+  registrar.registerClass(Bool.typeId)
+  registrar.registerClass(Vec2.typeId)
+///////////////////////////////////////////////////////////////////////////////

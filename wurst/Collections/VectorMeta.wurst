@@ -1,4 +1,4 @@
-package MetaWurstCore
+package VectorMeta
 import Meta
 
 public constant int typeId_Vector_object = Meta.reserveInterface("WurstCore.Vector<object>")

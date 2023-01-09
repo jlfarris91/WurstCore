@@ -5,7 +5,7 @@ import Layout
 import Vector
 import ClosureFrames
 import Range
-import Object
+import Meta
 import StackPanel
 import Execute
 
