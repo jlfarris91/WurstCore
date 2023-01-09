@@ -3,32 +3,32 @@ import Quaternion
 import ErrorHandling
 import Vector
 
-public tuple transform(vec3 pos, quat rot, real scale)
+tuple transform(vec3 pos, quat rot, real scale)
 
-public constant transform IDENTITYT = transform(ZERO3, IDENTITYQ, 1.0)
+constant transform IDENTITYT = transform(ZERO3, IDENTITYQ, 1.0)
 
 // ============================================================================
-public function transform(vec2 pos) returns transform
+function transform(vec2 pos) returns transform
   return transform(pos.toVec3(), IDENTITYQ, 1.0)
 
 // ============================================================================
-public function transform(vec3 pos) returns transform
+function transform(vec3 pos) returns transform
   return transform(pos, IDENTITYQ, 1.0)
 
 // ============================================================================
-public function transform(vec2 pos, quat rotation) returns transform
+function transform(vec2 pos, quat rotation) returns transform
   return transform(pos.toVec3(), rotation, 1.0)
 
 // ============================================================================
-public function transform(vec3 pos, quat rotation) returns transform
+function transform(vec3 pos, quat rotation) returns transform
   return transform(pos, rotation, 1.0)
 
 // ============================================================================
-public function transform.op_mult(transform localTransform) returns transform
+function transform.op_mult(transform localTransform) returns transform
   return this.concat(localTransform)
 
 // ============================================================================
-public function transform.concat(transform localTransform) returns transform
+function transform.concat(transform localTransform) returns transform
   let r = this.rot * localTransform.rot
   var v = localTransform.pos * this.scale
   v = v.rotate(this.rot)
@@ -37,7 +37,7 @@ public function transform.concat(transform localTransform) returns transform
   return transform(p, r, s)
 
 // ============================================================================
-public function transform.separate(transform worldTransform) returns transform
+function transform.separate(transform worldTransform) returns transform
   let scaleSafe = this.scale == 0.0 ? 1.0 : this.scale
   let s = worldTransform.scale / scaleSafe
   let r = this.rot.conj() * worldTransform.rot.norm()
@@ -46,7 +46,7 @@ public function transform.separate(transform worldTransform) returns transform
   return transform(v, r, s)
 
 // // ============================================================================
-// public function transform.concat(transform localTransform) returns transform
+// function transform.concat(transform localTransform) returns transform
 //   let r = this.rot * localTransform.rot
 //   var v = (localTransform.pivot + localTransform.pos - this.pivot) * this.scale
 //   v = v.rotate(this.rot)
@@ -55,7 +55,7 @@ public function transform.separate(transform worldTransform) returns transform
 //   return transform(p, localTransform.pivot, r, s)
 
 // // ============================================================================
-// public function transform.separate(transform worldTransform) returns transform
+// function transform.separate(transform worldTransform) returns transform
 //   let scaleSafe = this.scale == 0.0 ? 1.0 : this.scale
 //   let s = worldTransform.scale / scaleSafe
 //   let r = this.rot.conj() * worldTransform.rot.norm()
@@ -65,116 +65,118 @@ public function transform.separate(transform worldTransform) returns transform
 //   return transform(p, worldTransform.pivot, r, s)
 
 // ============================================================================
-public function transform.getRight() returns vec3
+function transform.getRight() returns vec3
   return this.transformDir(RIGHT3)
 
 // ============================================================================
-public function transform.setRight(vec3 value) returns transform
+function transform.setRight(vec3 value) returns transform
   var transform = this
   transform.rot = quatLookRotation(value)
   return transform
 
 // ============================================================================
-public function transform.getUp() returns vec3
+function transform.getUp() returns vec3
   return this.transformDir(UP3)
 
 // ============================================================================
-public function transform.setUp(vec3 value) returns transform
+function transform.setUp(vec3 value) returns transform
   var transform = this
   transform.rot = quatFromToRotation(UP3, value)
   return transform
 
 // ============================================================================
-public function transform.getForward() returns vec3
+function transform.getForward() returns vec3
   return this.transformDir(FORWARD3)
 
 // ============================================================================
-public function transform.setForward(vec3 value) returns transform
+function transform.setForward(vec3 value) returns transform
   var transform = this
   transform.rot = quatFromToRotation(RIGHT3, value)
   return transform
 
 // ============================================================================
 /** Affected by position, scale and rotaiton */
-public function transform.transformPoint(vec2 point) returns vec2
+function transform.transformPoint(vec2 point) returns vec2
   return this.transformPoint(point.toVec3()).toVec2()
 
 // ============================================================================
 /** Affected by position, scale and rotaiton */
-public function transform.transformPoint(vec3 point) returns vec3
+function transform.transformPoint(vec3 point) returns vec3
   return this.rot * this.scale * point + this.pos
 
 // ============================================================================
 /** Not affected by position but is affected by scale */
-public function transform.transformVector(vec2 vec) returns vec2
+function transform.transformVector(vec2 vec) returns vec2
   return this.transformVector(vec.toVec3()).toVec2()
 
 // ============================================================================
 /** Not affected by position but is affected by scale */
-public function transform.transformVector(vec3 vec) returns vec3
+function transform.transformVector(vec3 vec) returns vec3
   return this.rot * this.scale * vec
 
 // ============================================================================
 /** Only affected by rotation */
-public function transform.transformDir(vec2 dir) returns vec2
+function transform.transformDir(vec2 dir) returns vec2
   return this.transformDir(dir.toVec3()).toVec2()
 
 // ============================================================================
 /** Only affected by rotation */
-public function transform.transformDir(vec3 dir) returns vec3
+function transform.transformDir(vec3 dir) returns vec3
   return this.rot * dir
 
 // ============================================================================
-public function transform.apply(effect fx)
+function transform.apply(effect fx)
   fx.setPos(this.pos)
   fx.setScale(this.scale)
   fx.setOrientation(this.rot)
 
 // ============================================================================
-public function effect.applyTransform(transform t)
+function effect.applyTransform(transform t)
   this.setPos(t.pos)
   this.setScale(t.scale)
   this.setOrientation(t.rot)
 
 // ============================================================================
-public function transform.apply(unit u)
+function transform.apply(unit u)
   let eulers = this.rot.toEuler()
   u.setPosFly(this.pos)
   u.setScale(this.scale)
   u.setFacing(eulers.z.asAngleRadians())
 
 // ============================================================================
-public function unit.applyTransform(transform t)
+function unit.applyTransform(transform t)
   let eulers = t.rot.toEuler()
   this.setPosFly(t.pos)
   this.setScale(t.scale)
   this.setFacing(eulers.z.asAngleRadians())
 
 // ============================================================================
-public function transform.apply(item i)
+function transform.apply(item i)
   i.setPos(this.pos.toVec2())
 
 // ============================================================================
-public function item.applyTransform(transform t)
-  this.setPos(t.pos.toVec2())
+public function item.applyTransform(Transform transform)
+  this.setPos(transform.getWorldPosition().toVec2())
 
 // ============================================================================
-public function unit.getTransform() returns transform
-  return transform(this.getPos3Fly(), eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
+public function unit.getTransform() returns Transform
+  return new Transform(this.getPos3Fly(), eulerToQuat(this.getFacingAngle().radians, 0.0, 0.0), 1.0)
 
 // ============================================================================
-public function createUnit(player owner, int unitTypeId, transform worldTransform) returns unit
-  let facingAngle = worldTransform.rot.getEulerYaw().asAngleRadians()
-  return createUnit(owner, unitTypeId, worldTransform.pos, facingAngle)
+public function createUnit(player owner, int unitTypeId, Transform worldTransform) returns unit
+  return createUnit(
+    owner,
+    unitTypeId,
+    worldTransform.getWorldPosition(),
+    worldTransform.getWorldYaw())
 
 // ============================================================================
-public function createDestructable(int destructableTypeId, int variation, transform worldTransform) returns destructable
-  let facingAngle = worldTransform.rot.getEulerYaw().asAngleRadians()
+public function createDestructable(int destructableTypeId, int variation, Transform transform) returns destructable
   return createDestructable(
     destructableTypeId,
-    worldTransform.pos,
-    facingAngle,
-    worldTransform.scale,
+    transform.getWorldPosition(),
+    transform.getWorldYaw(),
+    transform.getWorldScale(),
     variation)
 
 // ============================================================================
@@ -185,11 +187,54 @@ public class Transform
   private transform m_worldTransform = IDENTITYT
   private bool m_dirtyWorld = true
 
+  // ----------------------------------------------------------------------------
+  construct()
+
+  // ----------------------------------------------------------------------------
+  construct(vec2 pos)
+    m_localTransform = transform(pos.toVec3(), IDENTITYQ, 1.0)
+
+  // ----------------------------------------------------------------------------
+  construct(vec2 pos, quat rot)
+    m_localTransform = transform(pos.toVec3(), rot, 1.0)
+
+  // ----------------------------------------------------------------------------
+  construct(vec2 pos, quat rot, real scale)
+    m_localTransform = transform(pos.toVec3(), rot, scale)
+
+  // ----------------------------------------------------------------------------
+  construct(vec3 pos)
+    m_localTransform = transform(pos, IDENTITYQ, 1.0)
+
+  // ----------------------------------------------------------------------------
+  construct(vec3 pos, quat rot)
+    m_localTransform = transform(pos, rot, 1.0)
+
+  // ----------------------------------------------------------------------------
+  construct(vec3 pos, quat rot, real scale)
+    m_localTransform = transform(pos, rot, scale)
+
+  // ----------------------------------------------------------------------------
+  construct(Transform other)
+    m_localTransform = other.m_localTransform
+
   // --------------------------------------------------------------------------
   ondestroy
     if (m_children != null)
       destroy m_children
       m_children = null
+
+  // ----------------------------------------------------------------------------
+  function copyLocalFrom(Transform transform)
+    setLocalTransform(transform.m_localTransform)
+
+  // ----------------------------------------------------------------------------
+  function copyWorldFrom(Transform transform)
+    setWorldTransform(transform.m_worldTransform)
+
+  // ----------------------------------------------------------------------------
+  function clone() returns Transform
+    return new Transform(this)
 
   // --------------------------------------------------------------------------
   function getParent() returns Transform
@@ -223,12 +268,32 @@ public class Transform
   function getChild(int index) returns Transform
     return m_children != null ? m_children.get(index) : null
 
-  // --------------------------------------------------------------------------
-  function getLocalTransform() returns transform
-    return m_localTransform
+  // ----------------------------------------------------------------------------
+  function setLocalTransform(vec2 pos)
+    setLocalTransform(pos.toVec3())
+
+  // ----------------------------------------------------------------------------
+  function setLocalTransform(vec2 pos, quat rot)
+    setLocalTransform(pos.toVec3(), rot)
+
+  // ----------------------------------------------------------------------------
+  function setLocalTransform(vec2 pos, quat rot, real scale)
+    setLocalTransform(pos.toVec3(), rot, scale)
+
+  // ----------------------------------------------------------------------------
+  function setLocalTransform(vec3 pos)
+    setLocalTransform(pos, IDENTITYQ, 1.0)
+
+  // ----------------------------------------------------------------------------
+  function setLocalTransform(vec3 pos, quat rot)
+    setLocalTransform(pos, rot, 1.0)
+
+  // ----------------------------------------------------------------------------
+  function setLocalTransform(vec3 pos, quat rot, real scale)
+    setLocalTransform(transform(pos, rot, scale))
 
   // --------------------------------------------------------------------------
-  function setLocalTransform(transform value)
+  private function setLocalTransform(transform value)
     if (m_localTransform != value)
       m_localTransform = value
       dirtyHierarchy()
@@ -236,6 +301,10 @@ public class Transform
   // --------------------------------------------------------------------------
   function getLocalPosition() returns vec3
     return m_localTransform.pos
+
+  // --------------------------------------------------------------------------
+  function setLocalPosition(vec2 value)
+    setLocalPosition(value.toVec3())
 
   // --------------------------------------------------------------------------
   function setLocalPosition(vec3 value)
@@ -250,6 +319,14 @@ public class Transform
     if (m_localTransform.rot != value)
       m_localTransform.rot = value
       dirtyHierarchy()
+
+  // ----------------------------------------------------------------------------
+  function getLocalYaw() returns angle
+    return m_localTransform.rot.getEulerYaw().asAngleRadians()
+
+  // ----------------------------------------------------------------------------
+  function setLocalYaw(angle angle)
+    setLocalRotation(eulerToQuat(angle.radians(), 0, 0))
 
   // --------------------------------------------------------------------------
   function getLocalScale() returns real
@@ -292,14 +369,38 @@ public class Transform
       dirtyHierarchy()
 
   // --------------------------------------------------------------------------
-  function getWorldTransform() returns transform
+  private function getWorldTransform() returns transform
     if (m_dirtyWorld)
       m_worldTransform = m_parent != null ? m_parent.getWorldTransform() * m_localTransform : m_localTransform
       m_dirtyWorld = false
     return m_worldTransform
 
+  // ----------------------------------------------------------------------------
+  function setWorldTransform(vec2 pos)
+    setWorldTransform(pos.toVec3())
+
+  // ----------------------------------------------------------------------------
+  function setWorldTransform(vec2 pos, quat rot)
+    setWorldTransform(pos.toVec3(), rot)
+
+  // ----------------------------------------------------------------------------
+  function setWorldTransform(vec2 pos, quat rot, real scale)
+    setWorldTransform(pos.toVec3(), rot, scale)
+
+  // ----------------------------------------------------------------------------
+  function setWorldTransform(vec3 pos)
+    setWorldTransform(pos, IDENTITYQ, 1.0)
+
+  // ----------------------------------------------------------------------------
+  function setWorldTransform(vec3 pos, quat rot)
+    setWorldTransform(pos, rot, 1.0)
+
+  // ----------------------------------------------------------------------------
+  function setWorldTransform(vec3 pos, quat rot, real scale)
+    setWorldTransform(transform(pos, rot, scale))
+
   // --------------------------------------------------------------------------
-  function setWorldTransform(transform value)
+  private function setWorldTransform(transform value)
     var localTransform = value
     if (m_parent != null)
       localTransform = m_parent.getWorldTransform().separate(value)
@@ -308,6 +409,10 @@ public class Transform
   // --------------------------------------------------------------------------
   function getWorldPosition() returns vec3
     return getWorldTransform().pos
+
+  // --------------------------------------------------------------------------
+  function setWorldPosition(vec2 value)
+    setWorldPosition(value.toVec3())
 
   // --------------------------------------------------------------------------
   function setWorldPosition(vec3 value)
@@ -324,6 +429,15 @@ public class Transform
     var worldTransform = getWorldTransform()
     worldTransform.rot = value
     setWorldTransform(worldTransform)
+
+  // ----------------------------------------------------------------------------
+  function getWorldYaw() returns angle
+    let worldTransform = getWorldTransform()
+    return worldTransform.rot.getEulerYaw().asAngleRadians()
+
+  // ----------------------------------------------------------------------------
+  function setWorldYaw(angle angle)
+    setWorldRotation(eulerToQuat(angle.radians(), 0, 0))
 
   // --------------------------------------------------------------------------
   function getWorldScale() returns real
@@ -358,6 +472,36 @@ public class Transform
   // --------------------------------------------------------------------------
   function setWorldForward(vec3 value)
     setWorldTransform(getWorldTransform().setForward(value))
+
+  // --------------------------------------------------------------------------
+  /** Affected by position, scale and rotaiton */
+  function transformPoint(vec2 point) returns vec2
+    return transformPoint(point.toVec3()).toVec2()
+
+  // --------------------------------------------------------------------------
+  /** Affected by position, scale and rotaiton */
+  function transformPoint(vec3 point) returns vec3
+    return getWorldTransform().transformPoint(point)
+
+  // --------------------------------------------------------------------------
+  /** Not affected by position but is affected by scale */
+  function transformVector(vec2 vec) returns vec2
+    return transformVector(vec.toVec3()).toVec2()
+
+  // --------------------------------------------------------------------------
+  /** Not affected by position but is affected by scale */
+  function transformVector(vec3 vec) returns vec3
+    return getWorldTransform().transformVector(vec)
+
+  // --------------------------------------------------------------------------
+  /** Only affected by rotation */
+  function transformDir(vec2 dir) returns vec2
+    return transformDir(dir.toVec3()).toVec2()
+
+  // --------------------------------------------------------------------------
+  /** Only affected by rotation */
+  function transformDir(vec3 dir) returns vec3
+    return getWorldTransform().transformDir(dir)
 
   // --------------------------------------------------------------------------
   function apply(effect fx)
