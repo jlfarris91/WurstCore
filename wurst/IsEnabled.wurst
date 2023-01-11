@@ -1,0 +1,38 @@
+package IsEnabled
+
+// ============================================================================
+public module IsEnabled
+  private bool m_enabled
+
+  // ----------------------------------------------------------------------------
+  ondestroy
+    disable()
+
+  // --------------------------------------------------------------------------
+  function getEnabled() returns bool
+    return m_enabled
+  
+  // --------------------------------------------------------------------------
+  function setEnabled(bool value)
+    if (m_enabled != value)
+      m_enabled = value
+      if (value)
+        onEnabled()
+      else
+        onDisabled()
+
+  // --------------------------------------------------------------------------
+  function enable()
+    setEnabled(true)
+
+  // --------------------------------------------------------------------------
+  function disable()
+    setEnabled(false)
+
+  // ----------------------------------------------------------------------------
+  protected function onEnabled()
+    skip
+
+  // ----------------------------------------------------------------------------
+  protected function onDisabled()
+    skip
