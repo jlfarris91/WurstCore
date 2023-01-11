@@ -228,12 +228,16 @@ public class DeckInstance
     m_deck = null
 
   // ----------------------------------------------------------------------------
-  function drawCard() returns Card
+  function draw() returns Card
     return m_cards.popRandom()
 
   // ----------------------------------------------------------------------------
   function add(Card card)
     m_cards.add(card, card.getWeight())
+
+  // ----------------------------------------------------------------------------
+  function remove(Card card) returns bool
+    return m_cards.remove(card)
   
   // ----------------------------------------------------------------------------
   function isEmpty() returns bool
