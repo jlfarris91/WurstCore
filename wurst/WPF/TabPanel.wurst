@@ -122,6 +122,8 @@ public class TabPanel extends DockPanel
     if (buttonFrame != null)
       destroy buttonFrame
     m_allIds.remove(id)
+    if (m_selectedFrameId == id)
+      m_selectedFrameId = m_allIds.isEmpty() ? "" : m_allIds.getFirst()
 
   // --------------------------------------------------------------------------
   function removeAllContent()

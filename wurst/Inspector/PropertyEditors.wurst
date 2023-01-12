@@ -3,9 +3,8 @@ import Frame
 import InspectionInterfaces
 import ClosureFrames
 import Vector
-import Object
+import Meta
 import Observable
-import MetaWurstCore
 import Handle
 
 constant string INDETERMINATE_STRING = "?"

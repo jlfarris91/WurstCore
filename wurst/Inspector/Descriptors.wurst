@@ -2,7 +2,7 @@ package Descriptors
 import Func
 import Action
 import InspectionInterfaces
-import Object
+import Meta
 import ErrorHandling
 import LinkedList
 

@@ -33,11 +33,6 @@ public class DockPanel extends Panel
     setFrameLayout(m_layout)
 
   // --------------------------------------------------------------------------
-  ondestroy
-    destroy m_layout
-    m_layout = null
-
-  // --------------------------------------------------------------------------
   function getLastChildFills() returns bool
     return m_layout.getLastChildFills()
 

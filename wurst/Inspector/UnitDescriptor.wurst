@@ -3,7 +3,7 @@ import InspectionInterfaces
 import Descriptors
 import LinkedList
 import UnitMetadata
-import Object
+import Meta
 
 LinkedList<IPropertyDescriptor> s_descriptors = new LinkedList<IPropertyDescriptor>()
 
