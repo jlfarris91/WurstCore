@@ -8,7 +8,6 @@ import RefObject
 // ============================================================================
 public class Card
   private string m_id
-  private CardCategory m_category
   private SmartValue m_cost
   private real m_weight = 1.0
 
@@ -49,14 +48,6 @@ public class Card
     m_weight = value
 
   // --------------------------------------------------------------------------
-  function getCategory() returns CardCategory
-    return m_category
-  
-  // --------------------------------------------------------------------------
-  function setCategory(CardCategory value)
-    m_category = value
-
-  // --------------------------------------------------------------------------
   function canActivate() returns bool
     return true
 
@@ -83,12 +74,9 @@ public class CardCategory
   // --------------------------------------------------------------------------
   function addCard(Card card)
 
-    let category = card.getCategory()
-    if (category != null)
-      category.removeCard(card)
+    card.acquire()
 
     m_cards.add(card, card.getWeight())
-    card.setCategory(this)
 
     if (m_mostExpensiveCard == null or card.getCost() > m_mostExpensiveCard.getCost())
       m_mostExpensiveCard = card
@@ -97,10 +85,11 @@ public class CardCategory
   // --------------------------------------------------------------------------
   function removeCard(Card card)
     m_cards.remove(card)
-    card.setCategory(null)
 
     if (m_mostExpensiveCard == card)
       updateMostExpensiveCard()
+
+    card.release()
 
   // --------------------------------------------------------------------------
   function getCardWeight(Card card) returns real
