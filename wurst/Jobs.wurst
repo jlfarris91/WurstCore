@@ -233,6 +233,7 @@ public class Thread
       // Vector.emplaceRemove to avoid costly Vector.remove call.
       // So, job can be null here and that's okay.
       let job = m_readQueue.get(m_readPosition)
+      m_readQueue.set(m_readPosition, null)
       if (job != null)
         processCounter++
         workCounter += processJob(job)
@@ -242,6 +243,8 @@ public class Thread
 
     if (getRemainingWorkCount() == 0)
       stopProcessing()
+
+    swapQueuesIfNecessary()
     
     Trace.trace("Work.subWork", workCounter)
     Trace.trace("Work.items", processCounter)
@@ -367,13 +370,13 @@ public abstract class Job
   construct (string id)
     m_id = id
     m_timeout = REAL_MAX
-    m_startTime = getRealTimeSeconds()
+    reset()
 
   // --------------------------------------------------------------------------
   construct (string id, real timeout)
     m_id = id
     m_timeout = timeout
-    m_startTime = getRealTimeSeconds()
+    reset()
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -490,6 +493,14 @@ public abstract class Job
     m_errorMessage = "Canceled"
     setStatus(JobStatus.CANCELED)
     complete()
+
+  // ----------------------------------------------------------------------------
+  function reset()
+    m_completed = false
+    m_errorMessage = ""
+    m_requeueCount = 0
+    m_startTime = getRealTimeSeconds()
+    setStatus(getThread() != null ? JobStatus.RUNNING : JobStatus.WAITING)
 
   // --------------------------------------------------------------------------
   protected function completeInternal()
