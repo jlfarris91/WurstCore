@@ -141,6 +141,10 @@ public abstract class DebuggerRealtimeUpdateFrame extends Frame implements IReal
   construct (framehandle frame)
     super(frame)
 
+  // ----------------------------------------------------------------------------
+  ondestroy
+    this.unregisterForRealtimeUpdate()
+
   // --------------------------------------------------------------------------
   override function onVisibilityChanged()
     super.onVisibilityChanged()
