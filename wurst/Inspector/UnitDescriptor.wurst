@@ -4,6 +4,7 @@ import Descriptors
 import LinkedList
 import UnitMetadata
 import Meta
+import Composition
 
 LinkedList<IPropertyDescriptor> s_descriptors = new LinkedList<IPropertyDescriptor>()
 

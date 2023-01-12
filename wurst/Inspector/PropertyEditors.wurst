@@ -6,6 +6,8 @@ import Vector
 import Meta
 import Observable
 import Handle
+import VectorMeta
+import Reflection
 
 constant string INDETERMINATE_STRING = "?"
 
