@@ -56,7 +56,8 @@ public class CardCategory
   private Deck m_deck
   private string m_id
   private WeightedSet<Card> m_cards = new WeightedSet<Card>()
-  private Card m_mostExpensiveCard
+  private Card m_leastExpensiveCard = null
+  private Card m_mostExpensiveCard = null
 
   // --------------------------------------------------------------------------
   construct(Deck deck, string id)
@@ -78,6 +79,10 @@ public class CardCategory
 
     m_cards.add(card, card.getWeight())
 
+    if (m_leastExpensiveCard == null or card.getCost() < m_leastExpensiveCard.getCost())
+      m_leastExpensiveCard = card
+      m_deck.updateLeastExpensiveCard()
+
     if (m_mostExpensiveCard == null or card.getCost() > m_mostExpensiveCard.getCost())
       m_mostExpensiveCard = card
       m_deck.updateMostExpensiveCard()
@@ -85,6 +90,9 @@ public class CardCategory
   // --------------------------------------------------------------------------
   function removeCard(Card card)
     m_cards.remove(card)
+
+    if (m_leastExpensiveCard == card)
+      updateLeastExpensiveCard()
 
     if (m_mostExpensiveCard == card)
       updateMostExpensiveCard()
@@ -108,8 +116,20 @@ public class CardCategory
     return m_cards.popRandom()
 
   // --------------------------------------------------------------------------
+  function getLeastExpensiveCard() returns Card
+    return m_leastExpensiveCard
+
+  // --------------------------------------------------------------------------
   function getMostExpensiveCard() returns Card
     return m_mostExpensiveCard
+
+  // --------------------------------------------------------------------------
+  private function updateLeastExpensiveCard()
+    m_leastExpensiveCard = null
+    for otherCard in m_cards
+      if (m_leastExpensiveCard == null or otherCard.getCost() < m_leastExpensiveCard.getCost())
+        m_leastExpensiveCard = otherCard
+    m_deck.updateLeastExpensiveCard()
 
   // --------------------------------------------------------------------------
   private function updateMostExpensiveCard()
@@ -123,7 +143,8 @@ public class CardCategory
 public class Deck
   private HashMap<string, CardCategory> m_categoryMap = new HashMap<string, CardCategory>()
   private WeightedSet<CardCategory> m_categories = new WeightedSet<CardCategory>()
-  private Card m_mostExpensiveCard
+  private Card m_leastExpensiveCard = null
+  private Card m_mostExpensiveCard = null
 
   use RefObject
 
@@ -170,6 +191,10 @@ public class Deck
     let cardRelativeWeight = category.getCardRelativeWeight(card)
     return categoryRelativeWeight * cardRelativeWeight
 
+  // ----------------------------------------------------------------------------
+  function getLeastExpensiveCard() returns Card
+    return m_leastExpensiveCard
+
   // --------------------------------------------------------------------------
   function getMostExpensiveCard() returns Card
     return m_mostExpensiveCard
@@ -182,6 +207,15 @@ public class Deck
   // ----------------------------------------------------------------------------
   function createInstance() returns DeckInstance
     return new DeckInstance(this)
+
+  // --------------------------------------------------------------------------
+  protected function updateLeastExpensiveCard()
+    m_leastExpensiveCard = null
+    for category in m_categories
+      let categoryCard = category.getLeastExpensiveCard()
+      if (categoryCard != null)
+        if (m_leastExpensiveCard == null or categoryCard.getCost() < m_leastExpensiveCard.getCost())
+          m_leastExpensiveCard = categoryCard
 
   // --------------------------------------------------------------------------
   protected function updateMostExpensiveCard()
