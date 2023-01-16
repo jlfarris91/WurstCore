@@ -4,6 +4,7 @@ import GroupUtils
 import AbilityIds
 import RegisterEvents
 import UnitIndexer
+import Orders
 
 group array g_targetUnitRepairGroup
 unit array g_targetUnits
@@ -45,6 +46,10 @@ int g_repairAbilityIdStackIndex
 // ============================================================================
 @configurable public function getRepairUnitIndex(unit u) returns int
   return u.getIndex()
+
+// ============================================================================
+@configurable public function ignoreIssuedOrder(int orderId) returns bool
+  return orderId == Orders.repairon or orderId == Orders.repairoff
 
 // ============================================================================
 public function registerRepairStart(code func)
@@ -271,6 +276,9 @@ function onUnitIssuedOrder()
   let orderedUnitIndex = getRepairUnitIndex(orderedUnit)
   let targetUnit = g_targetUnits[orderedUnitIndex]
   if (targetUnit == null)
+    return
+
+  if (ignoreIssuedOrder(GetIssuedOrderId()))
     return
 
   // Log.info("onUnitIssuedOrder")
