@@ -144,44 +144,47 @@ function removeRepairer(unit targetUnit, unit castingUnit)
 function removeRepairer(unit targetUnit, unit castingUnit, int repairAbilityId)
   let targetUnitIndex = getRepairUnitIndex(targetUnit)
   let castingUnitIndex = getRepairUnitIndex(castingUnit)
-    
-  let repairerGroup = g_targetUnitRepairGroup[targetUnitIndex]
+
+  var repairerGroup = g_targetUnitRepairGroup[targetUnitIndex]
   if (repairerGroup == null)
     return
 
-  repairerGroup.removeUnit(castingUnit)
-
   g_repairAbilityIds[castingUnitIndex] = 0
   g_targetUnits[castingUnitIndex] = null
-
-  // Need to refresh due to "ghost" units
-  repairerGroup.refresh()
 
   // Log.info("Repair remove " + castingUnit.getName() + " -> " + targetUnit.getName() + " : " + repairAbilityId.toRawCode())
   evaluateTrigger(g_triggerRepairRemove, targetUnit, castingUnit, repairAbilityId)
 
   // Log.info("Repairers remaining " + repairerGroup.size().toString())
 
+  // Get the repairer group again since executing g_triggerRepairRemove may have called removeRepairer and released the repairer group
+  repairerGroup = g_targetUnitRepairGroup[targetUnitIndex]
+  if (repairerGroup == null)
+    return
+
+  repairerGroup.removeUnit(castingUnit)
+
+  // Need to refresh due to "ghost" units
+  repairerGroup.refresh()
+
   // Target is no longer being repaired
   if (repairerGroup.isEmpty())
   //{
+    // Get the repairer group again since executing g_triggerRepairEnd may have called removeRepairer and released the repairer group
+    repairerGroup = g_targetUnitRepairGroup[targetUnitIndex]
+    if (repairerGroup != null)
+      repairerGroup.release()
+      g_targetUnitRepairGroup[targetUnitIndex] = null
+
     // Log.info("Repair end " + castingUnit.getName() + " -> " + targetUnit.getName() + " : " + repairAbilityId.toRawCode())
     evaluateTrigger(g_triggerRepairEnd, targetUnit, castingUnit, repairAbilityId)
-    repairerGroup.release()
-    g_targetUnitRepairGroup[targetUnitIndex] = null
+
     unregisterUnitToCheckForFullHealth(targetUnit)
   //}
 
 // ============================================================================
 function untrackTargetUnit(unit targetUnit)  
   let targetUnitIndex = getRepairUnitIndex(targetUnit)
-  
-  // If this unit had a group of units repairing it then clear that group
-  // and fire events for each removal and the end of the repair
-  let repairers = g_targetUnitRepairGroup[targetUnitIndex]
-  if (repairers != null)
-    for repairingUnit in repairers
-      removeRepairer(targetUnit, repairingUnit)
   
   // If this unit had a full health trigger active then destroy it. Technically,
   // this should happen when the final repairing unit is removed above but :shrug:
@@ -190,6 +193,13 @@ function untrackTargetUnit(unit targetUnit)
 
   // If this unit was in the middle of an upgrade then stop tracking it.
   g_upgradingTargetUnits.removeUnit(targetUnit)
+  
+  // If this unit had a group of units repairing it then clear that group
+  // and fire events for each removal and the end of the repair
+  var repairers = g_targetUnitRepairGroup[targetUnitIndex]
+  while (repairers != null and not repairers.isEmpty())
+    removeRepairer(targetUnit, repairers.getFirst())
+    repairers = g_targetUnitRepairGroup[targetUnitIndex]
 
 // ============================================================================
 function registerUnitToCheckForFullHealth(unit targetUnit)
