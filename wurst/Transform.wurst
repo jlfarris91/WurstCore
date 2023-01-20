@@ -405,6 +405,7 @@ public class Transform
     if (m_parent != null)
       localTransform = m_parent.getWorldTransform().separate(value)
     m_localTransform = localTransform
+    m_dirtyWorld = true
 
   // --------------------------------------------------------------------------
   function getWorldPosition() returns vec3
