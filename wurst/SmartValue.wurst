@@ -107,11 +107,15 @@ public class SmartValue
 
   // --------------------------------------------------------------------------
   function getValue() returns real
+    return getValue(m_base)
+
+  // --------------------------------------------------------------------------
+  function getValue(real baseValue) returns real
 
     if (m_affectors == null or m_affectors.isEmpty())
-      return m_base
+      return baseValue
 
-    var value = m_base
+    var value = baseValue
     var scale = 1.0
     var absolute = 0.0
 
@@ -129,6 +133,10 @@ public class SmartValue
   // --------------------------------------------------------------------------
   function getIntValue() returns int
     return getValue().toInt()
+
+  // --------------------------------------------------------------------------
+  function getIntValue(int baseValue) returns int
+    return getValue(baseValue.toReal()).toInt()
 
   // --------------------------------------------------------------------------
   function getBase() returns real
