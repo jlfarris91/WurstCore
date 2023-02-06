@@ -686,18 +686,18 @@ public class ECChannel implements IRealtimeListener
 
     ECS.destroyEntitiesMarkedForDestroy()
 
-ECWorldComponent array g_worldComponents
+ECTransform array g_transformComponents
 
 // ============================================================================
-public class ECWorldComponent extends ECComponent
+public class ECTransform extends ECComponent
   private Transform m_transform = new Transform()
-  private ECWorldComponent m_parent = null
-  private LinkedList<ECWorldComponent> m_children = new LinkedList<ECWorldComponent>()
+  private ECTransform m_parent = null
+  private LinkedList<ECTransform> m_children = new LinkedList<ECTransform>()
 
   // --------------------------------------------------------------------------
   construct (ECEntity entity)
     super(entity)
-    g_worldComponents[entity.getId()] = this
+    g_transformComponents[entity.getId()] = this
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -710,18 +710,18 @@ public class ECWorldComponent extends ECComponent
       destroy m_transform
       m_transform = null
 
-    g_worldComponents[getEntity().getId()] = null
+    g_transformComponents[getEntity().getId()] = null
 
   // --------------------------------------------------------------------------
-  function getParent() returns ECWorldComponent
+  function getParent() returns ECTransform
     return m_parent
 
   // --------------------------------------------------------------------------
-  function setParent(ECWorldComponent parent)
+  function setParent(ECTransform parent)
     setParent(parent, false)
 
   // --------------------------------------------------------------------------
-  function setParent(ECWorldComponent parent, bool keepWorldTransform)
+  function setParent(ECTransform parent, bool keepWorldTransform)
 
     if (m_parent == parent)
       return
@@ -732,17 +732,17 @@ public class ECWorldComponent extends ECComponent
     m_parent = parent
     m_parent.m_children.add(this)
 
-    var previousWorldTransform = IDENTITYT
-    if (keepWorldTransform)
-      previousWorldTransform = m_transform.getWorldTransform()
+    let worldPos = m_transform.getWorldPosition()
+    let worldRot = m_transform.getWorldRotation()
+    let worldScale = m_transform.getWorldScale()
     
     m_transform.setParent(m_parent.m_transform)
 
     if (keepWorldTransform)
-      m_transform.setWorldTransform(previousWorldTransform)
+      m_transform.setWorldTransform(worldPos, worldRot, worldScale)
 
   // --------------------------------------------------------------------------
-  function getChild(int index) returns ECWorldComponent
+  function getChild(int index) returns ECTransform
     return m_children.get(index)
 
   // --------------------------------------------------------------------------
@@ -754,14 +754,14 @@ public class ECWorldComponent extends ECComponent
     return m_transform
 
 // ============================================================================
-public class ECWorldSystem extends ECSystem1<ECWorldComponent>
+public class ECWorldSystem extends ECSystem1<ECTransform>
 
   // --------------------------------------------------------------------------
   construct()
-    super(ECWorldComponent.typeId)
+    super(ECTransform.typeId)
 
   // --------------------------------------------------------------------------
-  override protected function updateEntity(ECEntity entity, ECWorldComponent worldComponent, real _dt)
+  override protected function updateEntity(ECEntity entity, ECTransform worldComponent, real _dt)
     
     if (entity.isMarkedForDestroy())
     //{
@@ -780,8 +780,8 @@ init
 
   ECS.registerChannel(ECS.DEFAULT_CHANNEL_ID, RealtimeUpdatePriority.Fast)
 
-  ECS.registerComponentType(ECWorldComponent.typeId)
-    ..registerComponentFactory(entity -> new ECWorldComponent(entity))
-    ..registerComponentGetter(entity -> g_worldComponents[entity.getId()])
+  ECS.registerComponentType(ECTransform.typeId)
+    ..registerComponentFactory(entity -> new ECTransform(entity))
+    ..registerComponentGetter(entity -> g_transformComponents[entity.getId()])
 
   ECS.registerSystem(new ECWorldSystem())

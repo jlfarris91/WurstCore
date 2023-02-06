@@ -3,33 +3,56 @@ import Transform
 import ECS
 import RealtimeUpdate
 import Math
-
-MissileEffectComponent array g_missileEffectComponents
-MissileMovementComponent array g_missileMovementComponents
+import Events
+import Func
+import Action
 
 constant real DEFAULT_ARRIVAL_THRESHOLD = 10.0
+constant group g_tempGroup = CreateGroup()
 
 // ============================================================================
-public class MissileEffectComponent extends ECComponent
-  effect m_effect = null
-  transform m_transform = IDENTITYT
+public class ECMissileEffect extends ECComponent
+  protected static ECMissileEffect array g_components
+
+  private effect m_effect = null
+  private Transform m_transform = null
 
   // --------------------------------------------------------------------------
   construct(ECEntity entity)
     super(entity)
-    g_missileEffectComponents[entity.getId()] = this
+    g_components[entity.getId()] = this
+    m_transform = new Transform()
 
   // --------------------------------------------------------------------------
   ondestroy
-    g_missileEffectComponents[getEntity().getId()] = null
+    g_components[getEntity().getId()] = null
+
+    destroy m_transform
+    m_transform = null
 
     if (m_effect != null)
       m_effect.destr()
       m_effect = null
 
+  // ----------------------------------------------------------------------------
+  function getTransform() returns Transform
+    return m_transform
+
+  // ----------------------------------------------------------------------------
+  function setEffect(effect value)
+    if (m_effect != null)
+      m_effect.destr()
+    m_effect = value
+
+  // ----------------------------------------------------------------------------
+  function getEffect() returns effect
+    return m_effect
+
 // ============================================================================
-public class MissileMovementComponent extends ECComponent
-  transform m_transform = IDENTITYT
+public class ECMissile extends ECComponent
+  protected static ECMissile array g_components
+
+  unit m_owner = null
   widget m_targetWidget = null
   real m_targetWidgetHeight = 0.0
   vec3 m_targetPos = ZERO3
@@ -38,88 +61,227 @@ public class MissileMovementComponent extends ECComponent
   real m_arrivalThreshold = DEFAULT_ARRIVAL_THRESHOLD
   vec3 m_startPos = ZERO3
   vec3 m_arcUp = UP3
+  real m_progress = 0.0
+  real m_lastProgress = 0.0
+
+  private Event1<ECMissile> m_onArrived
 
   // --------------------------------------------------------------------------
   construct(ECEntity entity)
     super(entity)
-    g_missileMovementComponents[entity.getId()] = this
+    g_components[entity.getId()] = this
 
   // --------------------------------------------------------------------------
   ondestroy
-    g_missileMovementComponents[getEntity().getId()] = null
+    g_components[getEntity().getId()] = null
+
+  // ----------------------------------------------------------------------------
+  function onArrived() returns IEvent1<ECMissile>
+    if (m_onArrived == null)
+      m_onArrived = new Event1<ECMissile>()
+    return m_onArrived
+
+  // ----------------------------------------------------------------------------
+  function arrived()
+    m_progress = 1.0
+    if (m_onArrived != null)
+      m_onArrived.call(this)
+
+  // ----------------------------------------------------------------------------
+  function getTargetPosActual() returns vec3
+    if (m_targetWidget != null)
+      return m_targetWidget.getPos().withZ(m_targetWidgetHeight)
+    return m_targetPos
 
 // ============================================================================
-public class MissileMovementSystem extends ECSystem2<MissileEffectComponent, MissileMovementComponent>
+public class MissileMovementSystem extends ECSystem3<ECTransform, ECMissileEffect, ECMissile>
 
   // --------------------------------------------------------------------------
   construct()
-    super(MissileEffectComponent.typeId, MissileMovementComponent.typeId)
+    super(ECTransform.typeId, ECMissileEffect.typeId, ECMissile.typeId)
 
   // --------------------------------------------------------------------------
-  override protected function updateEntity(ECEntity entity, MissileEffectComponent effectComponent, MissileMovementComponent movementComponent, real dt)
+  override protected function updateEntity(ECEntity entity, ECTransform transformComponent, ECMissileEffect effectComponent, ECMissile missileComponent, real dt)
 
     if (entity.isMarkedForDestroy())
       return
 
-    var movementTransform = movementComponent.m_transform
+    let entityTransform = transformComponent.getTransform()
+    let targetPos = missileComponent.getTargetPosActual()
+    let speedDt = missileComponent.m_speed * dt
+    let currToTarget = targetPos - entityTransform.getWorldPosition()
+    let distRem = currToTarget.length()
+    let distTotal = missileComponent.m_startPos.distanceTo(targetPos)
+    let t = 1.0 - (distTotal == 0.0 ? 1.0 : clamp01(distRem / distTotal))
+    
+    missileComponent.m_lastProgress = missileComponent.m_progress
+    missileComponent.m_progress = t
 
-    vec3 targetPos
-
-    if (movementComponent.m_targetWidget != null)
-      targetPos = movementComponent.m_targetWidget.getPos().withZ(movementComponent.m_targetWidgetHeight)
-    else
-      targetPos = movementComponent.m_targetPos
-
-    let v = targetPos - movementTransform.pos
-    let length = v.length()
-
-    if (length < movementComponent.m_arrivalThreshold)
+    // Either way the missile has already arrived
+    if (speedDt > distRem or distRem < missileComponent.m_arrivalThreshold)
+    //{
       entity.markForDestroy()
+      missileComponent.arrived()
       return
+    //}
 
-    let speedDt = movementComponent.m_speed * dt
+    let velDir = currToTarget.norm()
 
-    if (speedDt > length)
-      entity.markForDestroy()
-      return
-
-    let velDir = v.norm()
-
-    movementTransform.pos += velDir * speedDt
-    movementComponent.m_transform = movementTransform
+    var transformPos = entityTransform.getWorldPosition()
+    transformPos += velDir * speedDt
+    entityTransform.setWorldPosition(transformPos)
 
     // Calculate arc z offset but only apply to the effect
-    let totalDist = movementComponent.m_startPos.distanceTo(targetPos)
-    let t = totalDist == 0.0 ? 1.0 : clamp01(length / totalDist)
     let arcRads = t * PI
-    let arcZOffset = Sin(arcRads) * totalDist * movementComponent.m_arc
+    let arcZOffset = Sin(arcRads) * distTotal * missileComponent.m_arc
 
-    var effectTransform = movementTransform
-    effectTransform.pos += movementComponent.m_arcUp * arcZOffset
+    var nextEffectPos = entityTransform.getWorldPosition()
+    nextEffectPos += missileComponent.m_arcUp * arcZOffset
 
-    let lastEffectTransform = effectComponent.m_transform
-    let lookDir = (effectTransform.pos - lastEffectTransform.pos).norm()
-    effectTransform = effectTransform.setForward(lookDir)
+    let effectTransform = effectComponent.getTransform()
 
-    if (effectComponent.m_effect != null)
-      effectComponent.m_effect.applyTransform(effectTransform)
+    let lastEffectPos = effectTransform.getWorldPosition()
+    let lookDir = (nextEffectPos - lastEffectPos).norm()
 
-    effectComponent.m_transform = effectTransform
+    effectTransform.setWorldPosition(nextEffectPos)
+    effectTransform.setWorldForward(lookDir)
+
+    let fx = effectComponent.getEffect()
+    if (fx != null)
+      effectTransform.apply(fx)
+
+// ============================================================================
+public class ECMissileLineDamage extends ECComponent
+  protected static ECMissileLineDamage array g_components
+
+  private Action1<unit> m_damageCallback
+  private Func1<unit, bool> m_filter
+
+  real m_startSize
+  real m_endSize
+  real m_damage
+  bool m_ignoreMissileTarget
+  group m_affectedUnits = CreateGroup()
+
+  // --------------------------------------------------------------------------
+  construct(ECEntity entity)
+    super(entity)
+    g_components[entity.getId()] = this
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    g_components[getEntity().getId()] = null
+    
+    m_affectedUnits.destr()
+    m_affectedUnits = null
+
+    if (m_damageCallback != null)
+      m_damageCallback.release()
+      m_damageCallback = null
+    
+    if (m_filter != null)
+      m_filter.release()
+      m_filter = null
+
+  // ----------------------------------------------------------------------------
+  function getTargetFilter() returns Func1<unit, bool>
+    return m_filter
+  
+  // ----------------------------------------------------------------------------
+  function setTargetFilter(Func1<unit, bool> value)
+    value.acquire()
+    if (m_filter != null)
+      m_filter.release()
+    m_filter = value
+
+  // ----------------------------------------------------------------------------
+  function getDamageCallback() returns Action1<unit>
+    return m_damageCallback
+  
+  // ----------------------------------------------------------------------------
+  function setDamageCallback(Action1<unit> value)
+    value.acquire()
+    if (m_damageCallback != null)
+      m_damageCallback.release()
+    m_damageCallback = value
+
+// ============================================================================
+public class MissileLineDamageSystem extends ECSystem3<ECTransform, ECMissile, ECMissileLineDamage>
+
+  // --------------------------------------------------------------------------
+  construct()
+    super(ECTransform.typeId, ECMissile.typeId, ECMissileLineDamage.typeId)
+
+  // --------------------------------------------------------------------------
+  override protected function updateEntity(ECEntity entity, ECTransform transformComponent, ECMissile missile, ECMissileLineDamage missileLineDamage, real dt)
+
+    if (entity.isMarkedForDestroy())
+      return
+
+    let t1 = missile.m_lastProgress
+    let t2 = missile.m_progress
+
+    let pos1 = lerp(missile.m_startPos, missile.getTargetPosActual(), t1).toVec2()
+    let pos2 = lerp(missile.m_startPos, missile.getTargetPosActual(), t2).toVec2()
+
+    let v = pos2 - pos1
+    let vdir = v.norm()
+    
+    let size1 = lerp(missileLineDamage.m_startSize, missileLineDamage.m_endSize, t1)
+    let size2 = lerp(missileLineDamage.m_startSize, missileLineDamage.m_endSize, t2)
+
+    let center = (pos1 + pos2) * 0.5
+    let radius = pos1.distanceTo(pos2) * 0.5 + size1 * 0.5 + size2 * 0.5
+
+    // let fx1 = addEffect("circle.mdl", center)..setScale(radius / 64.0)
+    // doAfter(3.0, () -> fx1.destr())
+
+    let damageCallback = missileLineDamage.getDamageCallback()
+    let targetFilter = missileLineDamage.getTargetFilter()
+
+    g_tempGroup.enumUnitsInRange(center, radius)
+
+    for u in g_tempGroup
+    //{
+      if ((u != missile.m_targetWidget or missileLineDamage.m_ignoreMissileTarget)
+          and not missileLineDamage.m_affectedUnits.contains(u)
+          and (targetFilter == null or targetFilter.call(u)))
+      //{
+        
+        let p = u.getPos()
+        let pp = p.project(vdir)
+        let pt = parameterize(pos1, pos2, pp)
+        let r = lerp(size1, size2, pt)
+
+        if (pp.distanceToSq(p) < r*r)
+        //{
+          missileLineDamage.m_affectedUnits.addUnit(u)
+          damageCallback.call(u)
+        //}
+      //}
+    //}
 
 // ============================================================================
 init
 
-  ECS.registerComponentType(MissileEffectComponent.typeId)
-    ..registerComponentFactory(entity -> new MissileEffectComponent(entity))
-    ..registerComponentGetter(entity -> g_missileEffectComponents[entity.getId()])
+  ECS.registerComponentType(ECMissileEffect.typeId)
+    ..registerComponentFactory(entity -> new ECMissileEffect(entity))
+    ..registerComponentGetter(entity -> ECMissileEffect.g_components[entity.getId()])
 
-  ECS.registerComponentType(MissileMovementComponent.typeId)
-    ..registerComponentFactory(entity -> new MissileMovementComponent(entity))
-    ..registerComponentGetter(entity -> g_missileMovementComponents[entity.getId()])
+  ECS.registerComponentType(ECMissile.typeId)
+    ..registerComponentFactory(entity -> new ECMissile(entity))
+    ..registerComponentGetter(entity -> ECMissile.g_components[entity.getId()])
 
-  ECS.registerChannel('ASDF', RealtimeUpdatePriority.Realtime)
+  ECS.registerComponentType(ECMissileLineDamage.typeId)
+    ..registerComponentFactory(entity -> new ECMissileLineDamage(entity))
+    ..registerComponentGetter(entity -> ECMissileLineDamage.g_components[entity.getId()])
+
+  ECS.registerChannel('MSLE', RealtimeUpdatePriority.Realtime)
 
   ECS.registerSystem(new MissileMovementSystem())
-    ..withUpdateChannel('ASDF')
+    ..withUpdateChannel('MSLE')
+
+  ECS.registerSystem(new MissileLineDamageSystem())
+    ..withUpdateChannel('MSLE')
 
   ECS.start()
