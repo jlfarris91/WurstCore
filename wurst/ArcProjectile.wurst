@@ -1,13 +1,11 @@
 package ArcProjectile
 import RealtimeUpdate
-import Action
 import GroupUtils
 import Math
-import Func
 import Circle
 import ClosureTimers
-
-let tempGroup = CreateGroup()
+import Events
+import Observable
 
 // ============================================================================
 public class ArcProjectile implements IRealtimeListener
@@ -19,19 +17,18 @@ public class ArcProjectile implements IRealtimeListener
   private real m_startSize
   private real m_endSize
   private real m_distance
+  private circle m_boundingCircle
   private effect m_fx
   private group m_affectedUnits
   private real m_speed
   private real m_time
-  private real m_damageTime
-  private real m_damageInterval
-  private Func2<ArcProjectile, unit, bool> m_unitFilter
-  private Action2<ArcProjectile, unit> m_callback
+
+  private Event1<ArcProjectile> m_onUpdated
+
+  use Observable
 
   // --------------------------------------------------------------------------
-  construct(unit owner, effect fx, vec2 startPos, vec2 endPos, real startSize, real endSize, real speed,
-            real damageInterval, Func2<ArcProjectile, unit, bool> unitFilter,
-            Action2<ArcProjectile, unit> callback)
+  construct(unit owner, effect fx, vec2 startPos, vec2 endPos, real startSize, real endSize, real speed)
     m_owner = owner
     m_fx = fx
     m_startPos = startPos
@@ -40,22 +37,27 @@ public class ArcProjectile implements IRealtimeListener
     m_endSize = endSize
     m_affectedUnits = getGroup()
     m_speed = speed
-    m_damageTime = damageInterval
-    m_damageInterval = damageInterval
-    m_unitFilter = unitFilter.acquire()
-    m_callback = callback.acquire()
     m_distance = startPos.distanceTo(endPos)
-    m_time = 0.0
-    this.registerForRealtimeUpdate(RealtimeUpdatePriority.Realtime)
-    affectUnits()
 
   // --------------------------------------------------------------------------
   ondestroy
     this.unregisterForRealtimeUpdate()
     m_affectedUnits.release()
-    m_unitFilter.release()
-    m_callback.release()
     m_fx.destr()
+
+    if (m_onUpdated != null)
+      destroy m_onUpdated
+      m_onUpdated = null
+
+  // ----------------------------------------------------------------------------
+  function onUpdated() returns IEvent1<ArcProjectile>
+    if (m_onUpdated == null)
+      m_onUpdated = new Event1<ArcProjectile>()
+    return m_onUpdated
+
+  // ----------------------------------------------------------------------------
+  function getOwner() returns unit
+    return m_owner
 
   // --------------------------------------------------------------------------
   function getPos() returns vec2
@@ -69,38 +71,43 @@ public class ArcProjectile implements IRealtimeListener
   function getDistance() returns real
     return m_time * m_speed
 
+  // ----------------------------------------------------------------------------
+  function getBoundingCircle() returns circle
+    return m_boundingCircle
+
+  // ----------------------------------------------------------------------------
+  function registerAffectedUnit(unit target)
+    m_affectedUnits.addUnit(target)
+  
+  // ----------------------------------------------------------------------------
+  function hasUnitBeenAffected(unit target) returns bool
+    return m_affectedUnits.contains(target)
+
+  // ----------------------------------------------------------------------------
+  function start()
+
+    m_time = 0.0
+    m_boundingCircle = circle(ZERO2, 0)
+    this.registerForRealtimeUpdate(RealtimeUpdatePriority.Realtime)
+
+    realtimeUpdate(0)
+
   // --------------------------------------------------------------------------
   override function realtimeUpdate(real dt)
 
     m_time += dt
 
     let t = getProgress01()
+    m_boundingCircle = circle(lerp(m_startPos, m_endPos, t), lerp(m_startSize, m_endSize, t))
 
     m_fx.setPos(getPos())
 
-    if (t >= 1.0)
-      affectUnits()
-      destroy this
-      return
-
-    m_damageTime -= dt
-
-    if (m_damageTime <= 0.0)
-      affectUnits()
-      m_damageTime = m_damageInterval
-
-  // --------------------------------------------------------------------------
-  private function affectUnits()
-
-    let t = getProgress01()
-    let boundingCircle = circle(lerp(m_startPos, m_endPos, t), lerp(m_startSize, m_endSize, t))
-
     if (SHOW_DEBUG)
-      let fx = addEffect("circle.mdl", boundingCircle.center)..setScale(boundingCircle.radius / 64.0)
+      let fx = addEffect("circle.mdl", m_boundingCircle.center)..setScale(m_boundingCircle.radius / 64.0)
       doAfter(3.0, () -> fx.destr())
 
-    tempGroup.enumUnitsInRange(boundingCircle.center, boundingCircle.radius)
-    for u in tempGroup
-      if (not m_affectedUnits.contains(u) and m_unitFilter.call(this, u))
-        m_callback.call(this, u)
-        m_affectedUnits.addUnit(u)
+    if (m_onUpdated != null)
+      m_onUpdated.call(this)
+
+    if (t >= 1.0)
+      destroy this
