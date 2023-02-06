@@ -1,6 +1,7 @@
 package UnitMetadataMeta
 import UnitMetadata
 import Meta
+import Composition
 
 public constant int typeId_IUnitMetadata = Meta.reserveInterface("UnitMetadata.IUnitMetadata")
 public constant int typeId_UnitComponent = Meta.reserveAbstractClass("UnitComponent.UnitComponent")
