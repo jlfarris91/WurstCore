@@ -6,7 +6,10 @@ import Events
 import Func
 import Action
 import Quaternion
-import ClosureTimers
+import GroupUtils
+
+// Debug:
+// import ClosureTimers
 
 constant real DEFAULT_ARRIVAL_THRESHOLD = 10.0
 constant group g_tempGroup = CreateGroup()
@@ -16,7 +19,8 @@ public class ECMissileEffect extends ECComponent
   protected static ECMissileEffect array g_components
 
   private effect m_effect = null
-  real m_scale = 1.0
+
+  bool m_updateOrientation = true
 
   // --------------------------------------------------------------------------
   construct(ECEntity entity)
@@ -68,7 +72,7 @@ public class ECMissile extends ECComponent
   real m_arrivalThreshold = DEFAULT_ARRIVAL_THRESHOLD
   vec3 m_arcUp = UP3
 
-  private Event1<ECMissile> m_onArrived
+  private Event1<ECMissile> m_onArrived = null
 
   // --------------------------------------------------------------------------
   construct(ECEntity entity)
@@ -78,6 +82,10 @@ public class ECMissile extends ECComponent
   // --------------------------------------------------------------------------
   ondestroy
     g_components[getEntity().getId()] = null
+
+    if (m_onArrived != null)
+      destroy m_onArrived
+      m_onArrived = null
 
   // ----------------------------------------------------------------------------
   function onArrived() returns IEvent1<ECMissile>
@@ -180,10 +188,13 @@ public class MissileEffectSystem extends ECSystem2<ECMissile, ECMissileEffect>
     super(ECMissile.typeId, ECMissileEffect.typeId)
 
   // --------------------------------------------------------------------------
-  override protected function updateEntity(ECEntity entity, ECMissile missile, ECMissileEffect effectComponent, real dt)
+  override protected function updateEntity(ECEntity entity, ECMissile missile, ECMissileEffect missileEffect, real dt)
     
-    let fx = effectComponent.getEffect()
+    let fx = missileEffect.getEffect()
     if (fx == null)
+      return
+
+    if (entity.isMarkedForDestroy())
       return
 
     // Careful! Everything below should only be local since it uses GetTerrainZ()
@@ -193,29 +204,39 @@ public class MissileEffectSystem extends ECSystem2<ECMissile, ECMissileEffect>
     let endPos = missile.getProjectileImpactPos()
     let startToEnd = endPos - startPos
     let totalDistance = startToEnd.length()
-    let rightDir = startToEnd.norm()
     let arcRads = t * PI
     let arcZOffset = Sin(arcRads) * missile.m_arc * totalDistance
-    let effectPos = lerp(startPos, endPos, t) + missile.m_arcUp * arcZOffset
+    let effectPos = lerp(startPos, endPos, t) + up * arcZOffset
+
+    fx.setPos(effectPos)
+
+    if (not missileEffect.m_updateOrientation)
+      return
+
+    let rightDir = startToEnd.norm()
     let arcVel = vec3(1, 0, PI * Cos(arcRads) * missile.m_arc).norm()
     let effectRotFinal = quatLookRotation(rightDir, up) * quatLookRotation(arcVel, up)
 
-    fx.setPos(effectPos)
-    fx.setScale(effectComponent.m_scale)
     fx.setOrientation(effectRotFinal)
 
 // ============================================================================
 public class ECMissileAreaDamage extends ECComponent
   protected static ECMissileAreaDamage array g_components
 
-  private Action1<unit> m_damageCallback
-  private Func1<unit, bool> m_filter
+  private Action1<unit> m_damageCallback = null
+  private Func1<unit, bool> m_filter = null
 
-  real m_startSize
-  real m_endSize
-  real m_damage
-  bool m_ignoreMissileTarget
-  group m_affectedUnits = CreateGroup()
+  real m_startSize = 0
+  real m_endSize = 0
+  real m_damage = 0
+  bool m_ignoreMissileOwner = true
+  bool m_ignoreMissileTarget = false
+  group m_affectedUnits = getGroup()
+
+  vec2 m_lastPos = ZERO2
+  real m_lastSize = 0.0
+
+  bool m_initialized = false
 
   // --------------------------------------------------------------------------
   construct(ECEntity entity)
@@ -226,8 +247,9 @@ public class ECMissileAreaDamage extends ECComponent
   ondestroy
     g_components[getEntity().getId()] = null
     
-    m_affectedUnits.destr()
-    m_affectedUnits = null
+    if (m_affectedUnits != null)
+      m_affectedUnits.release()
+      m_affectedUnits = null
 
     if (m_damageCallback != null)
       m_damageCallback.release()
@@ -272,23 +294,33 @@ public class MissileAreaDamageSystem extends ECSystem2<ECMissile, ECMissileAreaD
     if (entity.isMarkedForDestroy())
       return
 
-    let t1 = missile.m_lastProgress
-    let t2 = missile.m_progress
+    if (not missileAreaDamage.m_initialized)
+      missileAreaDamage.m_lastPos = lerp(missile.m_startPos, missile.getTargetPos(), missile.m_progress)
+      missileAreaDamage.m_lastSize = lerp(missileAreaDamage.m_startSize, missileAreaDamage.m_endSize, missile.m_progress)
+      missileAreaDamage.m_initialized = true
 
-    let pos1 = lerp(missile.m_startPos, missile.getTargetPos(), t1)
-    let pos2 = lerp(missile.m_startPos, missile.getTargetPos(), t2)
+    let pos1 = missileAreaDamage.m_lastPos
+    let pos2 = lerp(missile.m_startPos, missile.getTargetPos(), missile.m_progress)
 
     let v = pos2 - pos1
+    let dist = pos1.distanceTo(pos2)
     let vdir = v.norm()
     
-    let size1 = lerp(missileAreaDamage.m_startSize, missileAreaDamage.m_endSize, t1)
-    let size2 = lerp(missileAreaDamage.m_startSize, missileAreaDamage.m_endSize, t2)
+    let size1 = missileAreaDamage.m_lastSize
+    let size2 = lerp(missileAreaDamage.m_startSize, missileAreaDamage.m_endSize, missile.m_progress)
 
-    let center = (pos1 + pos2) * 0.5
-    let radius = pos1.distanceTo(pos2) * 0.5 + size1 * 0.5 + size2 * 0.5
+    let center = pos1 + vdir * (dist + (size2 - size1)) * 0.5
+    let radius = (dist + size1 + size2) * 0.5
 
-    let fx1 = addEffect("circle.mdl", center)..setScale(radius / 64.0)
-    doAfter(3.0, () -> fx1.destr())
+    // let fx1 = addEffect("circle.mdl", center)..setScale(radius / 64.0)..setColor(0, 255, 0)
+    // let fx2 = addEffect("axis.mdl", center)
+    // let fx3 = addEffect("circle.mdl", pos1)..setScale(size1 / 64.0)..setColor(0, 0, (missile.m_progress * 255).floor())
+    // let fx4 = addEffect("circle.mdl", pos2)..setScale(size2 / 64.0)..setColor(0, 0, (missile.m_progress * 255).floor())
+    // doAfter(3.0) () ->
+    //   fx1.destr()
+    //   fx2.destr()
+    //   fx3.destr()
+    //   fx4.destr()
 
     let damageCallback = missileAreaDamage.getDamageCallback()
     let targetFilter = missileAreaDamage.getTargetFilter()
@@ -297,23 +329,30 @@ public class MissileAreaDamageSystem extends ECSystem2<ECMissile, ECMissileAreaD
 
     for u in g_tempGroup
     //{
-      if ((u != missile.m_targetUnit or missileAreaDamage.m_ignoreMissileTarget)
+      if ((u != missile.m_owner or not missileAreaDamage.m_ignoreMissileOwner)
+          and (u != missile.m_targetUnit or not missileAreaDamage.m_ignoreMissileTarget)
           and not missileAreaDamage.m_affectedUnits.contains(u)
           and (targetFilter == null or targetFilter.call(u)))
       //{
         
         let p = u.getPos()
-        let pp = p.project(vdir)
-        let pt = parameterize(pos1, pos2, pp)
+        let pp = pos1 + (p - pos1).project(vdir)
+        let pt = parameterize01(pos1, pos2, pp)
         let r = lerp(size1, size2, pt)
 
         if (pp.distanceToSq(p) < r*r)
         //{
           missileAreaDamage.m_affectedUnits.addUnit(u)
           damageCallback.call(u)
+          // u.setVertexColor(color(0,255,0))
         //}
+        // else
+        //   u.setVertexColor(color(255,0,0))
       //}
     //}
+
+    missileAreaDamage.m_lastPos = pos2
+    missileAreaDamage.m_lastSize = size2
 
 // ============================================================================
 init
@@ -331,6 +370,7 @@ init
     ..registerComponentGetter(entity -> ECMissileAreaDamage.g_components[entity.getId()])
 
   ECS.registerChannel('MSLE', RealtimeUpdatePriority.Realtime)
+  ECS.registerChannel('MSAD', RealtimeUpdatePriority.Slow)
 
   ECS.registerSystem(new MissileMovementSystem())
     ..withUpdateChannel('MSLE')
@@ -339,6 +379,4 @@ init
     ..withUpdateChannel('MSLE')
 
   ECS.registerSystem(new MissileAreaDamageSystem())
-    ..withUpdateChannel('MSLE')
-
-  ECS.start()
+    ..withUpdateChannel('MSAD')

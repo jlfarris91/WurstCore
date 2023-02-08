@@ -273,7 +273,7 @@ public abstract class ECS
 
       let entity = g_entitiesToDestroy[g_entitiesToDestroyCounter]
     
-      Log.info("Destroying entity " + entity.getId().toString())
+      // Log.info("Destroying entity " + entity.getId().toString())
 
       for system in g_systemMetadata
         system.system.unregisterEntity(entity)
@@ -495,10 +495,22 @@ public abstract class ECSystemBase implements IRealtimeListener
     // Log.info("Added entity " + entity.getId().toString() + " to " + typeIdToTypeName(this.typeId))
     m_entities.add(entity)
 
+    onEntityRegistered(entity)
+
   // --------------------------------------------------------------------------
   protected function unregisterEntity(ECEntity entity)
     // Log.info("Removing entity " + entity.getId().toString() + " from " + typeIdToTypeName(this.typeId))
-    m_entities.remove(entity)
+
+    if (m_entities.remove(entity))
+      onEntityUnregistered(entity)
+
+  // ----------------------------------------------------------------------------
+  protected function onEntityRegistered(ECEntity _entity)
+    skip
+
+  // ----------------------------------------------------------------------------
+  protected function onEntityUnregistered(ECEntity _entity)
+    skip
 
 // ============================================================================
 public abstract class ECSystem extends ECSystemBase
@@ -522,15 +534,25 @@ public abstract class ECSystem extends ECSystemBase
   protected function updateEntity(ECEntity _entity, real _dt)
     skip
 
+  // ----------------------------------------------------------------------------
+  override protected function onEntityRegistered(ECEntity entity)
+    updateEntity(entity, 0)
+
 // ============================================================================
 public abstract class ECSystem1<TComp1> extends ECSystem
-  private int m_comp1TypeId
-  private ECSSystemMetadata m_systemMetadata
-  private Func1<ECEntity, ECComponent> m_component1Getter
+  private int m_comp1TypeId = 0
+  private ECSSystemMetadata m_systemMetadata = null
+  private Func1<ECEntity, ECComponent> m_component1Getter = null
 
   // --------------------------------------------------------------------------
   construct (int comp1TypeId)
     m_comp1TypeId = comp1TypeId
+
+  // ----------------------------------------------------------------------------
+  ondestroy
+    if (m_component1Getter != null)
+      m_component1Getter.release()
+      m_component1Getter = null
 
   // --------------------------------------------------------------------------
   override function getComponentTypeCount() returns int
@@ -551,7 +573,7 @@ public abstract class ECSystem1<TComp1> extends ECSystem
       m_systemMetadata = ECS.getSystemMetadata(this.typeId)
       if (m_systemMetadata.components.size() != 1)
         error("System component mismatch")
-      m_component1Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(0)).componentGetter
+      m_component1Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(0)).componentGetter.acquire()
 
     for i = 0 to m_entities.size() - 1
       let entity = m_entities.get(i)
@@ -564,16 +586,27 @@ public abstract class ECSystem1<TComp1> extends ECSystem
 
 // ============================================================================
 public abstract class ECSystem2<TComp1, TComp2> extends ECSystem
-  private int m_comp1TypeId
-  private int m_comp2TypeId
-  private ECSSystemMetadata m_systemMetadata
-  private Func1<ECEntity, ECComponent> m_component1Getter
-  private Func1<ECEntity, ECComponent> m_component2Getter
+  private int m_comp1TypeId = 0
+  private int m_comp2TypeId = 0
+  private ECSSystemMetadata m_systemMetadata = null
+  private Func1<ECEntity, ECComponent> m_component1Getter = null
+  private Func1<ECEntity, ECComponent> m_component2Getter = null
 
   // --------------------------------------------------------------------------
   construct (int comp1TypeId, int comp2TypeId)
     m_comp1TypeId = comp1TypeId
     m_comp2TypeId = comp2TypeId
+  
+  // ----------------------------------------------------------------------------
+  ondestroy
+  
+    if (m_component1Getter != null)
+      m_component1Getter.release()
+      m_component1Getter = null
+      
+    if (m_component2Getter != null)
+      m_component2Getter.release()
+      m_component2Getter = null
 
   // --------------------------------------------------------------------------
   override function getComponentTypeCount() returns int
@@ -596,8 +629,8 @@ public abstract class ECSystem2<TComp1, TComp2> extends ECSystem
       m_systemMetadata = ECS.getSystemMetadata(this.typeId)
       if (m_systemMetadata.components.size() != 2)
         error("System component mismatch")
-      m_component1Getter = ECS.getComponentMetadata(m_comp1TypeId).componentGetter
-      m_component2Getter = ECS.getComponentMetadata(m_comp2TypeId).componentGetter
+      m_component1Getter = ECS.getComponentMetadata(m_comp1TypeId).componentGetter.acquire()
+      m_component2Getter = ECS.getComponentMetadata(m_comp2TypeId).componentGetter.acquire()
 
     for i = 0 to m_entities.size() - 1
       let entity = m_entities.get(i)
@@ -611,19 +644,33 @@ public abstract class ECSystem2<TComp1, TComp2> extends ECSystem
 
 // ============================================================================
 public abstract class ECSystem3<TComp1, TComp2, TComp3> extends ECSystem
-  private int m_comp1TypeId
-  private int m_comp2TypeId
-  private int m_comp3TypeId
-  private ECSSystemMetadata m_systemMetadata
-  private Func1<ECEntity, ECComponent> m_component1Getter
-  private Func1<ECEntity, ECComponent> m_component2Getter
-  private Func1<ECEntity, ECComponent> m_component3Getter
+  private int m_comp1TypeId = 0
+  private int m_comp2TypeId = 0
+  private int m_comp3TypeId = 0
+  private ECSSystemMetadata m_systemMetadata = null
+  private Func1<ECEntity, ECComponent> m_component1Getter = null
+  private Func1<ECEntity, ECComponent> m_component2Getter = null
+  private Func1<ECEntity, ECComponent> m_component3Getter = null
 
   // --------------------------------------------------------------------------
   construct (int comp1TypeId, int comp2TypeId, int comp3TypeId)
     m_comp1TypeId = comp1TypeId
     m_comp2TypeId = comp2TypeId
     m_comp3TypeId = comp3TypeId
+
+  // ----------------------------------------------------------------------------
+  ondestroy
+    if (m_component1Getter != null)
+      m_component1Getter.release()
+      m_component1Getter = null
+
+    if (m_component2Getter != null)
+      m_component2Getter.release()
+      m_component2Getter = null
+
+    if (m_component3Getter != null)
+      m_component3Getter.release()
+      m_component3Getter = null
 
   // --------------------------------------------------------------------------
   override function getComponentTypeCount() returns int
@@ -648,9 +695,9 @@ public abstract class ECSystem3<TComp1, TComp2, TComp3> extends ECSystem
       m_systemMetadata = ECS.getSystemMetadata(this.typeId)
       if (m_systemMetadata.components.size() != 3)
         error("System component mismatch")
-      m_component1Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(0)).componentGetter
-      m_component2Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(1)).componentGetter
-      m_component3Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(2)).componentGetter
+      m_component1Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(0)).componentGetter.acquire()
+      m_component2Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(1)).componentGetter.acquire()
+      m_component3Getter = ECS.getComponentMetadata(m_systemMetadata.components.get(2)).componentGetter.acquire()
 
     for i = 0 to m_entities.size() - 1
       let entity = m_entities.get(i)
@@ -686,10 +733,11 @@ public class ECChannel implements IRealtimeListener
 
     ECS.destroyEntitiesMarkedForDestroy()
 
-ECTransform array g_transformComponents
 
 // ============================================================================
 public class ECTransform extends ECComponent
+  protected static ECTransform array g_components
+
   private Transform m_transform = new Transform()
   private ECTransform m_parent = null
   private LinkedList<ECTransform> m_children = new LinkedList<ECTransform>()
@@ -697,7 +745,7 @@ public class ECTransform extends ECComponent
   // --------------------------------------------------------------------------
   construct (ECEntity entity)
     super(entity)
-    g_transformComponents[entity.getId()] = this
+    g_components[entity.getId()] = this
 
   // --------------------------------------------------------------------------
   ondestroy
@@ -710,7 +758,7 @@ public class ECTransform extends ECComponent
       destroy m_transform
       m_transform = null
 
-    g_transformComponents[getEntity().getId()] = null
+    g_components[getEntity().getId()] = null
 
   // --------------------------------------------------------------------------
   function getParent() returns ECTransform
@@ -782,6 +830,6 @@ init
 
   ECS.registerComponentType(ECTransform.typeId)
     ..registerComponentFactory(entity -> new ECTransform(entity))
-    ..registerComponentGetter(entity -> g_transformComponents[entity.getId()])
+    ..registerComponentGetter(entity -> ECTransform.g_components[entity.getId()])
 
   ECS.registerSystem(new ECWorldSystem())
