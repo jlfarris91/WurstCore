@@ -30,10 +30,10 @@ public interface IRunnable
 // ============================================================================
 public abstract class Runnable implements IRunnable, IProgress
   private RunnableState m_state
-  private string m_error
-  private Event1<IRunnable> m_stateChangedEvent
-  private Event1<IProgress> m_progressChangedEvent
-  private CancellationToken m_ct
+  private string m_error = null
+  private Event1<IRunnable> m_stateChangedEvent = null
+  private Event1<IProgress> m_progressChangedEvent = null
+  private CancellationToken m_ct = null
   
   // --------------------------------------------------------------------------
   construct()
