@@ -14,6 +14,7 @@ Model "" {
 Sequences 3 {
 	Anim "Birth" {
 		Interval {1000, 1500},
+		NonLooping,
 		MinimumExtent {-64, -64, 0},
 		MaximumExtent {64, 64, 0.25024},
 		BoundsRadius 90.509754,
@@ -26,6 +27,7 @@ Sequences 3 {
 	}
 	Anim "Death" {
 		Interval {5000, 5500},
+		NonLooping,
 		MinimumExtent {-64, -64, 0},
 		MaximumExtent {64, 64, 0.25024},
 		BoundsRadius 90.509754,
