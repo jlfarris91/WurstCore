@@ -1,0 +1,165 @@
+package StandardTooltip
+import Layout
+
+@configurable constant rectr DRAW_AREA = rectr(0.512, 0.16, 0.28, 0.0)
+constant int MAX_RES_COST_ITEM_COUNT = 3
+
+// ============================================================================
+public class StandardTooltip
+  private framehandle m_backdrop
+  private framehandle m_tooltipText
+  private framehandle m_tooltipExtendedText
+  private framehandle m_separatorContainer
+  private framehandle m_separatorFrame
+  private framehandle m_resourceCostContainer
+  private framehandle m_requiresText
+
+  private framehandle array[MAX_RES_COST_ITEM_COUNT] m_resIcon
+  private framehandle array[MAX_RES_COST_ITEM_COUNT] m_resText
+
+  // ----------------------------------------------------------------------------
+  construct()
+  
+    m_backdrop = createFrame("StandardTooltipBackdrop")
+
+    m_tooltipExtendedText = createFrame("StandardTooltipText", m_backdrop, 0, 0)
+    ..setWidth(DRAW_AREA.width)
+    ..setAbsPoint(FRAMEPOINT_BOTTOMLEFT, DRAW_AREA.bottomLeft() + vec2(0.005, 0.005))
+
+    m_separatorContainer = createFrame("FRAME", "", m_backdrop, "", 0)
+    ..setWidth(DRAW_AREA.width)
+    ..setHeight(0.012)
+    ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_tooltipExtendedText, FRAMEPOINT_TOPLEFT, 0.0, 0.0)
+
+    m_separatorFrame = createFrame("StandardTooltipSeparator", m_separatorContainer, 0, 0)
+    ..setWidth(DRAW_AREA.width - 0.004)
+    ..setHeight(0.0005)
+    ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_separatorContainer, FRAMEPOINT_BOTTOMLEFT, 0.002, 0.0055)
+
+    m_resourceCostContainer = createFrame("FRAME", "", m_backdrop, "", 0)
+    ..setWidth(DRAW_AREA.width)
+    ..setHeight(0.0135)
+    ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_separatorContainer, FRAMEPOINT_TOPLEFT, 0.0, 0.0)
+
+    for i = 0 to MAX_RES_COST_ITEM_COUNT - 1
+    //{
+      m_resIcon[i] = createFrame("StandardTooltipResourceIcon", m_resourceCostContainer, 0, 0)
+      ..setSize(0.01, 0.01)
+      ..hide()
+
+      m_resText[i] = createFrame("StandardTooltipText", m_resourceCostContainer, 0, 0)
+      ..setText("")
+      ..setPoint(FRAMEPOINT_TOPLEFT, m_resIcon[i], FRAMEPOINT_TOPRIGHT, 0.0025, 0)
+      ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_resIcon[i], FRAMEPOINT_BOTTOMRIGHT, 0.0025, 0)
+      ..hide()
+    //}
+
+    m_requiresText = createFrame("StandardTooltipText", m_backdrop, 0, 0)
+    ..setText("")
+    ..setWidth(DRAW_AREA.width)
+    ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_separatorContainer, FRAMEPOINT_TOPLEFT, 0.0, 0.0)
+
+    m_tooltipText = createFrame("StandardTooltipText", m_backdrop, 0, 0)
+    ..setWidth(DRAW_AREA.width)
+
+    m_backdrop
+    ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_tooltipExtendedText, FRAMEPOINT_BOTTOMLEFT, -0.005, -0.005)
+    ..setPoint(FRAMEPOINT_TOPRIGHT, m_tooltipText, FRAMEPOINT_TOPRIGHT, 0.005, 0.005)
+
+    updateLayout()
+
+  // ----------------------------------------------------------------------------
+  ondestroy
+
+    // destroying frames causes crashes
+    m_backdrop..disable()..hide()
+
+  // ----------------------------------------------------------------------------
+  function getTooltipFrame() returns framehandle
+    return m_backdrop
+
+  // ----------------------------------------------------------------------------
+  function setTooltip(string tooltip, string tooltipExtended)
+    m_tooltipText.setText(tooltip)
+    m_tooltipExtendedText.setText(tooltipExtended)
+
+  // ----------------------------------------------------------------------------
+  function setResourceCost(int index, string iconPath, int value)
+    m_resIcon[index].setTexture(iconPath, 0, true)
+    m_resText[index].setText("|cffffff00{0}|r".format(value.toString()))
+    updateLayout()
+
+  // ----------------------------------------------------------------------------
+  function clearResourceCosts(int index)
+    for i = 0 to MAX_RES_COST_ITEM_COUNT-1
+      m_resText[index]..setText("")..hide()
+    updateLayout()
+
+  // ----------------------------------------------------------------------------
+  function setRequiresText(string value)
+    m_requiresText.setText(value)
+    updateLayout()
+
+  // ----------------------------------------------------------------------------
+  static function createStandardTooltip() returns StandardTooltip
+    return new StandardTooltip()
+
+  // ----------------------------------------------------------------------------
+  protected function updateLayout()
+
+    let showRequiresText = m_requiresText.getText() != ""
+    var showResourceCosts = false
+
+    if (not showRequiresText)
+    //{
+      for i = 0 to MAX_RES_COST_ITEM_COUNT - 1
+      //{
+        if (m_resText[i].getText() != "")
+        //{
+          if (i == 0)
+            m_resIcon[i]
+            ..clearAllPoints()
+            ..setPoint(FRAMEPOINT_LEFT, m_resourceCostContainer, FRAMEPOINT_LEFT, -0.001, -0.002)
+          else
+            m_resIcon[i]
+            ..clearAllPoints()
+            ..setPoint(FRAMEPOINT_LEFT, m_resText[i-1], FRAMEPOINT_RIGHT, 0.006, 0)
+          
+          m_resIcon[i]..show()
+          m_resText[i]..show()
+
+          showResourceCosts = true
+        //}
+        else
+          m_resIcon[i].hide()
+          m_resText[i].hide()
+      //}
+    //}
+    
+    if (showRequiresText)
+    //{
+      m_resourceCostContainer.hide()
+      m_requiresText.show()
+
+      m_tooltipText
+      ..clearAllPoints()
+      ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_requiresText, FRAMEPOINT_TOPLEFT, 0, 0.005)
+    //}
+    else if (showResourceCosts)
+    //{
+      m_resourceCostContainer.show()
+      m_requiresText.hide()
+
+      m_tooltipText
+      ..clearAllPoints()
+      ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_resourceCostContainer, FRAMEPOINT_TOPLEFT, 0.0, 0.0)
+    //}
+    else
+    //{
+      m_resourceCostContainer.hide()
+      m_requiresText.hide()
+
+      m_tooltipText
+      ..clearAllPoints()
+      ..setPoint(FRAMEPOINT_BOTTOMLEFT, m_separatorContainer, FRAMEPOINT_TOPLEFT, 0.0, 0.0)
+    //}
