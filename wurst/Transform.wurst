@@ -95,6 +95,18 @@ function transform.setForward(vec3 value) returns transform
   return transform
 
 // ============================================================================
+function transform.withPos(vec3 pos) returns transform
+  return transform(pos, this.rot, this.scale)
+
+// ============================================================================
+function transform.withRot(quat rot) returns transform
+  return transform(this.pos, rot, this.scale)
+
+// ============================================================================
+function transform.withScale(real scale) returns transform
+  return transform(this.pos, this.rot, scale)
+
+// ============================================================================
 /** Affected by position, scale and rotaiton */
 function transform.transformPoint(vec2 point) returns vec2
   return this.transformPoint(point.toVec3()).toVec2()
@@ -308,7 +320,7 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function setLocalPosition(vec3 value)
-    m_localTransform.pos = value
+    setLocalTransform(m_localTransform.withPos(value))
 
   // --------------------------------------------------------------------------
   function getLocalRotation() returns quat
@@ -316,9 +328,7 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function setLocalRotation(quat value)
-    if (m_localTransform.rot != value)
-      m_localTransform.rot = value
-      dirtyHierarchy()
+    setLocalTransform(m_localTransform.withRot(value))
 
   // ----------------------------------------------------------------------------
   function getLocalYaw() returns angle
@@ -334,9 +344,7 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function setLocalScale(real value)
-    if (m_localTransform.scale != value)
-      m_localTransform.scale = value
-      dirtyHierarchy()
+    setLocalTransform(m_localTransform.withScale(value))
 
   // --------------------------------------------------------------------------
   function getLocalRight() returns vec3
@@ -344,9 +352,9 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function setLocalRight(vec3 value)
-    if (m_localTransform.getRight() != value)
-      m_localTransform = m_localTransform.setRight(value)
-      dirtyHierarchy()
+    let localTransform = m_localTransform
+    localTransform.setRight(value)
+    setLocalTransform(localTransform)
 
   // --------------------------------------------------------------------------
   function getLocalUp() returns vec3
@@ -354,9 +362,9 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function setLocalUp(vec3 value)
-    if (m_localTransform.getUp() != value)
-      m_localTransform = m_localTransform.setUp(value)
-      dirtyHierarchy()
+    let localTransform = m_localTransform
+    localTransform.setUp(value)
+    setLocalTransform(localTransform)
 
   // --------------------------------------------------------------------------
   function getLocalForward() returns vec3
@@ -364,9 +372,9 @@ public class Transform
 
   // --------------------------------------------------------------------------
   function setLocalForward(vec3 value)
-    if (m_localTransform.getForward() != value)
-      m_localTransform = m_localTransform.setForward(value)
-      dirtyHierarchy()
+    let localTransform = m_localTransform
+    localTransform.setForward(value)
+    setLocalTransform(localTransform)
 
   // --------------------------------------------------------------------------
   private function getWorldTransform() returns transform
@@ -405,7 +413,7 @@ public class Transform
     if (m_parent != null)
       localTransform = m_parent.getWorldTransform().separate(value)
     m_localTransform = localTransform
-    m_dirtyWorld = true
+    dirtyHierarchy()
 
   // --------------------------------------------------------------------------
   function getWorldPosition() returns vec3
