@@ -1,8 +1,13 @@
 package StandardTooltip
 import Layout
+import HashList
 
 @configurable constant rectr DRAW_AREA = rectr(0.512, 0.16, 0.28, 0.0)
 constant int MAX_RES_COST_ITEM_COUNT = 3
+
+HashList<StandardTooltip> g_used = new HashList<StandardTooltip>
+StandardTooltip array g_freeList
+int g_freeListCount = 0
 
 // ============================================================================
 public class StandardTooltip
@@ -75,6 +80,44 @@ public class StandardTooltip
     m_backdrop..disable()..hide()
 
   // ----------------------------------------------------------------------------
+  static function get() returns StandardTooltip
+    StandardTooltip tooltip
+    if (g_freeListCount > 0)
+      tooltip =  g_freeList[g_freeListCount-1]
+      g_freeListCount--
+    else
+      tooltip = new StandardTooltip()
+    g_used.add(tooltip)
+    return tooltip
+
+  // ----------------------------------------------------------------------------
+  function release()
+
+    if (not g_used.has(this))
+      Log.warn("Attemping to release an already released group!")
+      return
+
+    clear()
+
+    g_freeList[g_freeListCount] = this
+    g_freeListCount++
+
+    g_used.remove(this)
+
+  // ----------------------------------------------------------------------------
+  function clear()
+
+    m_tooltipText.setText("")
+    m_tooltipExtendedText.setText("")
+    m_requiresText.setText("")
+    
+    for i = 0 to MAX_RES_COST_ITEM_COUNT - 1
+      m_resText[i].setText("")
+
+    // hide everything
+    m_backdrop..hide()
+
+  // ----------------------------------------------------------------------------
   function getTooltipFrame() returns framehandle
     return m_backdrop
 
@@ -99,10 +142,6 @@ public class StandardTooltip
   function setRequiresText(string value)
     m_requiresText.setText(value)
     updateLayout()
-
-  // ----------------------------------------------------------------------------
-  static function createStandardTooltip() returns StandardTooltip
-    return new StandardTooltip()
 
   // ----------------------------------------------------------------------------
   protected function updateLayout()
