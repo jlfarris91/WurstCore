@@ -75,9 +75,7 @@ public class StandardTooltip
 
   // ----------------------------------------------------------------------------
   ondestroy
-
-    // destroying frames causes crashes
-    m_backdrop..disable()..hide()
+    Log.error("Cannot destroy a StandardTooltip, use .release() instead")
 
   // ----------------------------------------------------------------------------
   static function get() returns StandardTooltip

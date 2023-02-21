@@ -1,0 +1,180 @@
+package UnitAdmin
+import GroupUtils
+import Events
+import GroupExtensions
+import HashMap
+import ErrorHandling
+import RegisterEvents
+import ObjectIds
+import IterableMapExtensions
+
+HashMap<unit, UnitAdmin> g_unitToAdminMap
+
+// ============================================================================
+public class UnitAdmin
+  private string m_id
+  private group m_ownedUnits = getGroup()
+  private int m_totalRegisteredUnits = 0
+
+  private IterableMap<string, group> m_ownedUnitsByKey = new IterableMap<string, group>()
+  private HashMap<string, int> m_totalRegisteredUnitsByKey = new HashMap<string, int>()
+
+  private Event2<UnitAdmin, unit> m_onUnitRegistered
+  private Event2<UnitAdmin, unit> m_onUnitUnregistered
+
+  // --------------------------------------------------------------------------
+  construct(string id)
+    m_id = id
+
+  // --------------------------------------------------------------------------
+  ondestroy
+
+    for key in m_ownedUnitsByKey
+      m_ownedUnitsByKey.get(key).release()
+    destroy m_ownedUnitsByKey
+    m_ownedUnitsByKey = null
+
+    while not m_ownedUnits.isEmpty()
+      unregisterOwnedUnit(m_ownedUnits.getFirst())
+
+    m_ownedUnits.release()
+    m_ownedUnits = null
+
+    destroy m_totalRegisteredUnitsByKey
+    m_totalRegisteredUnitsByKey = null
+
+    if (m_onUnitRegistered != null)
+      destroy m_onUnitRegistered
+      m_onUnitRegistered = null
+
+    if (m_onUnitUnregistered != null)
+      destroy m_onUnitUnregistered
+      m_onUnitUnregistered = null
+
+  // ----------------------------------------------------------------------------
+  function getAliveCount() returns int
+    return m_ownedUnits.size()
+
+  // ----------------------------------------------------------------------------
+  function getAliveCount(int unitTypeId) returns int
+    return getAliveCount(unitTypeId.toRawCode())
+
+  // ----------------------------------------------------------------------------
+  function getAliveCount(string key) returns int
+    let ownedUnitsByTypeGroup = getOwnedUnits(key)
+    return ownedUnitsByTypeGroup != null ? ownedUnitsByTypeGroup.size() : 0
+
+  // ----------------------------------------------------------------------------
+  function getTotalRegistered() returns int
+    return m_totalRegisteredUnits
+
+  // ----------------------------------------------------------------------------
+  function getTotalRegistered(int unitTypeId) returns int
+    return getTotalRegistered(unitTypeId.toRawCode())
+
+  // ----------------------------------------------------------------------------
+  function getTotalRegistered(string key) returns int
+    return m_totalRegisteredUnitsByKey.get(key)
+
+  // --------------------------------------------------------------------------
+  function getOwnedUnits() returns group
+    return m_ownedUnits
+
+  // ----------------------------------------------------------------------------
+  function getOwnedUnits(int unitTypeId) returns group
+    return getOwnedUnits(unitTypeId.toRawCode())
+
+  // ----------------------------------------------------------------------------
+  function getOwnedUnits(string key) returns group
+    return m_ownedUnitsByKey.get(key)
+
+  // --------------------------------------------------------------------------
+  function onUnitRegistered() returns IEvent2<UnitAdmin, unit>
+    if (m_onUnitRegistered == null)
+      m_onUnitRegistered = new Event2<UnitAdmin, unit>()
+    return m_onUnitRegistered
+
+  // --------------------------------------------------------------------------
+  function onUnitUnregistered() returns IEvent2<UnitAdmin, unit>
+    if (m_onUnitUnregistered == null)
+      m_onUnitUnregistered = new Event2<UnitAdmin, unit>()
+    return m_onUnitUnregistered
+
+  // --------------------------------------------------------------------------
+  function registerOwnedUnit(unit _unit)
+    registerOwnedUnit(_unit, _unit.getTypeId().toRawCode())
+
+  // --------------------------------------------------------------------------
+  function registerOwnedUnit(unit _unit, string key)
+
+    let existingAdmin = g_unitToAdminMap.get(_unit)
+    if (existingAdmin != null and existingAdmin != this)
+      error("Unit belongs to a different admin")
+      return
+
+    if (existingAdmin == this)
+      return
+
+    g_unitToAdminMap.put(_unit, this)
+
+    let unitTypeId = _unit.getTypeId()
+    let rawCode = unitTypeId.toRawCode()
+    
+    m_totalRegisteredUnits++
+    
+    m_ownedUnits.addUnit(_unit)
+
+    if (key != rawCode)
+      m_totalRegisteredUnitsByKey.put(key, m_totalRegisteredUnitsByKey.get(rawCode) + 1)
+      m_ownedUnitsByKey.addUnit(rawCode, _unit)
+
+    m_totalRegisteredUnitsByKey.put(key, m_totalRegisteredUnitsByKey.get(key) + 1)
+    m_ownedUnitsByKey.addUnit(key, _unit)
+
+    if (m_onUnitRegistered != null)
+      m_onUnitRegistered.call(this, _unit)
+
+  // --------------------------------------------------------------------------
+  function unregisterOwnedUnit(unit _unit)
+
+    let existingAdmin = g_unitToAdminMap.get(_unit)
+    if (existingAdmin == null)
+      return
+
+    if (existingAdmin != this)
+      error("Unit belongs to a different admin")
+      return
+    
+    g_unitToAdminMap.remove(_unit)
+    m_ownedUnits.removeUnit(_unit)
+
+    // Remove the unit from any keyed group it belongs to
+    let keys = m_ownedUnitsByKey.getKeys()
+    for key in keys
+      m_ownedUnitsByKey.removeUnit(key, _unit)
+    destroy keys
+
+    if (m_onUnitUnregistered != null)
+      m_onUnitUnregistered.call(this, _unit)
+
+  // ----------------------------------------------------------------------------
+  function reset()
+    m_totalRegisteredUnits = 0
+    m_totalRegisteredUnitsByKey.flush()
+
+  // --------------------------------------------------------------------------
+  protected function onOwnedUnitKilled(unit dyingUnit)
+    unregisterOwnedUnit(dyingUnit)
+
+// ============================================================================
+function onUnitDeath()
+  let dyingUnit = GetDyingUnit()
+  if (not g_unitToAdminMap.has(dyingUnit))
+    return
+  let director = g_unitToAdminMap.get(dyingUnit)
+  director.onOwnedUnitKilled(dyingUnit)
+
+// ============================================================================
+init
+  g_unitToAdminMap = new HashMap<unit, UnitAdmin>()
+  registerPlayerUnitEvent(EVENT_PLAYER_UNIT_DEATH, function onUnitDeath)

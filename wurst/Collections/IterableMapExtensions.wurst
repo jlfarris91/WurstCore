@@ -1,6 +1,7 @@
 package IterableMapExtensions
 import HashMap
 import LinkedList
+import GroupUtils
 
 // ============================================================================
 public function IterableMap<TKey, TValue>.getKeys<TKey, TValue>() returns LinkedList<TKey>
@@ -15,3 +16,20 @@ public function IterableMap<TKey, TValue>.getValues<TKey, TValue>() returns Link
   for key in this
     values.add(this.get(key))
   return values
+
+// ============================================================================
+public function IterableMap<TKey, group>.addUnit<TKey>(TKey key, unit u)
+  var g = this.get(key)
+  if (g == null)
+    g = getGroup()
+    this.put(key, g)
+  g.addUnit(u)
+
+// ============================================================================
+public function IterableMap<TKey, group>.removeUnit<TKey>(TKey key, unit u)
+  var g = this.get(key)
+  if (g != null)
+    g.removeUnit(u)
+    if (g.isEmpty())
+      g.release()
+      this.remove(key)
