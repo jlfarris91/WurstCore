@@ -27,7 +27,7 @@ public function IterableMap<TKey, group>.addUnit<TKey>(TKey key, unit u)
 
 // ============================================================================
 public function IterableMap<TKey, group>.removeUnit<TKey>(TKey key, unit u)
-  var g = this.get(key)
+  let g = this.get(key)
   if (g != null)
     g.removeUnit(u)
     if (g.isEmpty())
