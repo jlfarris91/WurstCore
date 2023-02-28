@@ -29,13 +29,13 @@ public class UnitAdmin
   // --------------------------------------------------------------------------
   ondestroy
 
+    while not m_ownedUnits.isEmpty()
+      unregisterOwnedUnit(m_ownedUnits.getFirst())
+
     for key in m_ownedUnitsByKey
       m_ownedUnitsByKey.get(key).release()
     destroy m_ownedUnitsByKey
     m_ownedUnitsByKey = null
-
-    while not m_ownedUnits.isEmpty()
-      unregisterOwnedUnit(m_ownedUnits.getFirst())
 
     m_ownedUnits.release()
     m_ownedUnits = null
