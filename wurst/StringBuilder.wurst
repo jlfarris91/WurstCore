@@ -51,3 +51,9 @@ public function IStringBuilder.toStringAndDestroy() returns string
   let str = this.toString()
   destroy this
   return str
+
+// ============================================================================
+public function IStringBuilder.toStringAndReset() returns string
+  let str = this.toString()
+  this.reset()
+  return str
