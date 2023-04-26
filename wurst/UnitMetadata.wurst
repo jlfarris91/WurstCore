@@ -8,6 +8,7 @@ import UnitIndexer
 import Preload
 import Events
 import public Dispatcher
+import ObjectIds
 
 IUnitMetadata array g_unitMetadatas
 LinkedList<IUnitMetadataFactory> g_unitMetadataFactories
@@ -43,11 +44,18 @@ public class UnitComponentCreationContext
 public abstract class UnitComponent extends Component implements IDispatcher
   private IUnitMetadata m_owner
   private bool m_disableOnDeath = true
+  private UnitComponentDispatcherContext m_dispatcherContext
 
   // --------------------------------------------------------------------------
   construct(IUnitMetadata ownerUnit)
     super(ownerUnit)
     m_owner = ownerUnit
+
+  // --------------------------------------------------------------------------
+  ondestroy
+    if (m_dispatcherContext != null)
+      m_dispatcherContext.release()
+      m_dispatcherContext = null
 
   // --------------------------------------------------------------------------
   override function getOwner() returns IUnitMetadata
@@ -75,6 +83,10 @@ public abstract class UnitComponent extends Component implements IDispatcher
       disable()
 
   // --------------------------------------------------------------------------
+  override function onEnabled()
+    super.onEnabled()
+
+  // --------------------------------------------------------------------------
   function onOwnerRevived()
     enable()
 
@@ -83,16 +95,20 @@ public abstract class UnitComponent extends Component implements IDispatcher
     skip
 
   // --------------------------------------------------------------------------
-  function onUnitChanged(unit _oldUnit, unit _newUnit)
-    skip
+  function onUnitChanged(unit _oldUnit, unit newUnit)
+    
+    if (m_dispatcherContext != null)
+      m_dispatcherContext.m_ownerUnit = newUnit
 
   // --------------------------------------------------------------------------
   override function getDispatcherContext(bool requireEnabled) returns DispatcherContext
-    return new UnitComponentDispatcher(getOwnerUnit(), this.typeId, requireEnabled)
+    if (m_dispatcherContext == null)
+      m_dispatcherContext = new UnitComponentDispatcherContext(getOwnerUnit(), this.typeId, requireEnabled)..acquire()
+    return m_dispatcherContext
 
 // ============================================================================
-class UnitComponentDispatcher extends DispatcherContext
-  private unit m_ownerUnit
+class UnitComponentDispatcherContext extends DispatcherContext
+  protected unit m_ownerUnit
   private int m_compTypeId
   private bool m_requireEnabled
 
@@ -178,7 +194,7 @@ public class UnitMetadata extends Composable implements IUnitMetadata
     logDebug("[UnitMetadata.detach] Detached from " + m_unit.getName())
 
   // --------------------------------------------------------------------------
-  private function detachAndNullifyUnit()
+  protected function detachAndNullifyUnit()
     detach()
     setUnit(null)
 
@@ -394,24 +410,55 @@ public function replaceUnitTLS(unit whichUnit, integer newUnitId, integer unitSt
   if (whichUnit == null)
     argumentNullError("whichUnit")
 
+  let oldUnitId = whichUnit.getTypeId()
   let oldUnitName = whichUnit.getName()
-  let existingMetadata = whichUnit.getMetadata()
+  let existingMetadata = whichUnit.getMetadata() castTo UnitMetadata // gross - need for getComponents below
   let owningPlayer = whichUnit.getOwner()
   let wasSelected = whichUnit.isSelectedByOwner()
 
+  // Disable and then re-enable any components that were enabled and operated
+    // under the context of the old unit
+  LinkedList<IComponent> enabledComponents = null
+
   if (existingMetadata != null)
+  //{
     startIgnoreIndexing(owningPlayer)
+
+    enabledComponents = new LinkedList<IComponent>()
+
+    for comp in existingMetadata.getComponents()
+      if (comp.getEnabled())
+        enabledComponents.add(comp)
+        comp.setEnabled(false)
+
+    existingMetadata.detachAndNullifyUnit()
+  //}
   else
     logDebug("[replaceUnitTLS] Replacing unit " + whichUnit.getName() + " with no attached metadata")
 
   let newUnit = replaceUnitFixed(whichUnit, newUnitId, unitStateMethod, persistXp)
 
+  if (newUnit == null)
+    error("failed to replace unit type {0} with type {1}".format(oldUnitId.toRawCode(), newUnitId.toRawCode()))
+
   if (newUnit.hasMetadata())
     error("Unit should not have metadata yet")
   
   if (existingMetadata != null)
+  //{
     stopIgnoreIndexing(owningPlayer)
     existingMetadata.attach(newUnit)
+
+    // Now that the backing field for getUnit() has changed, re-enable any
+    // components that were enabled with the old unit, also alert them
+    if (enabledComponents != null)
+    //{
+      for comp in enabledComponents
+        if (comp != null and newUnit != null)
+          comp.setEnabled(true)
+      destroy enabledComponents
+    //}
+  //}
 
   if (wasSelected)
     SelectUnitAddForPlayer(newUnit, newUnit.getOwner())

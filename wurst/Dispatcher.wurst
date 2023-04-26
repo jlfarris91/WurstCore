@@ -45,22 +45,28 @@ public function IEvent1<T>.registerDispatched<T>(IDispatcher dispatcher, bool re
   return this.register(new DispatchedEvent1Callback<T>(dispatcher.getDispatcherContext(requireEnabled), handler))
 
 // ============================================================================
-function dispatch_Internal(DispatcherContext context, Action work)
+function dispatch_Internal(DispatcherContext context, Action work) returns bool
+  var dispatched = false
   context.acquire()
   work.acquire()
   if (context.canDispatch())
     work.call()
+    dispatched = true
   work.release()
   context.release()
+  return dispatched
 
 // ============================================================================
-function dispatch_Internal<T>(DispatcherContext context, Action1<T> work, T arg1)
+function dispatch_Internal<T>(DispatcherContext context, Action1<T> work, T arg1) returns bool
+  var dispatched = false
   context.acquire()
   work.acquire()
   if (context.canDispatch())
     work.call(arg1)
+    dispatched = true
   work.release()
   context.release()
+  return dispatched
 
 // ============================================================================
 module DispatchedWorkModule
