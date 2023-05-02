@@ -167,6 +167,21 @@ public function hill01(real x, real y) returns real
   return x / (x + y)
 
 // ============================================================================
+/**
+  desmos: f\left(x\right)\ =\frac{x}{x+a}\cdot\left(1+a\right)
+  curve - a number that causes a straighter line as it approaches positive infinity
+          0.0001 nearly 90 degree angle
+          0.5 is a good middle ground
+          100 is a straight line for all intents and purposes
+*/
+public function lerp_hill01(real start, real _end, real t, real curve) returns real
+  return lerp(start, _end, hill01(t, curve) * (1 + curve))
+
+// ============================================================================
+public function lerp_hill01_clamped(real start, real _end, real t, real curve) returns real
+  return lerp_hill01(start, _end, t, curve).clamp(start, _end)
+
+// ============================================================================
 /** Taken from Unity */
 tuple smoothDampResult(real value, real vel)
 public function smoothDamp(real current, real target, real currentVelocity, real smoothTime, real maxSpeed, real deltaTime) returns smoothDampResult
