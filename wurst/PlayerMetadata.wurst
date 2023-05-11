@@ -72,19 +72,26 @@ class PlayerComponentDispatcher extends DispatcherContext
     return false
 
 // ============================================================================
+enum VictoryState
+  None
+  Lost
+  Won
+
+// ============================================================================
 public interface IPlayerMetadata extends IComposite
   function getPlayer() returns player
   function getDisplayName() returns string
   function setDisplayName(string displayName)
   function resetDisplayName()
+  function getHasWonGame() returns bool
   function getHasLostGame() returns bool
-  function setHasLostGame(bool value)
+  function setVictoryState(VictoryState value)
 
 // ============================================================================
 public class PlayerMetadata extends Composable implements IPlayerMetadata
   private player m_player
   private string m_displayName
-  private bool m_lostGame
+  private VictoryState m_victoryState
 
   // --------------------------------------------------------------------------
   construct(player p)
@@ -108,14 +115,18 @@ public class PlayerMetadata extends Composable implements IPlayerMetadata
     setDisplayName(m_player.getName())
 
   // --------------------------------------------------------------------------
-  override function getHasLostGame() returns bool
-    return m_lostGame
+  override function getHasWonGame() returns bool
+    return m_victoryState == VictoryState.Won
 
   // --------------------------------------------------------------------------
-  override function setHasLostGame(bool value)
-    if (m_lostGame != value)
-      m_lostGame = value
-      if (m_lostGame)
+  override function getHasLostGame() returns bool
+    return m_victoryState == VictoryState.Lost
+
+  // --------------------------------------------------------------------------
+  override function setVictoryState(VictoryState value)
+    if (m_victoryState != value)
+      m_victoryState = value
+      if (m_victoryState == VictoryState.Lost)
         raisePlayerLostEvent(m_player)
 
   // --------------------------------------------------------------------------
