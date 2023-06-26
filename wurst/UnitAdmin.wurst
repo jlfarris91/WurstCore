@@ -53,6 +53,7 @@ public class UnitAdmin
 
   // ----------------------------------------------------------------------------
   function getAliveCount() returns int
+    m_ownedUnits.refresh()
     return m_ownedUnits.size()
 
   // ----------------------------------------------------------------------------
@@ -62,7 +63,10 @@ public class UnitAdmin
   // ----------------------------------------------------------------------------
   function getAliveCount(string key) returns int
     let ownedUnitsByTypeGroup = getOwnedUnits(key)
-    return ownedUnitsByTypeGroup != null ? ownedUnitsByTypeGroup.size() : 0
+    if (ownedUnitsByTypeGroup != null)
+      ownedUnitsByTypeGroup.refresh()
+      return ownedUnitsByTypeGroup.size()
+    return 0
 
   // ----------------------------------------------------------------------------
   function getTotalRegistered() returns int
@@ -78,6 +82,7 @@ public class UnitAdmin
 
   // --------------------------------------------------------------------------
   function getOwnedUnits() returns group
+    m_ownedUnits.refresh()
     return m_ownedUnits
 
   // ----------------------------------------------------------------------------
@@ -86,7 +91,10 @@ public class UnitAdmin
 
   // ----------------------------------------------------------------------------
   function getOwnedUnits(string key) returns group
-    return m_ownedUnitsByKey.get(key)
+    let ownedUnitsByTypeGroup = m_ownedUnitsByKey.get(key)
+    if (ownedUnitsByTypeGroup != null)
+      ownedUnitsByTypeGroup.refresh()
+    return ownedUnitsByTypeGroup
 
   // --------------------------------------------------------------------------
   function onUnitRegistered() returns IEvent2<UnitAdmin, unit>
@@ -109,7 +117,7 @@ public class UnitAdmin
 
     let existingAdmin = g_unitToAdminMap.get(_unit)
     if (existingAdmin != null and existingAdmin != this)
-      error("Unit belongs to a different admin")
+      error("Unit " + _unit.getTypeId().toRawCode() + " belongs to a different admin: " + existingAdmin.m_id)
       return
 
     if (existingAdmin == this)
@@ -139,12 +147,13 @@ public class UnitAdmin
 
     let existingAdmin = g_unitToAdminMap.get(_unit)
     if (existingAdmin == null)
+      error("Unit does not belong to an admin")
       return
 
     if (existingAdmin != this)
       error("Unit belongs to a different admin")
       return
-    
+
     g_unitToAdminMap.remove(_unit)
     m_ownedUnits.removeUnit(_unit)
 
