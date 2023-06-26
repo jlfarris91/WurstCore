@@ -1,10 +1,11 @@
 package RealTime
-import ClosureTimers
 
-int g_realTimeSeconds = 0
+timer g_realTimeTimer
+real g_realTimeSeconds
 
 // ============================================================================
-public function getRealTimeSeconds() returns int
+public function getRealTimeSeconds() returns real
+  g_realTimeSeconds = g_realTimeTimer.getElapsed()
   return g_realTimeSeconds
 
 // ============================================================================
@@ -21,14 +22,14 @@ public function getRealTimeString() returns string
   let hoursStr = hours < 10 ? "0" + hours.toString() : hours.toString()
   let minutes = R2I(getRealTimeMinutes() - R2I(R2I(getRealTimeHours()) * 60.0))
   let minutesStr = minutes < 10 ? "0" + minutes.toString() : minutes.toString()
-  let seconds = R2I(getRealTimeSeconds().toReal() - R2I(R2I(getRealTimeMinutes()) * 60.0))
+  let seconds = R2I(getRealTimeSeconds() - R2I(R2I(getRealTimeMinutes()) * 60.0))
   let secondsStr = seconds < 10 ? "0" + seconds.toString() : seconds.toString()
   return "{0}:{1}:{2}".format(hoursStr, minutesStr, secondsStr)
 
 // ============================================================================
 init
-  doPeriodically(1.0) (CallbackPeriodic cb) ->
-    g_realTimeSeconds++
+  g_realTimeTimer = CreateTimer() 
+  g_realTimeTimer.start(999999.0, null)
   
 // ============================================================================
 @test function realTimeString()

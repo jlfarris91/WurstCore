@@ -44,7 +44,7 @@ public class Thread
   static Thread defaultQueue = new Thread("default")..setEnabled(true)
   
   private static int s_threadIdGen = 0
-  private static int s_currTime = 0
+  private static real s_currTime = 0
 
   // --------------------------------------------------------------------------
   construct(string name)
@@ -265,6 +265,10 @@ public class Thread
   // --------------------------------------------------------------------------
   private function processJob(Job job) returns int
 
+    if (job == null)
+      Log.error("Job is null!")
+      return 0
+
     var workCounter = 0
 
     // Job owner must have completed the job outside of the thread
@@ -356,7 +360,7 @@ public abstract class Job
   private string m_id
   private Thread m_executingThread = null
   protected real m_timeout
-  protected int m_startTime
+  protected real m_startTime
   protected CancellationToken m_ct
   private JobStatus m_status = WAITING
   private Event1<Job> m_completedEvent = null
