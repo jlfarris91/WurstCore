@@ -117,16 +117,21 @@ public class TabPanel extends DockPanel
   function removeContent(string id)
     let contentFrame = m_contentFrameMap.get(id)
     if (contentFrame != null)
+      m_fillPanel.removeChild(contentFrame)
+      m_contentFrameMap.remove(id)
       destroy contentFrame
     let buttonFrame = m_buttonFrameMap.get(id)
     if (buttonFrame != null)
+      m_buttonPanel.removeChild(buttonFrame)
+      m_buttonFrameMap.remove(id)
       destroy buttonFrame
     m_allIds.remove(id)
     if (m_selectedFrameId == id)
-      m_selectedFrameId = m_allIds.isEmpty() ? "" : m_allIds.getFirst()
+      setSelectedContentId(m_allIds.isEmpty() ? "" : m_allIds.getFirst())
 
   // --------------------------------------------------------------------------
   function removeAllContent()
+    setSelectedContentId("")
     while (m_allIds.isEmpty() == false)
       removeContent(m_allIds.pop())
 
