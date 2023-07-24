@@ -82,7 +82,7 @@ public class DebuggerDialog
 
   // --------------------------------------------------------------------------
   static function hide()
-    if (g_debuggerDialogFrame != null)
+    if (getIsVisible())
       g_debuggerDialogFrame.hide()
 
   // --------------------------------------------------------------------------
