@@ -18,6 +18,7 @@ public class GradientList<TValue, TReturn>
   private LinkedList<GradientEntry<TValue>> m_entries
   private Func3<TValue, TValue, real, TReturn> m_sampleFunc
   private TReturn m_defaultValue
+  private vec2 m_minMaxTime = vec2(REAL_MAX, REAL_MIN)
 
   // --------------------------------------------------------------------------
   construct(TReturn defaultValue, Func3<TValue, TValue, real, TReturn> sampleFunc)
@@ -38,6 +39,8 @@ public class GradientList<TValue, TReturn>
   // --------------------------------------------------------------------------
   function addEntry(real time, TValue value)
     m_entries.add(new GradientEntry<TValue>(value, time))
+    m_minMaxTime.x = min(m_minMaxTime.x, time)
+    m_minMaxTime.y = max(m_minMaxTime.y, time)
 
   // --------------------------------------------------------------------------
   function getEntry(int index) returns GradientEntry<TValue>
@@ -64,7 +67,7 @@ public class GradientList<TValue, TReturn>
     if (firstEntry == null)
       return defaultValue
 
-    let clampedT = clamp01(time)
+    let clampedT = clamp(time, m_minMaxTime.x, m_minMaxTime.y)
 
     var firstTime = firstEntry.time
     var firstValue = firstEntry.value
