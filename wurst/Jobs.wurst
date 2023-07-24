@@ -435,7 +435,7 @@ public abstract class Job
   // --------------------------------------------------------------------------
   function getCancellationToken() returns CancellationToken
     if (m_ct == null)
-      m_ct = new CancellationToken()
+      m_ct = new CancellationToken()..acquire()
     return m_ct
 
   // --------------------------------------------------------------------------
