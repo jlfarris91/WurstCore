@@ -1,0 +1,29 @@
+package IntegerExtensions
+
+string array g_romanNumeralStrings = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+int array g_romanNumeralValues = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+
+// ============================================================================
+public function int.toRomanNumeral() returns string
+  var result = ""
+  var n = this
+  for i = 0 to 12
+    while (n - g_romanNumeralValues[i] >= 0)
+      result += g_romanNumeralStrings[i]
+      n -= g_romanNumeralValues[i]
+  return result
+
+// ============================================================================
+@test function toRomanNumeral()
+  for i = 0 to 12
+    g_romanNumeralValues[i].toRomanNumeral().assertEquals(g_romanNumeralStrings[i])
+  var n = 7
+  n.toRomanNumeral().assertEquals("VII")
+  n = 19
+  n.toRomanNumeral().assertEquals("XIX")
+  n = 789
+  n.toRomanNumeral().assertEquals("DCCLXXXIX")
+  n = 1099
+  n.toRomanNumeral().assertEquals("MXCIX")
+  n = 23456
+  n.toRomanNumeral().assertEquals("MMMMMMMMMMMMMMMMMMMMMMMCDLVI")
