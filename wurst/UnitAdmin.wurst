@@ -3,10 +3,11 @@ import GroupUtils
 import Events
 import GroupExtensions
 import HashMap
-import ErrorHandling
 import RegisterEvents
 import ObjectIds
 import IterableMapExtensions
+import Action
+import ErrorHandling
 
 HashMap<unit, UnitAdmin> g_unitToAdminMap
 
@@ -17,7 +18,7 @@ public class UnitAdmin
   private int m_totalRegisteredUnits = 0
 
   private IterableMap<string, group> m_ownedUnitsByKey = new IterableMap<string, group>()
-  private HashMap<string, int> m_totalRegisteredUnitsByKey = new HashMap<string, int>()
+  private IterableMap<string, int> m_totalRegisteredUnitsByKey = new IterableMap<string, int>()
 
   private Event2<UnitAdmin, unit> m_onUnitRegistered
   private Event2<UnitAdmin, unit> m_onUnitUnregistered
@@ -50,6 +51,10 @@ public class UnitAdmin
     if (m_onUnitUnregistered != null)
       destroy m_onUnitUnregistered
       m_onUnitUnregistered = null
+
+  // --------------------------------------------------------------------------
+  function getId() returns string
+    return m_id
 
   // ----------------------------------------------------------------------------
   function getAliveCount() returns int
@@ -117,7 +122,7 @@ public class UnitAdmin
 
     let existingAdmin = g_unitToAdminMap.get(_unit)
     if (existingAdmin != null and existingAdmin != this)
-      error("Unit " + _unit.getTypeId().toRawCode() + " belongs to a different admin: " + existingAdmin.m_id)
+      error("Unit {0} belongs to a different admin {1}".format(_unit.getTypeId().toRawCode(), existingAdmin.m_id))
       return
 
     if (existingAdmin == this)
@@ -125,16 +130,20 @@ public class UnitAdmin
 
     g_unitToAdminMap.put(_unit, this)
 
+    if (m_ownedUnits.contains(_unit))
+      error("Unit {0} not in admin {1} group".format(_unit.getTypeId().toRawCode(), existingAdmin.m_id))
+      return
+
     let unitTypeId = _unit.getTypeId()
-    let rawCode = unitTypeId.toRawCode()
+    let unitTypeRawCode = unitTypeId.toRawCode()
     
     m_totalRegisteredUnits++
-    
+
     m_ownedUnits.addUnit(_unit)
 
-    if (key != rawCode)
-      m_totalRegisteredUnitsByKey.put(key, m_totalRegisteredUnitsByKey.get(rawCode) + 1)
-      m_ownedUnitsByKey.addUnit(rawCode, _unit)
+    if (key != unitTypeRawCode)
+      m_totalRegisteredUnitsByKey.put(unitTypeRawCode, m_totalRegisteredUnitsByKey.get(unitTypeRawCode) + 1)
+      m_ownedUnitsByKey.addUnit(unitTypeRawCode, _unit)
 
     m_totalRegisteredUnitsByKey.put(key, m_totalRegisteredUnitsByKey.get(key) + 1)
     m_ownedUnitsByKey.addUnit(key, _unit)
@@ -147,11 +156,15 @@ public class UnitAdmin
 
     let existingAdmin = g_unitToAdminMap.get(_unit)
     if (existingAdmin == null)
-      error("Unit does not belong to an admin")
+      error("Unit {0} does not belong to an admin".format(_unit.getTypeId().toRawCode()))
       return
 
     if (existingAdmin != this)
-      error("Unit belongs to a different admin")
+      error("Unit {0} belongs to different admin {1}".format(_unit.getTypeId().toRawCode(), existingAdmin.m_id))
+      return
+
+    if (not m_ownedUnits.contains(_unit))
+      error("Unit {0} not in admin {1} group".format(_unit.getTypeId().toRawCode(), existingAdmin.m_id))
       return
 
     g_unitToAdminMap.remove(_unit)
@@ -174,6 +187,19 @@ public class UnitAdmin
   // --------------------------------------------------------------------------
   protected function onOwnedUnitKilled(unit dyingUnit)
     unregisterOwnedUnit(dyingUnit)
+
+  // --------------------------------------------------------------------------
+  function writeDebugString(Action1<string> output)
+
+    if (m_totalRegisteredUnitsByKey.size() > 0)
+      output.call("Registrations: " + getTotalRegistered().toString())
+      for string key in m_totalRegisteredUnitsByKey
+        output.call("  {0}: {1}".format(key, getTotalRegistered(key).toString()))
+
+    if (m_ownedUnitsByKey.size() > 0)
+      output.call("Alive: " + getAliveCount().toString())
+      for string key in m_ownedUnitsByKey
+        output.call("  {0}: {1}".format(key, getAliveCount(key).toString()))
 
 // ============================================================================
 function onUnitDeath()
